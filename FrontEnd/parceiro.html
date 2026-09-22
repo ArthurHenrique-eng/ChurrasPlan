@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width,initial-scale=1" name="viewport"/>
+    <title>
+      Parceiros — ChurrasPlan
+    </title>
+    <link href="favicon.svg" rel="icon" type="image/svg+xml"/>
+    <link href="css/unified-core.css" rel="stylesheet"/>
+    <link href="css/integracao-v3.css" rel="stylesheet"/>
+    <meta name="theme-color" content="#6f7c59">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="assets/pwa/icon-192.png">
+  <link rel="stylesheet" href="css/production-v63.css">
+</head>
+  <body class="account-page">
+  <a class="skip-link" href="#main">Pular para o conteúdo</a>
+    <main id="main" class="account-shell">
+      <header class="simple-topbar">
+        <a class="home-brand" href="index.html">
+          <img alt="" class="home-logo-icon" src="assets/logo-icon.png"/>
+          <img alt="ChurrasPlan" class="home-wordmark" src="assets/logo-wordmark.png"/>
+        </a>
+        <a class="text-button" href="minha-conta.html">
+          Minha conta
+        </a>
+      </header>
+      <section class="account-hero">
+        <div>
+          <span class="eyebrow">
+            <span>
+            </span>
+            CHURRASPLAN PARCEIROS
+          </span>
+          <h1>
+            Mercados e açougues
+            <br/>
+            <em>
+              mais perto da compra.
+            </em>
+          </h1>
+          <p>
+            Cadastre o estabelecimento, produtos comerciais e ofertas. Lojas novas ficam fora das recomendações públicas até verificação administrativa.
+          </p>
+        </div>
+        <button class="botao botao--primario" hidden="" id="ativar-parceiro" type="button">
+          Ativar perfil parceiro
+        </button>
+      </section>
+      <div class="mensagem" id="parceiro-mensagem" style="display:none">
+      </div>
+      <div hidden="" id="parceiro-conteudo">
+        <section class="account-section">
+          <div class="partner-stats" id="parceiro-stats">
+          </div>
+          <div class="partner-note" id="parceiro-note">
+          </div>
+        </section>
+        <section class="partner-layout" style="margin-top:18px">
+          <div class="partner-forms">
+            <div class="account-section">
+              <h2 style="font-size:16px">
+                1. Estabelecimento
+              </h2>
+              <form class="account-form" id="form-estabelecimento" style="margin-top:14px">
+                <label class="full">
+                  Nome
+                  <input id="est-nome" required=""/>
+                </label>
+                <label>
+                  Tipo
+                  <select id="est-tipo">
+                    <option value="mercado">
+                      Mercado
+                    </option>
+                    <option value="supermercado">
+                      Supermercado
+                    </option>
+                    <option value="acougue">
+                      Açougue
+                    </option>
+                    <option value="atacarejo">
+                      Atacarejo
+                    </option>
+                  </select>
+                </label>
+                <label>
+                  Cidade
+                  <input id="est-cidade"/>
+                </label>
+                <label>
+                  Estado
+                  <input id="est-estado" maxlength="2" placeholder="MG"/>
+                </label>
+                <label>
+                  CEP
+                  <input id="est-cep"/>
+                </label>
+                <label class="full">
+                  Endereço
+                  <input id="est-endereco"/>
+                </label>
+                <label>
+                  Latitude
+                  <input id="est-lat" step="any" type="number"/>
+                </label>
+                <label>
+                  Longitude
+                  <input id="est-lng" step="any" type="number"/>
+                </label>
+                <button class="botao botao--primario full" type="submit">
+                  Cadastrar estabelecimento
+                </button>
+              </form>
+            </div>
+            <div class="account-section">
+              <h2 style="font-size:16px">
+                2. Produto comercial
+              </h2>
+              <form class="account-form" id="form-produto" style="margin-top:14px">
+                <label class="full">
+                  Produto genérico
+                  <select id="prod-pai" required="">
+                  </select>
+                </label>
+                <label>
+                  Marca
+                  <input id="prod-marca" required=""/>
+                </label>
+                <label>
+                  Nome comercial
+                  <input id="prod-nome" placeholder="Ex.: Coca-Cola Original" required=""/>
+                </label>
+                <label>
+                  Variante
+                  <input id="prod-variante" placeholder="Ex.: Original"/>
+                </label>
+                <label>
+                  EAN / código de barras
+                  <input id="prod-ean" minlength="8"/>
+                </label>
+                <label>
+                  Tamanho da embalagem
+                  <input id="prod-qtd" min="0.001" required="" step="0.001" type="number"/>
+                </label>
+                <label>
+                  Unidade da embalagem
+                  <input id="prod-unidade" placeholder="L, kg, ml..." required=""/>
+                </label>
+                <label>
+                  Unidade de venda
+                  <input id="prod-venda" placeholder="garrafa, lata, peça..." required=""/>
+                </label>
+                <button class="botao botao--primario full" type="submit">
+                  Cadastrar produto
+                </button>
+              </form>
+            </div>
+          </div>
+          <div class="partner-forms">
+            <div class="account-section">
+              <h2 style="font-size:16px">
+                Seus estabelecimentos
+              </h2>
+              <div class="basket-table" id="lista-estabelecimentos">
+              </div>
+            </div>
+            <div class="account-section">
+              <h2 style="font-size:16px">
+                3. Preço / oferta
+              </h2>
+              <form class="account-form" id="form-preco" style="margin-top:14px">
+                <label class="full">
+                  Estabelecimento
+                  <select id="preco-est" required="">
+                  </select>
+                </label>
+                <label class="full">
+                  Produto
+                  <select id="preco-prod" required="">
+                  </select>
+                </label>
+                <label>
+                  Preço atual (R$)
+                  <input id="preco-valor" min="0.01" required="" step="0.01" type="number"/>
+                </label>
+                <label>
+                  Preço anterior (R$)
+                  <input id="preco-original" min="0.01" step="0.01" type="number"/>
+                </label>
+                <label>
+                  Validade inicial
+                  <input id="preco-inicio" type="datetime-local"/>
+                </label>
+                <label>
+                  Validade final
+                  <input id="preco-fim" type="datetime-local"/>
+                </label>
+                <label class="full">
+                  Estoque
+                  <select id="preco-estoque">
+                    <option value="disponivel">
+                      Disponível
+                    </option>
+                    <option value="baixo">
+                      Estoque baixo
+                    </option>
+                    <option value="indisponivel">
+                      Indisponível
+                    </option>
+                  </select>
+                </label>
+                <button class="botao botao--primario full" type="submit">
+                  Publicar preço
+                </button>
+              </form>
+            </div>
+            <div class="account-section">
+              <h2 style="font-size:16px">
+                Produtos comerciais
+              </h2>
+              <div class="basket-table" id="lista-produtos">
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+    <script src="js/config.js">
+    </script>
+    <script src="js/state.js">
+    </script>
+    <script src="js/api.js">
+    </script>
+    <script src="js/script.js">
+    </script>
+    <script src="js/auth-ui.js">
+    </script>
+    <script src="js/parceiro.js">
+    </script>
+  <script src="js/pwa.js"></script>
+</body>
+</html>

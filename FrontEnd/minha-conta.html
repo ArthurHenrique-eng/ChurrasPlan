@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width,initial-scale=1" name="viewport"/>
+    <title>
+      Minha conta — ChurrasPlan
+    </title>
+    <link href="favicon.svg" rel="icon" type="image/svg+xml"/>
+    <link href="css/unified-core.css" rel="stylesheet"/>
+    <link href="css/integracao-v3.css" rel="stylesheet"/>
+    <meta name="theme-color" content="#6f7c59">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="assets/pwa/icon-192.png">
+  <link rel="stylesheet" href="css/production-v63.css">
+</head>
+  <body class="account-page">
+  <a class="skip-link" href="#main">Pular para o conteúdo</a>
+    <main id="main" class="account-shell">
+      <header class="simple-topbar">
+        <a class="home-brand" href="index.html">
+          <img alt="" class="home-logo-icon" src="assets/logo-icon.png"/>
+          <img alt="ChurrasPlan" class="home-wordmark" src="assets/logo-wordmark.png"/>
+        </a>
+        <a class="primary-button" href="planejamento.html">
+          Novo churrasco
+        </a>
+      </header>
+      <section class="account-hero">
+        <div>
+          <span class="eyebrow">
+            <span>
+            </span>
+            MINHA CONTA
+          </span>
+          <h1 id="conta-saudacao">
+            Seus churrascos.
+          </h1>
+          <p>
+            Histórico, recursos avançados e configurações da sua conta.
+          </p>
+        </div>
+        <button class="botao botao--secundario" id="logout" type="button">
+          Sair
+        </button>
+      </section>
+      <div class="mensagem" id="conta-mensagem" style="display:none">
+      </div>
+      <section class="account-grid">
+        <div class="account-section">
+          <div class="cartao__titulo">
+            <span class="section-icon" data-icon="flame">
+            </span>
+            <h2>
+              Meus churrascos
+            </h2>
+          </div>
+          <div class="history-list" id="historico-lista">
+            <div class="empty-state">
+              Carregando histórico...
+            </div>
+          </div>
+        </div>
+        <aside class="account-section">
+          <div class="cartao__titulo">
+            <span class="section-icon" data-icon="users">
+            </span>
+            <h2>
+              Conta
+            </h2>
+          </div>
+          <div id="conta-perfil">
+          </div>
+          <div class="plan-card" id="conta-plano" style="margin-top:14px">
+          </div>
+          <div class="account-menu">
+            <a href="planejamento.html">
+              Criar novo planejamento
+            </a>
+            <a href="parceiro.html" id="link-parceiro">
+              Área para mercados e açougues
+            </a>
+            <a href="admin.html" id="link-admin" hidden>
+              Administração do ChurrasPlan
+            </a>
+            <button id="continuar-atual" type="button">
+              Continuar planejamento atual
+            </button>
+          </div>
+        </aside>
+      </section>
+      <section class="account-section privacy-center">
+        <div class="cartao__titulo">
+          <span class="section-icon" data-icon="sliders"></span>
+          <h2>Privacidade e dados</h2>
+        </div>
+        <p class="texto-suave">Exporte seus dados em formato JSON, controle comunicações opcionais ou exclua sua conta. Termos e dados necessários ao serviço não usam consentimento de marketing.</p>
+        <div class="privacy-actions">
+          <label class="legal-check privacy-marketing"><input id="marketing-optin" type="checkbox"><span>Quero receber novidades e comunicações opcionais.</span></label>
+          <button class="botao botao--secundario" id="exportar-dados" type="button">Exportar meus dados</button>
+          <button class="botao botao--perigo" id="excluir-conta" type="button">Excluir minha conta</button>
+        </div>
+        <div class="legal-links"><a href="privacidade.html">Política de Privacidade</a><a href="termos.html">Termos de Uso</a><a href="cookies.html">Cookies</a></div>
+      </section>
+    </main>
+    <script src="js/config.js">
+    </script>
+    <script src="js/state.js">
+    </script>
+    <script src="js/api.js">
+    </script>
+    <script src="js/script.js">
+    </script>
+    <script src="js/auth-ui.js">
+    </script>
+    <script src="js/icons.js">
+    </script>
+    <script src="js/minha-conta.js">
+    </script>
+  <script src="js/pwa.js"></script>
+</body>
+</html>

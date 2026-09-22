@@ -1,0 +1,32 @@
+/* Carnes - progresso percentual com cores de brasa, sem efeitos neon. */
+
+.resumo-percentual {
+    display: flex;
+    align-items: center;
+    gap: var(--espaco-2);
+    font-family: var(--fonte-corpo);
+    font-size: 1rem;
+    font-weight: 800;
+}
+
+.resumo-percentual .valor { color: var(--fogo-forte); }
+.resumo-percentual .valor.ok { color: var(--sucesso); }
+
+.barra-percentual {
+    height: 10px;
+    border-radius: 999px;
+    background: #eadbc9;
+    overflow: hidden;
+    flex: 1;
+    box-shadow: inset 0 1px 2px rgba(70,45,31,0.05);
+}
+
+.barra-percentual__preenchimento {
+    height: 100%;
+    background: linear-gradient(90deg, #c85b43, #9f2f1d);
+    transition: width 0.15s ease, background 0.15s ease;
+}
+
+.item-carne { flex-wrap: wrap; }
+.item-carne .campo-percentual { display: flex; align-items: center; gap: 0.4rem; }
+.item-carne .campo-percentual span { color: var(--texto-suave); font-size: 0.85rem; }

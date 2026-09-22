@@ -1,0 +1,102 @@
+services:
+  db:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-churrasplan}
+      MYSQL_USER: ${MYSQL_USER:-churrasplan}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?defina MYSQL_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?defina MYSQL_ROOT_PASSWORD}
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - churrasplan_mysql_prod:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 15s
+    networks: [internal]
+
+  backend:
+    build: ./BackEnd/Python
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      APP_ENV: production
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_USER: ${MYSQL_USER:-churrasplan}
+      DB_PASSWORD: ${MYSQL_PASSWORD:?defina MYSQL_PASSWORD}
+      DB_NAME: ${MYSQL_DATABASE:-churrasplan}
+      AUTO_CREATE_SCHEMA: "false"
+      COOKIE_SECURE: "true"
+      REQUIRE_EMAIL_VERIFICATION: "true"
+      FORCE_HTTPS: "true"
+      TRUST_PROXY_HEADERS: "true"
+      PUBLIC_APP_URL: https://${APP_DOMAIN:?defina APP_DOMAIN}
+      CORS_ORIGINS: https://${APP_DOMAIN:?defina APP_DOMAIN}
+      TRUSTED_HOSTS: ${APP_DOMAIN:?defina APP_DOMAIN}
+      SECURITY_PEPPER: ${SECURITY_PEPPER:?defina SECURITY_PEPPER}
+      SMTP_HOST: ${SMTP_HOST:?defina SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:?defina SMTP_FROM}
+      SMTP_TLS: ${SMTP_TLS:-true}
+      GOOGLE_PLACES_ENABLED: ${GOOGLE_PLACES_ENABLED:-false}
+      GOOGLE_PLACES_API_KEY: ${GOOGLE_PLACES_API_KEY:-}
+      GOOGLE_MAPS_JS_API_KEY: ${GOOGLE_MAPS_JS_API_KEY:-}
+      GOOGLE_MAP_ID: ${GOOGLE_MAP_ID:-}
+      TERMS_VERSION: ${TERMS_VERSION:-2026-09-18}
+      PRIVACY_VERSION: ${PRIVACY_VERSION:-2026-09-21}
+    command: ["sh", "-c", "python scripts/wait_for_db.py && alembic upgrade head && uvicorn main:app --host 0.0.0.0 --port 8000 --proxy-headers --forwarded-allow-ips='*'"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health/ready', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks: [internal]
+
+  frontend:
+    build: ./FrontEnd
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks: [internal]
+
+  gateway:
+    image: caddy:2.8-alpine
+    restart: unless-stopped
+    depends_on:
+      frontend:
+        condition: service_started
+      backend:
+        condition: service_healthy
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN:?defina APP_DOMAIN}
+      TLS_EMAIL: ${TLS_EMAIL:?defina TLS_EMAIL}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks: [internal]
+
+networks:
+  internal:
+    driver: bridge
+
+volumes:
+  churrasplan_mysql_prod:
+  caddy_data:
+  caddy_config:

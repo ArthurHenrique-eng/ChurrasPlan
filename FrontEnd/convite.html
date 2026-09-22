@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width,initial-scale=1" name="viewport"/>
+    <title>
+      Convite — ChurrasPlan
+    </title>
+    <link href="favicon.svg" rel="icon" type="image/svg+xml"/>
+    <link href="css/unified-core.css" rel="stylesheet"/>
+    <link href="css/integracao-v3.css" rel="stylesheet"/>
+    <meta name="theme-color" content="#6f7c59">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="assets/pwa/icon-192.png">
+  <link rel="stylesheet" href="css/production-v63.css">
+</head>
+  <body class="account-page">
+  <a class="skip-link" href="#main">Pular para o conteúdo</a>
+    <main id="main" class="account-shell">
+      <header class="simple-topbar">
+        <a class="home-brand" href="index.html">
+          <img alt="" class="home-logo-icon" src="assets/logo-icon.png"/>
+          <img alt="ChurrasPlan" class="home-wordmark" src="assets/logo-wordmark.png"/>
+        </a>
+      </header>
+      <section class="auth-card rsvp-card" id="convite-card">
+        <div class="rsvp-event" id="convite-evento">
+          <h1>
+            Carregando convite...
+          </h1>
+        </div>
+        <form class="auth-form" id="rsvp-form" style="display:none">
+          <div class="campo">
+            <label for="rsvp-nome">
+              Seu nome
+            </label>
+            <input autocomplete="name" id="rsvp-nome" maxlength="120" required=""/>
+          </div>
+          <div class="campo">
+            <label>
+              Você vai?
+            </label>
+            <div class="segmented-response">
+              <label>
+                <input name="resposta" required="" type="radio" value="confirmado"/>
+                <span>
+                  Vou
+                </span>
+              </label>
+              <label>
+                <input name="resposta" type="radio" value="talvez"/>
+                <span>
+                  Talvez
+                </span>
+              </label>
+              <label>
+                <input name="resposta" type="radio" value="nao"/>
+                <span>
+                  Não vou
+                </span>
+              </label>
+            </div>
+          </div>
+          <div class="campo">
+            <label for="rsvp-tipo">
+              Tipo de convidado
+            </label>
+            <select id="rsvp-tipo">
+              <option value="adulto">
+                Adulto
+              </option>
+              <option value="crianca">
+                Criança
+              </option>
+            </select>
+          </div>
+          <details class="guest-details">
+            <summary>
+              <span>
+                Preferências e restrições
+              </span>
+              <small>
+                opcional
+              </small>
+            </summary>
+            <div class="guest-details__content">
+              <div class="rsvp-checks">
+                <label>
+                  <input id="rsvp-alcool" type="checkbox"/>
+                  Consumo bebida alcoólica
+                </label>
+                <label>
+                  <input id="rsvp-vegetariano" type="checkbox"/>
+                  Vegetariano
+                </label>
+                <label>
+                  <input id="rsvp-vegano" type="checkbox"/>
+                  Vegano
+                </label>
+                <label>
+                  <input id="rsvp-sem-bovina" type="checkbox"/>
+                  Não como carne bovina
+                </label>
+                <label>
+                  <input id="rsvp-sem-suina" type="checkbox"/>
+                  Não como carne suína
+                </label>
+                <label>
+                  <input id="rsvp-lactose" type="checkbox"/>
+                  Intolerância à lactose
+                </label>
+              </div>
+              <div class="campo" style="margin-top:14px">
+                <label for="rsvp-alergias">
+                  Alergias
+                </label>
+                <textarea id="rsvp-alergias" maxlength="2000" rows="2"></textarea>
+              </div>
+              <div class="campo" style="margin-top:10px">
+                <label for="rsvp-outras">
+                  Outras restrições
+                </label>
+                <textarea id="rsvp-outras" maxlength="2000" rows="2"></textarea>
+              </div>
+            </div>
+          </details>
+          <button class="botao botao--primario" type="submit">
+            Enviar resposta
+          </button>
+        </form>
+        <div class="mensagem auth-message" id="convite-mensagem" style="display:none">
+        </div>
+      </section>
+    </main>
+    <script src="js/config.js">
+    </script>
+    <script src="js/api.js">
+    </script>
+    <script src="js/script.js">
+    </script>
+    <script src="js/convite.js">
+    </script>
+  <script src="js/pwa.js"></script>
+</body>
+</html>

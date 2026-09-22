@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Administração — ChurrasPlan</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="css/unified-core.css">
+  <link rel="stylesheet" href="css/integracao-v3.css">
+  <link rel="stylesheet" href="css/production-v63.css">
+  <meta name="theme-color" content="#6f7c59">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="assets/pwa/icon-192.png">
+</head>
+<body class="account-page admin-page">
+  <a class="skip-link" href="#main">Pular para o conteúdo</a>
+  <main id="main" class="account-shell">
+    <header class="simple-topbar"><a class="home-brand" href="index.html"><img class="home-logo-icon" src="assets/logo-icon.png" alt=""><img class="home-wordmark" src="assets/logo-wordmark.png" alt="ChurrasPlan"></a><a class="text-button" href="minha-conta.html">Minha conta</a></header>
+    <section class="account-hero"><div><span class="eyebrow"><span></span>ADMINISTRAÇÃO</span><h1>Operação do ChurrasPlan.</h1><p>Usuários, parceiros, moderação e auditoria de ações privilegiadas.</p></div></section>
+    <div class="mensagem" id="admin-mensagem" hidden></div>
+    <section class="admin-metrics" id="admin-metrics"><div class="empty-state">Carregando indicadores...</div></section>
+    <section class="account-section admin-section">
+      <div class="admin-section-head"><div><h2>Usuários</h2><p>Gerencie acesso sem expor senhas ou sessões.</p></div><input id="admin-busca" type="search" placeholder="Buscar nome ou e-mail" autocomplete="off"></div>
+      <div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Usuário</th><th>Papel</th><th>Status</th><th>Cadastro</th><th>Ações</th></tr></thead><tbody id="admin-usuarios"></tbody></table></div>
+    </section>
+    <section class="account-section admin-section">
+      <div class="admin-section-head"><div><h2>Estabelecimentos</h2><p>Somente parceiros verificados entram nas recomendações públicas.</p></div><label class="legal-check"><input id="admin-somente-pendentes" type="checkbox"><span>Somente pendentes</span></label></div>
+      <div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Estabelecimento</th><th>Local</th><th>Verificado</th><th>Ativo</th><th>Ações</th></tr></thead><tbody id="admin-estabelecimentos"></tbody></table></div>
+    </section>
+    <section class="account-section admin-section"><h2>Auditoria recente</h2><div class="audit-list" id="admin-auditoria"></div></section>
+  </main>
+  <script src="js/config.js"></script><script src="js/api.js"></script><script src="js/script.js"></script><script src="js/auth-ui.js"></script><script src="js/admin.js"></script><script src="js/pwa.js"></script>
+</body>
+</html>

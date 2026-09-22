@@ -1,0 +1,16 @@
+/* Planejamento - cartoes claros e resumo de convidados com aspecto de madeira. */
+
+.contador-total {
+    background: linear-gradient(135deg, #5c3e30, #714d3b);
+    color: #fffaf3;
+    border-radius: 15px;
+    padding: 1rem 1.2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--espaco-3);
+    box-shadow: 0 8px 20px rgba(73,49,39,0.12);
+}
+
+.contador-total span { font-weight: 700; }
+.contador-total strong { font-family: var(--fonte-display); color: #f2c995; font-size: 1.5rem; }

@@ -1,0 +1,22 @@
+{
+  "name": "ChurrasPlan",
+  "short_name": "ChurrasPlan",
+  "description": "Planeje quantidades, orçamento, lista de compras e convidados para o seu churrasco.",
+  "lang": "pt-BR",
+  "start_url": "/index.html?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#fffdf8",
+  "theme_color": "#6f7c59",
+  "categories": ["lifestyle", "food", "shopping"],
+  "icons": [
+    {"src":"/assets/pwa/icon-192.png","sizes":"192x192","type":"image/png","purpose":"any"},
+    {"src":"/assets/pwa/icon-512.png","sizes":"512x512","type":"image/png","purpose":"any"},
+    {"src":"/assets/pwa/icon-maskable-512.png","sizes":"512x512","type":"image/png","purpose":"maskable"}
+  ],
+  "shortcuts": [
+    {"name":"Novo churrasco","short_name":"Planejar","url":"/planejamento.html","icons":[{"src":"/assets/pwa/icon-192.png","sizes":"192x192"}]},
+    {"name":"Minha conta","short_name":"Conta","url":"/minha-conta.html","icons":[{"src":"/assets/pwa/icon-192.png","sizes":"192x192"}]}
+  ]
+}

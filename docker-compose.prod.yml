@@ -1,0 +1,19 @@
+services:
+  db:
+    ports: []
+  backend:
+    environment:
+      APP_ENV: production
+      COOKIE_SECURE: "true"
+      REQUIRE_EMAIL_VERIFICATION: "true"
+      FORCE_HTTPS: "true"
+      TRUST_PROXY_HEADERS: "true"
+      PUBLIC_APP_URL: ${PUBLIC_APP_URL:?defina PUBLIC_APP_URL com https}
+      CORS_ORIGINS: ${CORS_ORIGINS:?defina CORS_ORIGINS}
+      TRUSTED_HOSTS: ${TRUSTED_HOSTS:?defina TRUSTED_HOSTS}
+      SECURITY_PEPPER: ${SECURITY_PEPPER:?defina SECURITY_PEPPER}
+      SMTP_HOST: ${SMTP_HOST:?defina SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:?defina SMTP_FROM}

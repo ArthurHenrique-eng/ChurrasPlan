@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width,initial-scale=1" name="viewport"/>
+    <title>
+      Entrar — ChurrasPlan
+    </title>
+    <link href="favicon.svg" rel="icon" type="image/svg+xml"/>
+    <link href="css/unified-core.css" rel="stylesheet"/>
+    <link href="css/integracao-v3.css" rel="stylesheet"/>
+    <meta name="theme-color" content="#6f7c59">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="assets/pwa/icon-192.png">
+  <link rel="stylesheet" href="css/production-v63.css">
+</head>
+  <body class="account-page" data-auth-page="login">
+  <a class="skip-link" href="#main">Pular para o conteúdo</a>
+    <main id="main" class="account-shell">
+      <header class="simple-topbar">
+        <a class="home-brand" href="index.html">
+          <img alt="" class="home-logo-icon" src="assets/logo-icon.png"/>
+          <img alt="ChurrasPlan" class="home-wordmark" src="assets/logo-wordmark.png"/>
+        </a>
+        <a class="text-button" href="index.html">
+          Voltar ao site
+        </a>
+      </header>
+      <section class="auth-layout">
+        <div class="auth-copy">
+          <span class="eyebrow">
+            <span>
+            </span>
+            SUA CONTA CHURRASPLAN
+          </span>
+          <h1>
+            Planeje uma vez.
+            <br/>
+            <em>
+              Reaproveite tudo.
+            </em>
+          </h1>
+          <p>
+            Entre para salvar churrascos, criar links de confirmação, acessar seu histórico e usar a comparação de onde comprar.
+          </p>
+          <div class="auth-benefits">
+            <span>
+              Histórico e repetir churrascos
+            </span>
+            <span>
+              Convites e confirmação de presença
+            </span>
+            <span>
+              Mapa e comparação de estabelecimentos
+            </span>
+          </div>
+        </div>
+        <div class="auth-card">
+          <h2>
+            Entrar
+          </h2>
+          <p>
+            Os cálculos básicos continuam disponíveis sem cadastro.
+          </p>
+          <form class="auth-form" id="auth-form">
+            <div class="campo">
+              <label for="auth-email">
+                E-mail
+              </label>
+              <input autocomplete="email" id="auth-email" required="" type="email"/>
+            </div>
+            <div class="campo">
+              <label for="auth-senha">
+                Senha
+              </label>
+              <input autocomplete="current-password" id="auth-senha" minlength="8" required="" type="password"/>
+            </div>
+            <button class="botao botao--primario" type="submit">
+              Entrar
+            </button>
+          </form>
+          <div class="mensagem auth-message" id="auth-message" style="display:none">
+          </div>
+          <div class="auth-links">
+            <a href="cadastro.html">
+              Criar conta
+            </a>
+            <a href="recuperar-senha.html">
+              Esqueci minha senha
+            </a>
+          </div>
+        </div>
+      </section>
+    </main>
+    <script src="js/config.js">
+    </script>
+    <script src="js/state.js">
+    </script>
+    <script src="js/api.js">
+    </script>
+    <script src="js/script.js">
+    </script>
+    <script src="js/auth-ui.js">
+    </script>
+    <script src="js/auth-pages.js">
+    </script>
+  <script src="js/pwa.js"></script>
+</body>
+</html>

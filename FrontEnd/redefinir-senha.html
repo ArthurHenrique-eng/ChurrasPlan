@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width,initial-scale=1" name="viewport"/>
+    <title>
+      Nova senha — ChurrasPlan
+    </title>
+    <link href="favicon.svg" rel="icon" type="image/svg+xml"/>
+    <link href="css/unified-core.css" rel="stylesheet"/>
+    <link href="css/integracao-v3.css" rel="stylesheet"/>
+    <meta name="theme-color" content="#6f7c59">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="assets/pwa/icon-192.png">
+  <link rel="stylesheet" href="css/production-v63.css">
+</head>
+  <body class="account-page" data-auth-page="redefinir">
+  <a class="skip-link" href="#main">Pular para o conteúdo</a>
+    <main id="main" class="account-shell">
+      <header class="simple-topbar">
+        <a class="home-brand" href="index.html">
+          <img alt="" class="home-logo-icon" src="assets/logo-icon.png"/>
+          <img alt="ChurrasPlan" class="home-wordmark" src="assets/logo-wordmark.png"/>
+        </a>
+        <a class="text-button" href="login.html">
+          Voltar ao login
+        </a>
+      </header>
+      <section class="auth-layout">
+        <div class="auth-copy">
+          <span class="eyebrow">
+            <span>
+            </span>
+            NOVA SENHA
+          </span>
+          <h1>
+            Escolha uma senha
+            <br/>
+            <em>
+              nova e segura.
+            </em>
+          </h1>
+        </div>
+        <div class="auth-card">
+          <h2>
+            Redefinir senha
+          </h2>
+          <form class="auth-form" id="auth-form">
+            <div class="campo">
+              <label for="auth-senha">
+                Nova senha
+              </label>
+              <input autocomplete="new-password" id="auth-senha" maxlength="128" minlength="10" required="" type="password"/>
+            </div>
+            <div class="campo">
+              <label for="auth-senha2">
+                Confirmar nova senha
+              </label>
+              <input autocomplete="new-password" id="auth-senha2" maxlength="128" minlength="10" required="" type="password"/>
+            </div>
+            <button class="botao botao--primario" type="submit">
+              Salvar nova senha
+            </button>
+          </form>
+          <div class="mensagem auth-message" id="auth-message" style="display:none">
+          </div>
+        </div>
+      </section>
+    </main>
+    <script src="js/config.js">
+    </script>
+    <script src="js/state.js">
+    </script>
+    <script src="js/api.js">
+    </script>
+    <script src="js/script.js">
+    </script>
+    <script src="js/auth-ui.js">
+    </script>
+    <script src="js/auth-pages.js">
+    </script>
+  <script src="js/pwa.js"></script>
+</body>
+</html>

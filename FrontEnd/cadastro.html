@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width,initial-scale=1" name="viewport"/>
+    <title>
+      Criar conta — ChurrasPlan
+    </title>
+    <link href="favicon.svg" rel="icon" type="image/svg+xml"/>
+    <link href="css/unified-core.css" rel="stylesheet"/>
+    <link href="css/integracao-v3.css" rel="stylesheet"/>
+    <meta name="theme-color" content="#6f7c59">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="assets/pwa/icon-192.png">
+  <link rel="stylesheet" href="css/production-v63.css">
+</head>
+  <body class="account-page" data-auth-page="cadastro">
+  <a class="skip-link" href="#main">Pular para o conteúdo</a>
+    <main id="main" class="account-shell">
+      <header class="simple-topbar">
+        <a class="home-brand" href="index.html">
+          <img alt="" class="home-logo-icon" src="assets/logo-icon.png"/>
+          <img alt="ChurrasPlan" class="home-wordmark" src="assets/logo-wordmark.png"/>
+        </a>
+        <a class="text-button" href="index.html">
+          Voltar ao site
+        </a>
+      </header>
+      <section class="auth-layout">
+        <div class="auth-copy">
+          <span class="eyebrow">
+            <span>
+            </span>
+            RECURSOS AVANÇADOS
+          </span>
+          <h1>
+            Seu churrasco continua
+            <br/>
+            <em>
+              de onde você parou.
+            </em>
+          </h1>
+          <p>
+            A conta é opcional para calcular. Ela existe para os recursos que precisam de identidade, histórico e compartilhamento seguro.
+          </p>
+          <div class="auth-benefits">
+            <span>
+              Salve e repita seus eventos
+            </span>
+            <span>
+              Receba confirmações dos convidados
+            </span>
+            <span>
+              Compare mercados e açougues
+            </span>
+          </div>
+        </div>
+        <div class="auth-card">
+          <h2>
+            Criar conta
+          </h2>
+          <p>
+            Use um e-mail válido para recuperação e verificação.
+          </p>
+          <form class="auth-form" id="auth-form">
+            <div class="campo">
+              <label for="auth-nome">
+                Nome
+              </label>
+              <input autocomplete="name" id="auth-nome" maxlength="120" required=""/>
+            </div>
+            <div class="campo">
+              <label for="auth-email">
+                E-mail
+              </label>
+              <input autocomplete="email" id="auth-email" required="" type="email"/>
+            </div>
+            <div class="campo">
+              <label for="auth-senha">
+                Senha
+              </label>
+              <input autocomplete="new-password" id="auth-senha" maxlength="128" minlength="10" required="" type="password"/>
+              <small>Use pelo menos 10 caracteres. Não reutilize senhas de outros serviços.</small>
+            </div>
+            <div class="legal-checks">
+              <label class="legal-check">
+                <input id="aceite-termos" type="checkbox" required/>
+                <span>Li e aceito os <a href="termos.html" target="_blank" rel="noopener">Termos de Uso</a>.</span>
+              </label>
+              <label class="legal-check">
+                <input id="aceite-privacidade" type="checkbox" required/>
+                <span>Li a <a href="privacidade.html" target="_blank" rel="noopener">Política de Privacidade</a>.</span>
+              </label>
+              <label class="legal-check">
+                <input id="aceite-marketing" type="checkbox"/>
+                <span>Quero receber novidades por e-mail (opcional).</span>
+              </label>
+            </div>
+            <button class="botao botao--primario" type="submit">
+              Criar minha conta
+            </button>
+          </form>
+          <div class="mensagem auth-message" id="auth-message" style="display:none">
+          </div>
+          <div class="auth-links">
+            <a href="login.html">
+              Já tenho conta
+            </a>
+          </div>
+        </div>
+      </section>
+    </main>
+    <script src="js/config.js">
+    </script>
+    <script src="js/state.js">
+    </script>
+    <script src="js/api.js">
+    </script>
+    <script src="js/script.js">
+    </script>
+    <script src="js/auth-ui.js">
+    </script>
+    <script src="js/auth-pages.js">
+    </script>
+  <script src="js/pwa.js"></script>
+</body>
+</html>

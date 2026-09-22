@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Central do churrasco — ChurrasPlan</title>
+<link href="css/style.css" rel="stylesheet"/><link href="css/resultado.css" rel="stylesheet"/><link href="favicon.svg" rel="icon" type="image/svg+xml"/><link href="css/unified-core.css" rel="stylesheet"/><link href="css/integracao-v3.css" rel="stylesheet"/>
+  <meta name="theme-color" content="#6f7c59">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="assets/pwa/icon-192.png">
+  <link rel="stylesheet" href="css/production-v63.css">
+</head>
+<body class="app-page"><a class="skip-link" href="#main">Ir para o planejamento</a>
+<aside class="sidebar"><a aria-label="ChurrasPlan início" class="brand" href="index.html"><img alt="" class="original-icon" src="assets/logo-icon.png"/><img alt="ChurrasPlan" class="original-wordmark" src="assets/logo-wordmark.png"/></a><span class="nav-caption">DO ENCONTRO À COMPRA</span><nav aria-label="Navegação do planejamento"><a class="nav-item" href="index.html"><span data-icon="home"></span>Apresentação</a><a class="nav-item" href="planejamento.html"><span data-icon="users"></span>Planejamento</a><a class="nav-item" href="carnes.html"><span data-icon="beef"></span>Carnes</a><a class="nav-item" href="bebidas.html"><span data-icon="glass"></span>Bebidas</a><a class="nav-item" href="extras.html"><span data-icon="utensils"></span>Extras</a><a class="nav-item active" href="resultado.html"><span data-icon="bag"></span>Central<span class="nav-dot"></span></a></nav><div class="sidebar-note"><span data-icon="sprout"></span><strong>Sua turma.<br/>Seu cardápio.</strong><p>Um planejamento com a identidade do seu churrasco.</p><span class="note-line"></span></div><div class="sidebar-bottom"><span class="sidebar-save-icon" data-icon="save"></span><div><strong>Rascunho automático</strong><small>Salvo neste navegador</small></div></div></aside>
+<div class="app-shell"><header class="topbar"><div class="breadcrumb"><a href="index.html">ChurrasPlan</a> <span>/</span> <strong>Central do churrasco</strong></div><div class="topbar-actions"><div class="private-badge"><span data-icon="flame"></span>Seu planejamento</div><div id="auth-nav-slot"></div></div></header>
+<main class="container pagina-fluxo" id="main">
+<div class="page-intro"><div><div class="eyebrow"><span></span>DA CONTA AO CARRINHO</div><h1 class="pagina-fluxo__titulo">A central do seu <em>churrasco.</em></h1><p class="pagina-fluxo__subtitulo">Quantidades, orçamento, compras e recursos avançados no mesmo lugar.</p></div></div><ol class="steps" id="stepper"></ol>
+<div class="mensagem" id="mensagem-erro-geral" style="display:none;"></div><div class="texto-centro espaco-topo" id="carregando"><p>Calculando seu churrasco...</p></div>
+<div id="conteudo-resultado" style="display:none;">
+  <div class="resumo-evento">
+    <div class="central-heading-row"><div><h1 class="resumo-evento__titulo" id="resumo-titulo">Churrasco</h1><p class="resumo-evento__meta" id="resumo-meta"></p></div><span class="central-account-state" id="central-account-state"></span></div>
+    <div class="resumo-evento__grade"><div class="resumo-evento__bloco"><span>Pessoas</span><strong id="bloco-pessoas">-</strong></div><div class="resumo-evento__bloco"><span>Carne total</span><strong id="bloco-carne">-</strong></div><div class="resumo-evento__bloco"><span>Carvão</span><strong id="bloco-carvao">-</strong></div><div class="resumo-evento__bloco"><span>Custo por pessoa</span><strong id="bloco-custo-pessoa">-</strong></div></div>
+  </div>
+
+  <section class="central-grid central-grid--overview">
+    <div class="cartao budget-result-card" id="card-orcamento"><div class="cartao__titulo"><span class="section-icon" data-icon="chart"></span><h2>Orçamento</h2></div><div id="bloco-orcamento"></div></div>
+    <div class="cartao"><div class="cartao__titulo"><span class="section-icon" data-icon="users"></span><h2>Restrições e preferências</h2></div><div id="bloco-restricoes"></div></div>
+  </section>
+
+  <div class="grade-resultado">
+    <div class="cartao"><div class="cartao__titulo"><span class="section-icon" data-icon="chart"></span><h2>Itens do churrasco</h2></div><div class="table-scroll"><table class="tabela-itens"><thead><tr><th>Item</th><th>Necessário</th><th>Comprar</th><th>Preço da oferta</th><th>Subtotal</th></tr></thead><tbody id="tabela-itens-corpo"></tbody></table></div></div>
+    <div>
+      <div class="cartao"><div class="cartao__titulo"><span class="section-icon" data-icon="store"></span><h2>Custos</h2></div><div class="mensagem" id="mensagem-precos" style="display:none;"></div><div id="bloco-custos"></div></div>
+      <div class="cartao split-card"><div class="cartao__titulo"><span class="section-icon" data-icon="users"></span><h2>Dividir o valor</h2><span class="small-badge">opcional</span></div><p class="texto-suave">Escolha a partir de 2 pessoas. Isso não altera as quantidades do churrasco.</p><div class="split-control"><button type="button" id="divisao-menos" aria-label="Diminuir pessoas">−</button><input id="divisao-pessoas" min="2" type="number" value="2"/><button type="button" id="divisao-mais" aria-label="Aumentar pessoas">+</button></div><div class="split-result"><span>Valor por pessoa</span><strong id="divisao-valor">—</strong><small id="divisao-base" class="texto-suave">aguardando preços</small></div></div>
+    </div>
+  </div>
+
+  <div class="cartao shopping-central-card"><div class="cartao__titulo"><span class="section-icon" data-icon="bag"></span><h2>Lista de compras</h2><span class="small-badge" id="lista-progresso-badge">0 / 0</span></div><div class="shopping-totals" id="lista-totais"></div><div id="lista-compras-corpo"></div></div>
+
+  <section class="cartao advanced-hub"><div class="cartao__titulo"><span class="section-icon" data-icon="users"></span><h2>Recursos da sua conta</h2></div><p class="texto-suave" id="advanced-hub-copy">Entre na sua conta para salvar este churrasco e liberar recursos avançados.</p><div class="central-actions">
+    <button class="central-action" id="acao-convidados" type="button"><span data-icon="users"></span><strong>Convidados</strong><small>Crie um link e acompanhe confirmações.</small><b class="resource-lock" id="lock-convidados">Conta</b></button>
+    <button class="central-action" id="acao-onde-comprar" type="button"><span data-icon="store"></span><strong>Onde comprar</strong><small>Mercados próximos, preços e otimização.</small><b class="resource-lock" id="lock-mapa">Conta</b></button>
+    <a class="central-action" id="acao-historico" href="minha-conta.html"><span data-icon="save"></span><strong>Histórico</strong><small>Abra ou repita churrascos anteriores.</small><b class="resource-lock" id="lock-historico">Conta</b></a>
+  </div><div class="invite-panel" id="painel-convite" hidden></div></section>
+
+  <div class="acoes-navegacao"><button class="botao botao--secundario" id="botao-refazer" type="button">Novo planejamento</button><button class="botao botao--primario" id="botao-concluir" type="button">Concluir</button></div>
+</div>
+</main><footer class="app-footer"><span class="footer-brand">churrasplan</span><span>Bom de planejar. Melhor de compartilhar à mesa.</span><span>Feito para bons encontros.</span></footer></div>
+<script src="js/config.js"></script><script src="js/state.js"></script><script src="js/api.js"></script><script src="js/script.js"></script><script src="js/auth-ui.js"></script><script src="js/icons.js"></script><script src="js/resultado.js"></script>
+<script src="js/pwa.js"></script>
+</body></html>

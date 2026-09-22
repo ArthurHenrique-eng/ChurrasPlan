@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width,initial-scale=1" name="viewport"/>
+    <title>
+      Onde comprar — ChurrasPlan
+    </title>
+    <link href="favicon.svg" rel="icon" type="image/svg+xml"/>
+    <link href="css/unified-core.css" rel="stylesheet"/>
+    <link href="css/integracao-v3.css" rel="stylesheet"/>
+    <meta name="theme-color" content="#6f7c59">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="assets/pwa/icon-192.png">
+  <link rel="stylesheet" href="css/production-v63.css">
+</head>
+  <body class="account-page">
+  <a class="skip-link" href="#main">Pular para o conteúdo</a>
+    <main id="main" class="account-shell">
+      <header class="simple-topbar">
+        <a class="home-brand" href="index.html">
+          <img alt="" class="home-logo-icon" src="assets/logo-icon.png"/>
+          <img alt="ChurrasPlan" class="home-wordmark" src="assets/logo-wordmark.png"/>
+        </a>
+        <div style="display:flex;gap:8px;align-items:center">
+          <a class="text-button" href="resultado.html">
+            Voltar à central
+          </a>
+          <div id="auth-nav-slot">
+          </div>
+        </div>
+      </header>
+      <section class="account-hero">
+        <div>
+          <span class="eyebrow">
+            <span>
+            </span>
+            ONDE COMPRAR
+          </span>
+          <h1>
+            Preço, distância e avaliação
+            <br/>
+            <em>
+              no mesmo mapa.
+            </em>
+          </h1>
+          <p>
+            Compare sua cesta e veja uma combinação otimizada entre estabelecimentos cadastrados.
+          </p>
+        </div>
+        <button class="botao botao--primario" id="localizar" type="button">
+          Usar minha localização
+        </button>
+      </section>
+      <div class="mensagem" id="mapa-mensagem" style="display:none">
+      </div>
+      <section class="account-section">
+        <div class="market-toolbar" id="ranking-modos">
+          <button data-modo="preco" type="button">
+            Mais barato
+          </button>
+          <button data-modo="distancia" type="button">
+            Mais perto
+          </button>
+          <button data-modo="avaliacao" type="button">
+            Melhor avaliado
+          </button>
+          <button class="active" data-modo="equilibrio" type="button">
+            Melhor equilíbrio
+          </button>
+        </div>
+        <div class="map-grid">
+          <div aria-label="Mapa de estabelecimentos próximos" class="map-canvas" id="mapa" role="region">
+            <span>
+              Permita sua localização para mostrar estabelecimentos próximos.
+            </span>
+          </div>
+          <div>
+            <h2 style="font-size:16px;margin-bottom:10px">
+              Perto de você
+            </h2>
+            <div class="market-list" id="mercados-proximos">
+              <div class="empty-state">
+                Aguardando localização.
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      <section class="account-section" style="margin-top:18px">
+        <div class="cartao__titulo">
+          <span class="section-icon" data-icon="store">
+          </span>
+          <h2>
+            Comparação da sua lista
+          </h2>
+        </div>
+        <div id="otimizacao-conteudo">
+          <div class="empty-state">
+            A comparação aparecerá depois que a localização for autorizada.
+          </div>
+        </div>
+      </section>
+    </main>
+    <script src="js/config.js">
+    </script>
+    <script src="js/state.js">
+    </script>
+    <script src="js/api.js">
+    </script>
+    <script src="js/script.js">
+    </script>
+    <script src="js/auth-ui.js">
+    </script>
+    <script src="js/icons.js">
+    </script>
+    <script src="js/onde-comprar.js">
+    </script>
+  <script src="js/pwa.js"></script>
+</body>
+</html>

@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Planejamento — ChurrasPlan</title>
+<link href="css/style.css" rel="stylesheet"/>
+<link href="css/planejamento.css" rel="stylesheet"/>
+<link href="favicon.svg" rel="icon" type="image/svg+xml"/>
+<link href="css/unified-core.css" rel="stylesheet"/>
+<link href="css/integracao-v3.css" rel="stylesheet"/>
+  <meta name="theme-color" content="#6f7c59">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="assets/pwa/icon-192.png">
+  <link rel="stylesheet" href="css/production-v63.css">
+</head>
+<body class="app-page">
+<a class="skip-link" href="#main">Ir para o planejamento</a>
+<aside class="sidebar">
+  <a aria-label="ChurrasPlan início" class="brand" href="index.html"><img alt="" class="original-icon" src="assets/logo-icon.png"/><img alt="ChurrasPlan" class="original-wordmark" src="assets/logo-wordmark.png"/></a>
+  <span class="nav-caption">DO ENCONTRO À COMPRA</span>
+  <nav aria-label="Navegação do planejamento">
+    <a class="nav-item" href="index.html"><span data-icon="home"></span>Apresentação</a>
+    <a class="nav-item active" href="planejamento.html"><span data-icon="users"></span>Planejamento<span class="nav-dot"></span></a>
+    <a class="nav-item" href="carnes.html"><span data-icon="beef"></span>Carnes</a>
+    <a class="nav-item" href="bebidas.html"><span data-icon="glass"></span>Bebidas</a>
+    <a class="nav-item" href="extras.html"><span data-icon="utensils"></span>Extras</a>
+    <a class="nav-item" href="resultado.html"><span data-icon="bag"></span>Resultado</a>
+  </nav>
+  <div class="sidebar-note"><span data-icon="sprout"></span><strong>Sua turma.<br/>Seu cardápio.</strong><p>Um planejamento com a identidade do seu churrasco.</p><span class="note-line"></span></div>
+  <div class="sidebar-bottom"><span class="sidebar-save-icon" data-icon="save"></span><div><strong>Rascunho automático</strong><small>Salvo neste navegador</small></div></div>
+</aside>
+<div class="app-shell">
+<header class="topbar"><div class="breadcrumb"><a href="index.html">ChurrasPlan</a> <span>/</span> <strong>Planejamento</strong></div><div class="topbar-actions"><div class="private-badge"><span data-icon="flame"></span>Planejamento em andamento</div><div id="auth-nav-slot"></div></div></header>
+<main class="container pagina-fluxo" id="main">
+<div class="page-intro"><div><div class="eyebrow"><span></span>GENTE REUNIDA. TUDO NA MEDIDA.</div><h1 class="pagina-fluxo__titulo">Vamos planejar seu churrasco</h1><p class="pagina-fluxo__subtitulo">Comece pelo essencial. Os detalhes dos convidados ficam disponíveis sem deixar a tela pesada.</p></div></div>
+<ol class="steps" id="stepper"></ol>
+<div class="mensagem" id="mensagem-erro" style="display:none;"></div>
+<form id="form-planejamento">
+  <div class="cartao">
+    <div class="cartao__titulo"><span class="section-icon" data-icon="gift"></span><h2>Seu encontro</h2></div>
+    <div class="grade-campos grade-campos--3">
+      <div class="campo"><label for="campo-nome">Nome do churrasco <small>(opcional)</small></label><input id="campo-nome" maxlength="150" placeholder="Ex.: Aniversário do Arthur" type="text"/></div>
+      <div class="campo"><label for="campo-data-evento">Data e horário <small>(opcional)</small></label><input id="campo-data-evento" type="datetime-local"/></div>
+      <div class="campo"><label for="campo-duracao">Duração em horas</label><input id="campo-duracao" max="48" min="1" step="0.5" type="number" value="4"/></div>
+    </div>
+  </div>
+
+  <div class="cartao">
+    <div class="cartao__titulo"><span class="section-icon" data-icon="gift"></span><h2>Tipo de evento</h2></div>
+    <div class="opcoes-cartoes" id="opcoes-evento"></div>
+  </div>
+
+  <div class="cartao convidados-card">
+    <div class="cartao__titulo"><span class="section-icon" data-icon="users"></span><h2>Convidados</h2><span class="small-badge">simples primeiro, detalhes depois</span></div>
+    <div class="contador-total contador-total--destaque"><span>Total de convidados</span><strong id="total-convidados">0</strong></div>
+    <div class="grade-campos grade-campos--3">
+      <div class="campo"><label for="campo-adultos">Adultos</label><input id="campo-adultos" min="0" max="500" type="number" value="0"/></div>
+      <div class="campo"><label for="campo-criancas">Crianças</label><input id="campo-criancas" min="0" max="500" type="number" value="0"/></div>
+      <div class="campo"><label for="campo-adultos-alcool">Adultos que consomem álcool</label><input id="campo-adultos-alcool" min="0" max="0" type="number" value="0"/><small class="field-help">Usado apenas quando você incluir bebida alcoólica.</small></div>
+    </div>
+
+    <details class="guest-details" id="detalhes-convidados">
+      <summary><span>Configurações dos convidados</span><small>vegetarianos, veganos, restrições e alergias</small></summary>
+      <div class="guest-details__content">
+        <p class="texto-suave">Essas informações deixam o planejamento mais real. Vegetarianos e veganos são retirados do cálculo de carnes; as demais restrições aparecem como alertas para o organizador.</p>
+        <div class="grade-campos grade-campos--restricoes">
+          <div class="campo"><label for="campo-vegetarianos">Vegetarianos</label><input id="campo-vegetarianos" min="0" max="500" type="number" value="0"/></div>
+          <div class="campo"><label for="campo-veganos">Veganos</label><input id="campo-veganos" min="0" max="500" type="number" value="0"/></div>
+          <div class="campo"><label for="campo-sem-bovina">Não comem carne bovina</label><input id="campo-sem-bovina" min="0" max="500" type="number" value="0"/></div>
+          <div class="campo"><label for="campo-sem-suina">Não comem carne suína</label><input id="campo-sem-suina" min="0" max="500" type="number" value="0"/></div>
+          <div class="campo"><label for="campo-lactose">Intolerância à lactose</label><input id="campo-lactose" min="0" max="500" type="number" value="0"/></div>
+        </div>
+        <div class="grade-campos grade-campos--2 texto-restricoes">
+          <div class="campo"><label for="campo-alergias">Alergias importantes</label><textarea id="campo-alergias" maxlength="2000" rows="3" placeholder="Ex.: amendoim, castanhas..."></textarea></div>
+          <div class="campo"><label for="campo-outras-restricoes">Outras restrições</label><textarea id="campo-outras-restricoes" maxlength="2000" rows="3" placeholder="Ex.: preferência sem glúten..."></textarea></div>
+        </div>
+      </div>
+    </details>
+  </div>
+
+  <div class="cartao budget-card">
+    <div class="cartao__titulo"><span class="section-icon" data-icon="chart"></span><h2>Orçamento</h2><span class="small-badge">opcional</span></div>
+    <div class="budget-layout">
+      <div><p class="budget-title">Quanto você pretende gastar no máximo?</p><p class="texto-suave">No resultado, o ChurrasPlan compara este valor com a estimativa disponível — sem trocar itens automaticamente.</p></div>
+      <label class="money-field" for="campo-orcamento"><span>R$</span><input id="campo-orcamento" min="0" step="0.01" inputmode="decimal" placeholder="800,00" type="number"/></label>
+    </div>
+  </div>
+
+  <div class="cartao">
+    <div class="cartao__titulo"><span class="section-icon" data-icon="sliders"></span><h2>Perfil de consumo</h2></div>
+    <div class="opcoes-cartoes" id="opcoes-perfil"></div>
+    <div id="bloco-personalizado" style="display:none; margin-top: var(--espaco-3);">
+      <p class="texto-suave">Ajuste os coeficientes usados no cálculo. O que não for alterado usa o valor padrão do perfil normal.</p>
+      <div class="grade-campos">
+        <div class="campo"><label for="perso-carne-adulto">Carne por adulto (kg)</label><input id="perso-carne-adulto" min="0" placeholder="0.40" step="0.05" type="number"/></div>
+        <div class="campo"><label for="perso-carne-crianca">Carne por criança (kg)</label><input id="perso-carne-crianca" min="0" placeholder="0.20" step="0.05" type="number"/></div>
+        <div class="campo"><label for="perso-agua">Água por pessoa (L)</label><input id="perso-agua" min="0" placeholder="0.75" step="0.05" type="number"/></div>
+        <div class="campo"><label for="perso-refrigerante">Refrigerante por pessoa (L)</label><input id="perso-refrigerante" min="0" placeholder="0.50" step="0.05" type="number"/></div>
+        <div class="campo"><label for="perso-suco">Suco por pessoa (L)</label><input id="perso-suco" min="0" placeholder="0.30" step="0.05" type="number"/></div>
+        <div class="campo"><label for="perso-cerveja">Cerveja por consumidor/hora (L)</label><input id="perso-cerveja" min="0" placeholder="0.45" step="0.05" type="number"/></div>
+        <div class="campo"><label for="perso-gelo">Gelo por pessoa (kg)</label><input id="perso-gelo" min="0" placeholder="0.50" step="0.1" type="number"/></div>
+        <div class="campo"><label for="perso-carvao">Carvão por kg de carne</label><input id="perso-carvao" min="0" placeholder="0.50" step="0.05" type="number"/></div>
+      </div>
+    </div>
+  </div>
+  <div class="acoes-navegacao"><a class="botao botao--secundario" href="index.html">Voltar ao início</a><button class="botao botao--primario botao--grande" type="submit">Continuar para carnes</button></div>
+</form>
+</main>
+<footer class="app-footer"><span class="footer-brand">churrasplan</span><span>Bom de planejar. Melhor de compartilhar à mesa.</span><span>Feito para bons encontros.</span></footer>
+</div>
+<script src="js/config.js"></script><script src="js/state.js"></script><script src="js/api.js"></script><script src="js/script.js"></script><script src="js/auth-ui.js"></script><script src="js/icons.js"></script><script src="js/planejamento.js"></script>
+<script src="js/pwa.js"></script>
+</body>
+</html>

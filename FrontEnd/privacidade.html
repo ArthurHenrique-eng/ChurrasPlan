@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Política de Privacidade — ChurrasPlan</title>
+  <meta name="description" content="Como o ChurrasPlan trata dados pessoais, localização, conta e informações de planejamento.">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="css/unified-core.css">
+  <link rel="stylesheet" href="css/integracao-v3.css">
+  <link rel="stylesheet" href="css/production-v63.css">
+  <meta name="theme-color" content="#6f7c59">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="assets/pwa/icon-192.png">
+</head>
+<body class="account-page legal-page">
+  <a class="skip-link" href="#main">Pular para o conteúdo</a>
+  <main id="main" class="account-shell legal-shell">
+    <header class="simple-topbar">
+      <a class="home-brand" href="index.html"><img class="home-logo-icon" src="assets/logo-icon.png" alt=""><img class="home-wordmark" src="assets/logo-wordmark.png" alt="ChurrasPlan"></a>
+      <a class="text-button" href="index.html">Voltar ao site</a>
+    </header>
+    <article class="legal-document">
+      <span class="eyebrow"><span></span>PRIVACIDADE E LGPD</span>
+      <h1>Política de Privacidade</h1>
+      <p class="legal-lead">Versão 2026-09-21. Este documento descreve a arquitetura de privacidade prevista para o ChurrasPlan v6.4. Antes do lançamento comercial, razão social, CNPJ, canal oficial do encarregado e fornecedores efetivamente contratados devem ser preenchidos.</p>
+
+      <h2>1. Dados tratados</h2>
+      <p>Sem conta, o planejamento pode permanecer no navegador e ser enviado à API para cálculo. Com conta, tratamos nome, e-mail, senha em formato irreversível, churrascos salvos, respostas de convidados vinculadas aos eventos, listas de compras, preferências e, quando aplicável, dados do estabelecimento parceiro.</p>
+      <p>Localização é solicitada somente quando o usuário aciona recursos de estabelecimentos próximos. O ChurrasPlan não grava coordenadas pessoais nas métricas de parceiros.</p>
+
+      <h2>2. Finalidades</h2>
+      <ul>
+        <li>entregar cálculos, listas, histórico, convites e recursos da conta;</li>
+        <li>proteger a conta contra abuso, fraude e tentativas automatizadas;</li>
+        <li>permitir que parceiros publiquem ofertas e acompanhem métricas agregadas;</li>
+        <li>cumprir obrigações legais e solicitações relacionadas a direitos do titular.</li>
+      </ul>
+
+      <h2>3. Segurança e minimização</h2>
+      <p>Senhas são armazenadas com PBKDF2-HMAC-SHA256 e salt aleatório. Sessões usam segredos opacos em cookies HttpOnly. Identificadores usados para limitação de tentativas são HMACs; IPs não são gravados em texto puro no banco. Tokens de recuperação e verificação são armazenados apenas como hash.</p>
+
+      <h2>4. Convites</h2>
+      <p>Convidados podem responder a um convite sem criar conta. O organizador visualiza as informações fornecidas voluntariamente pelo convidado, como presença, consumo de álcool e restrições alimentares. A chave usada para editar a própria resposta não é exibida ao organizador.</p>
+
+      <h2>5. Serviços externos</h2>
+      <p>SMTP e Google Maps/Places são integrações opcionais. Quando o usuário aciona “Usar minha localização”, o navegador solicita permissão e envia as coordenadas aproximadas à API do ChurrasPlan para localizar estabelecimentos e ordenar resultados por distância. Se a integração Google Places estiver habilitada, essas coordenadas também são usadas pelo servidor em uma consulta de estabelecimentos próximos ao Google Maps Platform.</p>
+      <p>O ChurrasPlan não grava a localização pessoal usada nessa consulta em métricas de parceiros. Dados de estabelecimentos retornados pelo Google são exibidos com identificação de origem e não são persistidos como catálogo próprio, salvo o identificador de lugar quando houver vínculo explícito permitido com um estabelecimento cadastrado. O uso desses serviços também está sujeito aos termos e à política de privacidade do Google.</p>
+
+      <h2>6. Retenção</h2>
+      <p>Sessões e tokens possuem prazo de expiração. Eventos técnicos de segurança têm retenção operacional curta, configurável pelo ambiente. Dados da conta permanecem enquanto a conta estiver ativa ou pelo período necessário ao cumprimento de obrigações legais. Métricas de estabelecimentos são agregáveis e não incluem usuário, churrasco, sessão, IP ou coordenadas.</p>
+
+      <h2>7. Seus direitos</h2>
+      <p>Na área “Minha conta”, o usuário autenticado pode exportar os próprios dados em JSON e excluir a conta. A exclusão remove os churrascos privados associados à conta e desvincula registros empresariais que precisem permanecer por integridade do catálogo.</p>
+
+      <h2>8. Marketing</h2>
+      <p>Comunicações promocionais são opcionais e separadas do aceite necessário dos Termos e desta Política. A preferência pode ser alterada na conta.</p>
+
+      <h2>9. Contato</h2>
+      <p><strong>Antes do lançamento:</strong> preencher aqui o controlador dos dados, endereço de contato e e-mail do encarregado/DPO ou canal equivalente.</p>
+
+      <div class="legal-links"><a href="termos.html">Termos de Uso</a><a href="cookies.html">Política de Cookies</a></div>
+    </article>
+  </main>
+  <script src="js/pwa.js"></script>
+</body>
+</html>
