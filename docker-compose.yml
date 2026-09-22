@@ -2,66 +2,109 @@ services:
   db:
     image: mysql:8.4
     restart: unless-stopped
+
     environment:
       MYSQL_DATABASE: ${MYSQL_DATABASE:-churrasplan}
       MYSQL_USER: ${MYSQL_USER:-churrasplan}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD:-churrasplan_dev}
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root_dev_change_me}
-    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci"]
+
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+
     ports:
       - "${MYSQL_PORT:-3306}:3306"
+
     volumes:
       - churrasplan_mysql:/var/lib/mysql
+
     healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      test:
+        - CMD-SHELL
+        - mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent
       interval: 5s
       timeout: 5s
       retries: 20
       start_period: 10s
 
+
   backend:
     build: ./BackEnd/Python
     restart: unless-stopped
+
     depends_on:
       db:
         condition: service_healthy
+
     environment:
       APP_ENV: development
+
       DB_HOST: db
       DB_PORT: 3306
       DB_USER: ${MYSQL_USER:-churrasplan}
       DB_PASSWORD: ${MYSQL_PASSWORD:-churrasplan_dev}
       DB_NAME: ${MYSQL_DATABASE:-churrasplan}
+
       AUTO_CREATE_SCHEMA: "false"
+
       CORS_ORIGINS: http://localhost:8080,http://127.0.0.1:8080
       PUBLIC_APP_URL: http://localhost:8080
+
       COOKIE_SECURE: "false"
       REQUIRE_EMAIL_VERIFICATION: "false"
+
       SECURITY_PEPPER: ${SECURITY_PEPPER:-development-pepper-change-before-production-123456789}
+
       TRUSTED_HOSTS: localhost,127.0.0.1
       FORCE_HTTPS: "false"
       TRUST_PROXY_HEADERS: "true"
+
       LOAD_DEMO_DATA: ${LOAD_DEMO_DATA:-true}
+
       GOOGLE_PLACES_ENABLED: ${GOOGLE_PLACES_ENABLED:-false}
       GOOGLE_PLACES_API_KEY: ${GOOGLE_PLACES_API_KEY:-}
       GOOGLE_MAPS_JS_API_KEY: ${GOOGLE_MAPS_JS_API_KEY:-}
       GOOGLE_MAP_ID: ${GOOGLE_MAP_ID:-}
-    command: ["sh", "-c", "python scripts/wait_for_db.py && alembic upgrade head && if [ "$$LOAD_DEMO_DATA" = "true" ]; then python scripts/seed_demo.py; fi && uvicorn main:app --host 0.0.0.0 --port 8000 --proxy-headers --forwarded-allow-ips='*'"]
+
+    command:
+      - /bin/sh
+      - -c
+      - |
+        python scripts/wait_for_db.py &&
+        alembic upgrade head &&
+        if [ "$$LOAD_DEMO_DATA" = "true" ]; then
+          python scripts/seed_demo.py;
+        fi &&
+        uvicorn main:app \
+          --host 0.0.0.0 \
+          --port 8000 \
+          --proxy-headers \
+          --forwarded-allow-ips='*'
+
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health/ready', timeout=3)"]
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health/ready', timeout=3)"
       interval: 10s
       timeout: 5s
       retries: 10
       start_period: 20s
 
+
   frontend:
     build: ./FrontEnd
     restart: unless-stopped
+
     depends_on:
       backend:
         condition: service_healthy
+
     ports:
       - "${APP_PORT:-8080}:80"
+
 
 volumes:
   churrasplan_mysql:
