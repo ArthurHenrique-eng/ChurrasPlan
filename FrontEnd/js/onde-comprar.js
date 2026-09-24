@@ -48,9 +48,31 @@ function inicializarMapa() {
 
     alvo.innerHTML = "";
 
+    const tilesUrl =
+        `https://maps.geoapify.com/v1/tile/osm-carto/{z}/{x}/{y}.png?apiKey=${encodeURIComponent(geoapifyMapKey)}`;
+
     mapa = new maplibregl.Map({
         container: alvo,
-        style: `https://maps.geoapify.com/v1/styles/osm-bright/style.json?apiKey=${encodeURIComponent(geoapifyMapKey)}`,
+        style: {
+            version: 8,
+            sources: {
+                geoapify: {
+                    type: "raster",
+                    tiles: [tilesUrl],
+                    tileSize: 256,
+                    maxzoom: 20,
+                    attribution:
+                        'Powered by <a href="https://www.geoapify.com/" target="_blank" rel="noopener">Geoapify</a> | © OpenStreetMap contributors',
+                },
+            },
+            layers: [
+                {
+                    id: "geoapify-base",
+                    type: "raster",
+                    source: "geoapify",
+                },
+            ],
+        },
         center: [posicaoAtual.lng, posicaoAtual.lat],
         zoom: 13,
         minZoom: 2,
@@ -72,11 +94,11 @@ function inicializarMapa() {
 
     mapa.on("error", (evento) => {
         const mensagem = String(evento?.error?.message || "");
-        if (erroMapaMostrado || !/(401|403|api.?key|style)/i.test(mensagem)) return;
+        if (erroMapaMostrado || !/(401|403|api.?key|tile|image)/i.test(mensagem)) return;
         erroMapaMostrado = true;
         mostrarMensagem(
             document.getElementById("mapa-mensagem"),
-            "O Geoapify recusou o estilo do mapa. Confira a GEOAPIFY_MAP_API_KEY e as restrições da chave.",
+            "O Geoapify recusou alguns blocos do mapa. Confira a GEOAPIFY_MAP_API_KEY e as restrições de origem/referrer da chave.",
             "erro",
         );
     });
