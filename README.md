@@ -80,10 +80,10 @@ ChurrasPlan/
 
 O Alembic é a fonte de verdade da evolução do banco.
 
-Head da v6.3:
+Head atual:
 
 ```text
-20260918_0005
+20260922_0006
 ```
 
 Cadeia:
@@ -94,6 +94,7 @@ Cadeia:
 20260918_0003  alinhamentos de schema
 20260918_0004  métricas agregadas de estabelecimentos
 20260918_0005  LGPD, rate limiting e auditoria admin
+20260922_0006  restaura defaults de timestamps em usuarios
 ```
 
 `BackEnd/Python/sql/schema.sql` representa uma **instalação nova** no head atual. Para banco existente, use migrations.
@@ -354,7 +355,7 @@ Preços demonstrativos do seed **não são preços reais de mercado**.
 - `docs/LGPD_SEGURANCA_V6.3.md`
 - `docs/E2E_MYSQL_V6.3.md`
 - `docs/GEOAPIFY_ADMIN_V6.5.md`
-- `docs/RELEASE_NOTES_V6.4.md`
+- `docs/RELEASE_NOTES_V6.5.md`
 - `docs/VALIDACAO_V6.4.md`
 
 Os documentos antigos permanecem no repositório como histórico das versões anteriores.
