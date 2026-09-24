@@ -50,7 +50,6 @@ services:
       SMTP_TLS: ${SMTP_TLS:-true}
       GEOAPIFY_ENABLED: ${GEOAPIFY_ENABLED:-false}
       GEOAPIFY_SERVER_API_KEY: ${GEOAPIFY_SERVER_API_KEY:-}
-      GEOAPIFY_MAP_API_KEY: ${GEOAPIFY_MAP_API_KEY:-}
       TERMS_VERSION: ${TERMS_VERSION:-2026-09-18}
       PRIVACY_VERSION: ${PRIVACY_VERSION:-2026-09-21}
     command: ["sh", "-c", "python scripts/wait_for_db.py && alembic upgrade head && uvicorn main:app --host 0.0.0.0 --port 8000 --proxy-headers --forwarded-allow-ips='*'"]
