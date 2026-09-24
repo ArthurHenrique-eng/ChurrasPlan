@@ -1,9 +1,10 @@
 let posicaoAtual = null;
 let modoAtual = "equilibrio";
 let churrascoMapaId = null;
-let mapaGoogle = null;
-let googleMapId = null;
-let marcadores = [];
+let mapa = null;
+let camadaMarcadores = null;
+let geoapifyMapKey = null;
+let timerAutocomplete = null;
 const visualizacoesRegistradas = new Set();
 
 function estrelas(e) {
@@ -13,119 +14,74 @@ function estrelas(e) {
 }
 
 function tipoLoja(tipo) {
-    return String(tipo || "estabelecimento").replace(/_/g, " ");
+    return String(tipo || "estabelecimento")
+        .replace(/^commercial\./, "")
+        .replace(/\./g, " ")
+        .replace(/_/g, " ");
 }
 
-function carregarGoogleMaps(chave, mapId = null) {
-    if (!chave || window.google?.maps) {
-        return Promise.resolve(Boolean(window.google?.maps));
+function destruirMapa() {
+    if (mapa) {
+        mapa.remove();
+        mapa = null;
     }
-
-    return new Promise((resolve) => {
-        const cb = `churrasMapReady_${Date.now()}`;
-        let finalizado = false;
-        const concluir = (ok) => {
-            if (finalizado) return;
-            finalizado = true;
-            delete window[cb];
-            resolve(ok);
-        };
-
-        window[cb] = () => concluir(true);
-        const s = document.createElement("script");
-        const params = new URLSearchParams({
-            key: chave,
-            callback: cb,
-            v: "weekly",
-            libraries: "marker",
-            language: "pt-BR",
-            region: "BR",
-            loading: "async",
-            auth_referrer_policy: "origin",
-        });
-        if (mapId) params.set("map_ids", mapId);
-        s.src = `https://maps.googleapis.com/maps/api/js?${params.toString()}`;
-        s.async = true;
-        s.defer = true;
-        s.onerror = () => concluir(false);
-        document.head.appendChild(s);
-    });
-}
-
-function removerMarcadores() {
-    marcadores.forEach((marcador) => {
-        if ("map" in marcador) marcador.map = null;
-        else if (marcador.setMap) marcador.setMap(null);
-    });
-    marcadores = [];
-}
-
-function criarMarcador(position, title) {
-    if (googleMapId && google.maps.marker?.AdvancedMarkerElement) {
-        const marcador = new google.maps.marker.AdvancedMarkerElement({
-            map: mapaGoogle,
-            position,
-            title,
-        });
-        marcadores.push(marcador);
-        return marcador;
-    }
-
-    const marcador = new google.maps.Marker({
-        map: mapaGoogle,
-        position,
-        title,
-    });
-    marcadores.push(marcador);
-    return marcador;
+    camadaMarcadores = null;
 }
 
 function renderMapa(estabelecimentos) {
-    if (!window.google?.maps || !posicaoAtual) return;
+    if (!window.L || !posicaoAtual || !geoapifyMapKey) return;
 
     const alvo = document.getElementById("mapa");
+    destruirMapa();
     alvo.innerHTML = "";
 
-    const opcoes = {
-        center: posicaoAtual,
-        zoom: 13,
-        mapTypeControl: false,
-        streetViewControl: false,
-        fullscreenControl: true,
-        clickableIcons: true,
-    };
-    if (googleMapId) opcoes.mapId = googleMapId;
+    mapa = L.map(alvo, { scrollWheelZoom: false }).setView(
+        [posicaoAtual.lat, posicaoAtual.lng],
+        13,
+    );
 
-    mapaGoogle = new google.maps.Map(alvo, opcoes);
-    removerMarcadores();
+    const normal = "https://maps.geoapify.com/v1/tile/osm-bright/{z}/{x}/{y}.png?apiKey={apiKey}";
+    const retina = "https://maps.geoapify.com/v1/tile/osm-bright/{z}/{x}/{y}@2x.png?apiKey={apiKey}";
+    L.tileLayer(L.Browser.retina ? retina : normal, {
+        apiKey: geoapifyMapKey,
+        maxZoom: 20,
+        attribution: 'Powered by <a href="https://www.geoapify.com/" target="_blank" rel="noopener">Geoapify</a> | <a href="https://openmaptiles.org/" target="_blank" rel="noopener">© OpenMapTiles</a> <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap</a> contributors',
+    }).addTo(mapa);
 
-    criarMarcador(posicaoAtual, "Sua localização aproximada");
-    const bounds = new google.maps.LatLngBounds();
-    bounds.extend(posicaoAtual);
+    camadaMarcadores = L.layerGroup().addTo(mapa);
+    const bounds = L.latLngBounds();
+
+    const voce = L.circleMarker(
+        [posicaoAtual.lat, posicaoAtual.lng],
+        { radius: 8, weight: 3, fillOpacity: 0.8 },
+    ).bindPopup("<strong>Sua localização aproximada</strong>");
+    voce.addTo(camadaMarcadores);
+    bounds.extend([posicaoAtual.lat, posicaoAtual.lng]);
 
     estabelecimentos.forEach((e) => {
-        const position = { lat: e.latitude, lng: e.longitude };
-        bounds.extend(position);
-        const marcador = criarMarcador(position, e.nome);
-        const fonte = e.fonte === "google" ? "<br><small>Dados: Google Maps</small>" : "";
-        const info = new google.maps.InfoWindow({
-            content: `<strong>${escaparHTML(e.nome)}</strong><br><small>${escaparHTML(e.endereco || "")}</small><br><small>${escaparHTML(estrelas(e))}</small>${fonte}`,
-        });
-        marcador.addListener("click", () => info.open({ map: mapaGoogle, anchor: marcador }));
+        const fonte = e.fonte === "geoapify"
+            ? "<br><small>Dados: Geoapify / OpenStreetMap</small>"
+            : "";
+        const marker = L.circleMarker(
+            [e.latitude, e.longitude],
+            { radius: 7, weight: 2, fillOpacity: 0.7 },
+        );
+        marker.bindPopup(
+            `<strong>${escaparHTML(e.nome)}</strong><br><small>${escaparHTML(e.endereco || "")}</small><br><small>${escaparHTML(estrelas(e))}</small>${fonte}`,
+        );
+        marker.addTo(camadaMarcadores);
+        bounds.extend([e.latitude, e.longitude]);
     });
 
-    if (estabelecimentos.length) {
-        mapaGoogle.fitBounds(bounds, 60);
-        google.maps.event.addListenerOnce(mapaGoogle, "idle", () => {
-            if (mapaGoogle.getZoom() > 16) mapaGoogle.setZoom(16);
-        });
+    if (bounds.isValid()) {
+        mapa.fitBounds(bounds, { padding: [32, 32], maxZoom: 16 });
     }
 }
 
 function urlRota(e) {
-    if (e.google_maps_uri) return e.google_maps_uri;
-    if (e.latitude == null || e.longitude == null) return null;
-    return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${e.latitude},${e.longitude}`)}`;
+    if (!posicaoAtual || e.latitude == null || e.longitude == null) return null;
+    const route = `${posicaoAtual.lat},${posicaoAtual.lng};${e.latitude},${e.longitude}`;
+    return `https://www.openstreetmap.org/directions?engine=fossgis_osrm_car&route=${encodeURIComponent(route)}`;
 }
 
 async function registrarVisualizacoes(lista) {
@@ -135,7 +91,12 @@ async function registrarVisualizacoes(lista) {
     if (!ids.length) return;
     ids.forEach((id) => visualizacoesRegistradas.add(id));
     try {
-        await ChurrasPlanAPI.registrarInteracoesEstabelecimentos("visualizacao", ids, churrascoMapaId, "onde_comprar");
+        await ChurrasPlanAPI.registrarInteracoesEstabelecimentos(
+            "visualizacao",
+            ids,
+            churrascoMapaId,
+            "onde_comprar",
+        );
     } catch {
         // Métricas nunca bloqueiam a experiência.
     }
@@ -147,9 +108,11 @@ function renderProximos(lista) {
         ? lista.map((e) => {
             const rota = urlRota(e);
             const id = e.estabelecimento_id ? ` data-estabelecimento-id="${e.estabelecimento_id}"` : "";
-            const google = e.fonte === "google";
-            const classeFonte = google ? " market-card--google" : "";
-            const atribuicao = google ? '<span class="market-card__source">Google Maps</span>' : "";
+            const externo = e.fonte === "geoapify";
+            const classeFonte = externo ? " market-card--external" : "";
+            const atribuicao = externo
+                ? '<span class="market-card__source">Geoapify</span>'
+                : "";
             return `<article class="market-card${classeFonte}"${id}>
                 <div class="market-card__heading"><h3>${escaparHTML(e.nome)}</h3>${atribuicao}</div>
                 <p>${escaparHTML(e.endereco || tipoLoja(e.tipo))}</p>
@@ -165,7 +128,14 @@ function renderProximos(lista) {
 
     el.querySelectorAll(".js-rota[data-estabelecimento-id]").forEach((link) => link.addEventListener("click", () => {
         const id = Number(link.dataset.estabelecimentoId);
-        if (id) ChurrasPlanAPI.registrarInteracoesEstabelecimentos("clique", [id], churrascoMapaId, "rota").catch(() => {});
+        if (id) {
+            ChurrasPlanAPI.registrarInteracoesEstabelecimentos(
+                "clique",
+                [id],
+                churrascoMapaId,
+                "rota",
+            ).catch(() => {});
+        }
     }));
     registrarVisualizacoes(lista);
 }
@@ -174,7 +144,9 @@ function renderOtimizacao(dados) {
     const el = document.getElementById("otimizacao-conteudo");
     const cestas = dados.cestas || [];
     const otimizada = dados.compra_otimizada || {};
-    let html = dados.aviso ? `<p class="mensagem mensagem--aviso">${escaparHTML(dados.aviso)}</p>` : "";
+    let html = dados.aviso
+        ? `<p class="mensagem mensagem--aviso">${escaparHTML(dados.aviso)}</p>`
+        : "";
 
     if (otimizada.total != null) {
         html += `<div class="optimized-box">
@@ -203,8 +175,17 @@ async function atualizarTudo() {
     mostrarMensagem(msg, "Atualizando estabelecimentos e preços...", "aviso");
     try {
         const [proximos, otim] = await Promise.all([
-            ChurrasPlanAPI.estabelecimentosProximos(posicaoAtual.lat, posicaoAtual.lng, 15),
-            ChurrasPlanAPI.otimizarCompra(churrascoMapaId, modoAtual, posicaoAtual.lat, posicaoAtual.lng),
+            ChurrasPlanAPI.estabelecimentosProximos(
+                posicaoAtual.lat,
+                posicaoAtual.lng,
+                15,
+            ),
+            ChurrasPlanAPI.otimizarCompra(
+                churrascoMapaId,
+                modoAtual,
+                posicaoAtual.lat,
+                posicaoAtual.lng,
+            ),
         ]);
         renderProximos(proximos);
         renderMapa(proximos);
@@ -215,22 +196,62 @@ async function atualizarTudo() {
     }
 }
 
-async function solicitarLocalizacao() {
+function usarPosicao(latitude, longitude, rotulo = null) {
+    posicaoAtual = { lat: Number(latitude), lng: Number(longitude) };
+    if (rotulo) {
+        document.getElementById("endereco-busca").value = rotulo;
+    }
+    document.getElementById("endereco-sugestoes").innerHTML = "";
+    return atualizarTudo();
+}
+
+async function buscarAutocomplete() {
+    const input = document.getElementById("endereco-busca");
+    const lista = document.getElementById("endereco-sugestoes");
+    const texto = input.value.trim();
+    if (texto.length < 3) {
+        lista.innerHTML = "";
+        return;
+    }
+
+    try {
+        const resultados = await ChurrasPlanAPI.autocompleteEndereco(
+            texto,
+            posicaoAtual?.lat ?? null,
+            posicaoAtual?.lng ?? null,
+            6,
+        );
+        lista.innerHTML = resultados.length
+            ? resultados.map((item, indice) => `<button type="button" data-endereco-indice="${indice}">${escaparHTML(item.label)}</button>`).join("")
+            : '<span class="location-search__empty">Nenhum endereço encontrado.</span>';
+        lista.querySelectorAll("[data-endereco-indice]").forEach((botao) => {
+            botao.addEventListener("click", () => {
+                const item = resultados[Number(botao.dataset.enderecoIndice)];
+                usarPosicao(item.latitude, item.longitude, item.label);
+            });
+        });
+    } catch (erro) {
+        lista.innerHTML = `<span class="location-search__empty">${escaparHTML(erro.message)}</span>`;
+    }
+}
+
+function solicitarLocalizacao() {
     if (!navigator.geolocation) {
-        mostrarMensagem(document.getElementById("mapa-mensagem"), "Seu navegador não oferece geolocalização.", "erro");
+        mostrarMensagem(
+            document.getElementById("mapa-mensagem"),
+            "Seu navegador não oferece geolocalização. Digite um endereço.",
+            "erro",
+        );
         return;
     }
     navigator.geolocation.getCurrentPosition(
-        async (p) => {
-            posicaoAtual = { lat: p.coords.latitude, lng: p.coords.longitude };
-            await atualizarTudo();
-        },
+        (p) => usarPosicao(p.coords.latitude, p.coords.longitude),
         (erro) => mostrarMensagem(
             document.getElementById("mapa-mensagem"),
             erro.code === 1
-                ? "A localização foi negada. Você pode habilitá-la nas permissões do navegador."
-                : "Não foi possível obter sua localização.",
-            "erro",
+                ? "A localização foi negada. Digite um endereço ou habilite a permissão do navegador."
+                : "Não foi possível obter sua localização. Digite um endereço.",
+            "aviso",
         ),
         { enableHighAccuracy: false, timeout: 10000, maximumAge: 120000 },
     );
@@ -247,30 +268,41 @@ document.addEventListener("DOMContentLoaded", async () => {
     const estado = EstadoChurrasco.obter();
     churrascoMapaId = queryId || Number(estado.churrasco_id);
     if (!churrascoMapaId) {
-        mostrarMensagem(document.getElementById("mapa-mensagem"), "Abra a Central de um churrasco antes de consultar onde comprar.", "erro");
+        mostrarMensagem(
+            document.getElementById("mapa-mensagem"),
+            "Abra a Central de um churrasco antes de consultar onde comprar.",
+            "erro",
+        );
         document.getElementById("localizar").disabled = true;
+        document.getElementById("endereco-busca").disabled = true;
         return;
     }
 
     try {
         await ChurrasPlanAuth.vincularPlanejamentoAtual();
         const cfg = await ChurrasPlanAPI.configOndeComprar();
-        googleMapId = cfg.google_map_id || null;
-        if (cfg.google_maps_disponivel) {
-            const ok = await carregarGoogleMaps(cfg.google_maps_js_api_key, googleMapId);
-            if (!ok) {
-                mostrarMensagem(document.getElementById("mapa-mensagem"), "O mapa visual não carregou, mas a comparação por lista continua disponível.", "aviso");
-            } else if (!cfg.google_places_disponivel) {
-                mostrarMensagem(document.getElementById("mapa-mensagem"), "Google Maps está ativo. A busca externa de mercados pelo Places ainda não foi habilitada; serão usados os estabelecimentos do ChurrasPlan.", "aviso");
-            }
-        } else {
-            document.getElementById("mapa").innerHTML = "<span>Google Maps ainda não foi configurado. A lista e a otimização continuam disponíveis com os estabelecimentos cadastrados.</span>";
+        geoapifyMapKey = cfg.geoapify_map_api_key || null;
+
+        if (!cfg.geoapify_map_disponivel) {
+            document.getElementById("mapa").innerHTML =
+                "<span>Geoapify Map Tiles ainda não foi configurado. A lista e a otimização continuam disponíveis.</span>";
+        } else if (!cfg.geoapify_places_disponivel) {
+            mostrarMensagem(
+                document.getElementById("mapa-mensagem"),
+                "O mapa está ativo, mas a busca externa de estabelecimentos Geoapify ainda não foi habilitada.",
+                "aviso",
+            );
         }
     } catch (erro) {
         mostrarMensagem(document.getElementById("mapa-mensagem"), erro.message, "erro");
     }
 
     document.getElementById("localizar").onclick = solicitarLocalizacao;
+    document.getElementById("endereco-busca").addEventListener("input", () => {
+        window.clearTimeout(timerAutocomplete);
+        timerAutocomplete = window.setTimeout(buscarAutocomplete, 280);
+    });
+
     document.querySelectorAll("#ranking-modos [data-modo]").forEach((b) => {
         b.onclick = async () => {
             document.querySelectorAll("#ranking-modos [data-modo]").forEach((x) => x.classList.remove("active"));
