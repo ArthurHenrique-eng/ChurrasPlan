@@ -2,9 +2,11 @@ let posicaoAtual = null;
 let modoAtual = "equilibrio";
 let churrascoMapaId = null;
 let mapa = null;
-let camadaMarcadores = null;
 let geoapifyMapKey = null;
 let timerAutocomplete = null;
+let marcadoresMapa = [];
+let reencaixarMapa = true;
+let erroMapaMostrado = false;
 const visualizacoesRegistradas = new Set();
 
 function estrelas(e) {
@@ -20,103 +22,123 @@ function tipoLoja(tipo) {
         .replace(/_/g, " ");
 }
 
-function destruirMapa() {
-    if (mapa) {
-        mapa.remove();
-        mapa = null;
-    }
-    camadaMarcadores = null;
+function limparMarcadoresMapa() {
+    marcadoresMapa.forEach((marcador) => marcador.remove());
+    marcadoresMapa = [];
 }
 
-function renderMapa(estabelecimentos) {
+function criarPopupMapa(html) {
+    return new maplibregl.Popup({
+        offset: 18,
+        closeButton: false,
+        maxWidth: "280px",
+    }).setHTML(html);
+}
+
+function inicializarMapa() {
     const alvo = document.getElementById("mapa");
 
-    if (!window.L) {
-        alvo.innerHTML = "<span>Não foi possível carregar a biblioteca do mapa (Leaflet). Recarregue a página com Ctrl+F5.</span>";
-        return;
+    if (!window.maplibregl) {
+        alvo.innerHTML =
+            "<span>Não foi possível carregar a biblioteca do mapa (MapLibre). Recarregue a página com Ctrl+F5.</span>";
+        return false;
     }
-    if (!posicaoAtual || !geoapifyMapKey) return;
-    destruirMapa();
+    if (!posicaoAtual || !geoapifyMapKey) return false;
+    if (mapa) return true;
+
     alvo.innerHTML = "";
 
-    mapa = L.map(alvo, { scrollWheelZoom: false }).setView(
-        [posicaoAtual.lat, posicaoAtual.lng],
-        13,
-    );
-
-    const normal = "https://maps.geoapify.com/v1/tile/osm-bright/{z}/{x}/{y}.png?apiKey={apiKey}";
-    const retina = "https://maps.geoapify.com/v1/tile/osm-bright/{z}/{x}/{y}@2x.png?apiKey={apiKey}";
-    const tiles = L.tileLayer(L.Browser.retina ? retina : normal, {
-        apiKey: geoapifyMapKey,
+    mapa = new maplibregl.Map({
+        container: alvo,
+        style: `https://maps.geoapify.com/v1/styles/osm-bright/style.json?apiKey=${encodeURIComponent(geoapifyMapKey)}`,
+        center: [posicaoAtual.lng, posicaoAtual.lat],
+        zoom: 13,
+        minZoom: 2,
         maxZoom: 20,
-        keepBuffer: 0,
-        updateWhenIdle: true,
-        updateWhenZooming: false,
-        attribution: 'Powered by <a href="https://www.geoapify.com/" target="_blank" rel="noopener">Geoapify</a> | <a href="https://openmaptiles.org/" target="_blank" rel="noopener">© OpenMapTiles</a> <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap</a> contributors',
+        attributionControl: true,
     });
 
-    let erroTilesMostrado = false;
-    tiles.on("tileerror", (evento) => {
-        const tile = evento.tile;
-        const tentativa = Number(tile?.dataset?.geoapifyRetry || 0);
+    mapa.addControl(
+        new maplibregl.NavigationControl({
+            showCompass: false,
+            visualizePitch: false,
+        }),
+        "top-left",
+    );
 
-        if (tile && tentativa < 2) {
-            tile.dataset.geoapifyRetry = String(tentativa + 1);
-            window.setTimeout(() => {
-                try {
-                    const url = new URL(tile.src);
-                    url.searchParams.set("_retry", String(Date.now()));
-                    tile.src = url.toString();
-                } catch {
-                    // Se a URL não puder ser reconstruída, o Leaflet mantém o erro original.
-                }
-            }, 700 * (tentativa + 1));
-            return;
-        }
+    mapa.on("load", () => {
+        mapa.resize();
+    });
 
-        if (erroTilesMostrado) return;
-        erroTilesMostrado = true;
+    mapa.on("error", (evento) => {
+        const mensagem = String(evento?.error?.message || "");
+        if (erroMapaMostrado || !/(401|403|api.?key|style)/i.test(mensagem)) return;
+        erroMapaMostrado = true;
         mostrarMensagem(
             document.getElementById("mapa-mensagem"),
-            "Alguns blocos do mapa não puderam ser carregados pela Geoapify. Aguarde alguns segundos ou recarregue a página.",
-            "aviso",
+            "O Geoapify recusou o estilo do mapa. Confira a GEOAPIFY_MAP_API_KEY e as restrições da chave.",
+            "erro",
         );
     });
 
-    camadaMarcadores = L.layerGroup().addTo(mapa);
-    const bounds = L.latLngBounds();
+    return true;
+}
 
-    const voce = L.circleMarker(
-        [posicaoAtual.lat, posicaoAtual.lng],
-        { radius: 8, weight: 3, fillOpacity: 0.8 },
-    ).bindPopup("<strong>Sua localização aproximada</strong>");
-    voce.addTo(camadaMarcadores);
-    bounds.extend([posicaoAtual.lat, posicaoAtual.lng]);
+function renderMapa(estabelecimentos) {
+    if (!inicializarMapa()) return;
+
+    limparMarcadoresMapa();
+
+    const voce = new maplibregl.Marker({
+        color: "#2f80ed",
+        scale: 0.82,
+    })
+        .setLngLat([posicaoAtual.lng, posicaoAtual.lat])
+        .setPopup(
+            criarPopupMapa("<strong>Sua localização aproximada</strong>"),
+        )
+        .addTo(mapa);
+    marcadoresMapa.push(voce);
+
+    const bounds = new maplibregl.LngLatBounds();
+    bounds.extend([posicaoAtual.lng, posicaoAtual.lat]);
 
     estabelecimentos.forEach((e) => {
         const fonte = e.fonte === "geoapify"
             ? "<br><small>Dados: Geoapify / OpenStreetMap</small>"
             : "";
-        const marker = L.circleMarker(
-            [e.latitude, e.longitude],
-            { radius: 7, weight: 2, fillOpacity: 0.7 },
-        );
-        marker.bindPopup(
+
+        const popup = criarPopupMapa(
             `<strong>${escaparHTML(e.nome)}</strong><br><small>${escaparHTML(e.endereco || "")}</small><br><small>${escaparHTML(estrelas(e))}</small>${fonte}`,
         );
-        marker.addTo(camadaMarcadores);
-        bounds.extend([e.latitude, e.longitude]);
+
+        const marcador = new maplibregl.Marker({
+            color: e.fonte === "geoapify" ? "#647050" : "#a84027",
+            scale: 0.72,
+        })
+            .setLngLat([e.longitude, e.latitude])
+            .setPopup(popup)
+            .addTo(mapa);
+
+        marcadoresMapa.push(marcador);
+        bounds.extend([e.longitude, e.latitude]);
     });
 
-    if (bounds.isValid()) {
-        mapa.fitBounds(bounds, { padding: [32, 32], maxZoom: 16 });
+    if (reencaixarMapa && !bounds.isEmpty()) {
+        mapa.fitBounds(bounds, {
+            padding: {
+                top: 55,
+                right: 55,
+                bottom: 55,
+                left: 55,
+            },
+            maxZoom: 15,
+            duration: 0,
+        });
+        reencaixarMapa = false;
     }
 
-    // Adiciona os tiles apenas depois de definir a viewport final. Isso evita
-    // duas rajadas de requisições (setView inicial + fitBounds) no primeiro carregamento.
-    tiles.addTo(mapa);
-
-    window.setTimeout(() => mapa?.invalidateSize(), 0);
+    window.setTimeout(() => mapa?.resize(), 0);
 }
 
 function urlRota(e) {
@@ -130,7 +152,9 @@ async function registrarVisualizacoes(lista) {
         .filter((e) => e.estabelecimento_id && !visualizacoesRegistradas.has(e.estabelecimento_id))
         .map((e) => e.estabelecimento_id);
     if (!ids.length) return;
+
     ids.forEach((id) => visualizacoesRegistradas.add(id));
+
     try {
         await ChurrasPlanAPI.registrarInteracoesEstabelecimentos(
             "visualizacao",
@@ -148,12 +172,15 @@ function renderProximos(lista) {
     el.innerHTML = lista.length
         ? lista.map((e) => {
             const rota = urlRota(e);
-            const id = e.estabelecimento_id ? ` data-estabelecimento-id="${e.estabelecimento_id}"` : "";
+            const id = e.estabelecimento_id
+                ? ` data-estabelecimento-id="${e.estabelecimento_id}"`
+                : "";
             const externo = e.fonte === "geoapify";
             const classeFonte = externo ? " market-card--external" : "";
             const atribuicao = externo
                 ? '<span class="market-card__source">Geoapify</span>'
                 : "";
+
             return `<article class="market-card${classeFonte}"${id}>
                 <div class="market-card__heading"><h3>${escaparHTML(e.nome)}</h3>${atribuicao}</div>
                 <p>${escaparHTML(e.endereco || tipoLoja(e.tipo))}</p>
@@ -167,17 +194,20 @@ function renderProximos(lista) {
         }).join("")
         : '<div class="empty-state">Nenhum estabelecimento encontrado nesse raio.</div>';
 
-    el.querySelectorAll(".js-rota[data-estabelecimento-id]").forEach((link) => link.addEventListener("click", () => {
-        const id = Number(link.dataset.estabelecimentoId);
-        if (id) {
-            ChurrasPlanAPI.registrarInteracoesEstabelecimentos(
-                "clique",
-                [id],
-                churrascoMapaId,
-                "rota",
-            ).catch(() => {});
-        }
-    }));
+    el.querySelectorAll(".js-rota[data-estabelecimento-id]").forEach((link) => {
+        link.addEventListener("click", () => {
+            const id = Number(link.dataset.estabelecimentoId);
+            if (id) {
+                ChurrasPlanAPI.registrarInteracoesEstabelecimentos(
+                    "clique",
+                    [id],
+                    churrascoMapaId,
+                    "rota",
+                ).catch(() => {});
+            }
+        });
+    });
+
     registrarVisualizacoes(lista);
 }
 
@@ -207,13 +237,16 @@ function renderOtimizacao(dados) {
             <div class="basket-items">${(c.itens || []).slice(0, 8).map((i) => `${escaparHTML(i.descricao)} · ${formatarMoeda(i.subtotal)}`).join("<br>")}</div>
         </article>`).join("")
         : '<div class="empty-state">Ainda não existem ofertas verificadas suficientes para comparar esta lista.</div>'}</div>`;
+
     el.innerHTML = html;
 }
 
 async function atualizarTudo() {
     if (!posicaoAtual || !churrascoMapaId) return;
+
     const msg = document.getElementById("mapa-mensagem");
     mostrarMensagem(msg, "Atualizando estabelecimentos e preços...", "aviso");
+
     try {
         const [proximos, otim] = await Promise.all([
             ChurrasPlanAPI.estabelecimentosProximos(
@@ -228,6 +261,7 @@ async function atualizarTudo() {
                 posicaoAtual.lng,
             ),
         ]);
+
         renderProximos(proximos);
         renderMapa(proximos);
         renderOtimizacao(otim);
@@ -238,10 +272,16 @@ async function atualizarTudo() {
 }
 
 function usarPosicao(latitude, longitude, rotulo = null) {
-    posicaoAtual = { lat: Number(latitude), lng: Number(longitude) };
+    posicaoAtual = {
+        lat: Number(latitude),
+        lng: Number(longitude),
+    };
+    reencaixarMapa = true;
+
     if (rotulo) {
         document.getElementById("endereco-busca").value = rotulo;
     }
+
     document.getElementById("endereco-sugestoes").innerHTML = "";
     return atualizarTudo();
 }
@@ -250,6 +290,7 @@ async function buscarAutocomplete() {
     const input = document.getElementById("endereco-busca");
     const lista = document.getElementById("endereco-sugestoes");
     const texto = input.value.trim();
+
     if (texto.length < 3) {
         lista.innerHTML = "";
         return;
@@ -262,9 +303,14 @@ async function buscarAutocomplete() {
             posicaoAtual?.lng ?? null,
             6,
         );
+
         lista.innerHTML = resultados.length
-            ? resultados.map((item, indice) => `<button type="button" data-endereco-indice="${indice}">${escaparHTML(item.label)}</button>`).join("")
+            ? resultados.map(
+                (item, indice) =>
+                    `<button type="button" data-endereco-indice="${indice}">${escaparHTML(item.label)}</button>`,
+            ).join("")
             : '<span class="location-search__empty">Nenhum endereço encontrado.</span>';
+
         lista.querySelectorAll("[data-endereco-indice]").forEach((botao) => {
             botao.addEventListener("click", () => {
                 const item = resultados[Number(botao.dataset.enderecoIndice)];
@@ -272,7 +318,8 @@ async function buscarAutocomplete() {
             });
         });
     } catch (erro) {
-        lista.innerHTML = `<span class="location-search__empty">${escaparHTML(erro.message)}</span>`;
+        lista.innerHTML =
+            `<span class="location-search__empty">${escaparHTML(erro.message)}</span>`;
     }
 }
 
@@ -285,6 +332,7 @@ function solicitarLocalizacao() {
         );
         return;
     }
+
     navigator.geolocation.getCurrentPosition(
         (p) => usarPosicao(p.coords.latitude, p.coords.longitude),
         (erro) => mostrarMensagem(
@@ -294,20 +342,31 @@ function solicitarLocalizacao() {
                 : "Não foi possível obter sua localização. Digite um endereço.",
             "aviso",
         ),
-        { enableHighAccuracy: false, timeout: 10000, maximumAge: 120000 },
+        {
+            enableHighAccuracy: false,
+            timeout: 10000,
+            maximumAge: 120000,
+        },
     );
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
     const usuario = await ChurrasPlanAuth.usuarioAtual().catch(() => null);
     if (!usuario) {
-        irPara(ChurrasPlanAuth.urlLogin(location.pathname.split("/").pop() + location.search));
+        irPara(
+            ChurrasPlanAuth.urlLogin(
+                location.pathname.split("/").pop() + location.search,
+            ),
+        );
         return;
     }
 
-    const queryId = Number(new URLSearchParams(location.search).get("churrasco"));
+    const queryId = Number(
+        new URLSearchParams(location.search).get("churrasco"),
+    );
     const estado = EstadoChurrasco.obter();
     churrascoMapaId = queryId || Number(estado.churrasco_id);
+
     if (!churrascoMapaId) {
         mostrarMensagem(
             document.getElementById("mapa-mensagem"),
@@ -335,10 +394,15 @@ document.addEventListener("DOMContentLoaded", async () => {
             );
         }
     } catch (erro) {
-        mostrarMensagem(document.getElementById("mapa-mensagem"), erro.message, "erro");
+        mostrarMensagem(
+            document.getElementById("mapa-mensagem"),
+            erro.message,
+            "erro",
+        );
     }
 
     document.getElementById("localizar").onclick = solicitarLocalizacao;
+
     document.getElementById("endereco-busca").addEventListener("input", () => {
         window.clearTimeout(timerAutocomplete);
         timerAutocomplete = window.setTimeout(buscarAutocomplete, 280);
@@ -346,9 +410,15 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     document.querySelectorAll("#ranking-modos [data-modo]").forEach((b) => {
         b.onclick = async () => {
-            document.querySelectorAll("#ranking-modos [data-modo]").forEach((x) => x.classList.remove("active"));
+            document
+                .querySelectorAll("#ranking-modos [data-modo]")
+                .forEach((x) => x.classList.remove("active"));
+
             b.classList.add("active");
             modoAtual = b.dataset.modo;
+
+            // Atualiza ranking e marcadores sem destruir a câmera escolhida
+            // pelo usuário ao arrastar ou aplicar zoom no mapa.
             await atualizarTudo();
         };
     });
