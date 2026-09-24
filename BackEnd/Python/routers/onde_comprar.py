@@ -5,11 +5,11 @@ from config import settings
 from database.connection import get_db
 from models import Churrasco, Estabelecimento, ListaCompras, MetricaEstabelecimento, Usuario
 from schemas.otimizacao import (
-    EstabelecimentoProximoOut, InteracaoEstabelecimentosIn, LocalizacaoIn,
-    OtimizacaoConsultaIn, OtimizacaoOut,
+    EnderecoAutocompleteOut, EstabelecimentoProximoOut, InteracaoEstabelecimentosIn,
+    LocalizacaoIn, OtimizacaoConsultaIn, OtimizacaoOut,
 )
 from services.auth import usuario_atual, usuario_atual_com_csrf
-from services.google_places import buscar_proximos
+from services.geoapify import autocomplete_enderecos, buscar_proximos
 from services.otimizacao import distancia_km, otimizar_compra
 
 router = APIRouter(prefix="/api/onde-comprar", tags=["onde-comprar"])
@@ -24,15 +24,30 @@ def _churrasco_usuario(db: Session, churrasco_id: int, usuario: Usuario):
 
 @router.get("/config")
 def config_mapa(usuario: Usuario = Depends(usuario_atual)):
-    # A chave JavaScript é necessariamente visível no navegador e deve ser
-    # protegida por restrição de referrer/API no Google Cloud. A chave da
-    # Places API de servidor nunca é retornada ao frontend.
+    # A chave de mapa é necessariamente visível no navegador para carregar
+    # tiles Geoapify e deve ser restrita por HTTP referrer/origin. A chave de
+    # servidor usada por Places/Autocomplete nunca é retornada ao frontend.
     return {
-        "google_maps_disponivel": bool(settings.GOOGLE_MAPS_JS_API_KEY),
-        "google_places_disponivel": bool(settings.GOOGLE_PLACES_ENABLED and settings.GOOGLE_PLACES_API_KEY),
-        "google_maps_js_api_key": settings.GOOGLE_MAPS_JS_API_KEY or None,
-        "google_map_id": settings.GOOGLE_MAP_ID or None,
+        "geoapify_map_disponivel": bool(settings.GEOAPIFY_ENABLED and settings.GEOAPIFY_MAP_API_KEY),
+        "geoapify_places_disponivel": bool(settings.GEOAPIFY_ENABLED and settings.GEOAPIFY_SERVER_API_KEY),
+        "geoapify_map_api_key": settings.GEOAPIFY_MAP_API_KEY or None,
     }
+
+
+@router.get("/autocomplete", response_model=list[EnderecoAutocompleteOut])
+def autocomplete_local(
+    texto: str = Query(min_length=3, max_length=120),
+    latitude: float | None = Query(default=None, ge=-90, le=90),
+    longitude: float | None = Query(default=None, ge=-180, le=180),
+    limite: int = Query(default=6, ge=1, le=10),
+    usuario: Usuario = Depends(usuario_atual),
+):
+    return autocomplete_enderecos(
+        texto.strip(),
+        latitude=latitude,
+        longitude=longitude,
+        limite=limite,
+    )
 
 
 def _listar_proximos(latitude: float, longitude: float, raio_km: float, db: Session):
@@ -43,21 +58,18 @@ def _listar_proximos(latitude: float, longitude: float, raio_km: float, db: Sess
         d = distancia_km(latitude, longitude, e.latitude, e.longitude)
         if d is not None and d <= raio_km:
             saida.append(EstabelecimentoProximoOut(
-                fonte="churrasplan", estabelecimento_id=e.id, google_place_id=e.google_place_id, nome=e.nome, tipo=e.tipo,
+                fonte="churrasplan", estabelecimento_id=e.id, provider_place_id=None, nome=e.nome, tipo=e.tipo,
                 endereco=e.endereco, latitude=e.latitude, longitude=e.longitude, distancia_km=round(d, 2),
                 avaliacao=float(e.avaliacao) if e.avaliacao is not None else None, quantidade_avaliacoes=e.quantidade_avaliacoes,
                 parceiro_verificado=e.parceiro_verificado,
             ))
-    ids_google = {x.google_place_id for x in saida if x.google_place_id}
     for p in buscar_proximos(latitude, longitude, raio_km * 1000):
-        if p.get("google_place_id") in ids_google:
-            continue
         d = distancia_km(latitude, longitude, p["latitude"], p["longitude"])
         saida.append(EstabelecimentoProximoOut(
-            fonte="google", nome=p["nome"], tipo=p.get("tipo"), endereco=p.get("endereco"),
+            fonte="geoapify", nome=p["nome"], tipo=p.get("tipo"), endereco=p.get("endereco"),
             latitude=p["latitude"], longitude=p["longitude"], distancia_km=round(d, 2) if d is not None else None,
             avaliacao=p.get("avaliacao"), quantidade_avaliacoes=p.get("quantidade_avaliacoes"),
-            google_place_id=p.get("google_place_id"), google_maps_uri=p.get("google_maps_uri"), parceiro_verificado=False,
+            provider_place_id=p.get("provider_place_id"), provider_url=None, parceiro_verificado=False,
         ))
     return sorted(saida, key=lambda x: x.distancia_km if x.distancia_km is not None else 999999)
 
