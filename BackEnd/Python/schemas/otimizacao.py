@@ -16,7 +16,7 @@ class OtimizacaoConsultaIn(BaseModel):
 class EstabelecimentoProximoOut(BaseModel):
     fonte: str
     estabelecimento_id: int | None = None
-    google_place_id: str | None = None
+    provider_place_id: str | None = None
     nome: str
     tipo: str | None = None
     endereco: str | None = None
@@ -25,8 +25,15 @@ class EstabelecimentoProximoOut(BaseModel):
     distancia_km: float | None = None
     avaliacao: float | None = None
     quantidade_avaliacoes: int | None = None
-    google_maps_uri: str | None = None
+    provider_url: str | None = None
     parceiro_verificado: bool = False
+
+
+class EnderecoAutocompleteOut(BaseModel):
+    place_id: str | None = None
+    label: str
+    latitude: float
+    longitude: float
 
 
 class ItemOfertaOut(BaseModel):
