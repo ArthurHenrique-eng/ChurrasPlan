@@ -2,10 +2,13 @@ let posicaoAtual = null;
 let modoAtual = "equilibrio";
 let churrascoMapaId = null;
 let mapa = null;
-let geoapifyMapKey = null;
+let mapaDisponivel = false;
 let timerAutocomplete = null;
+let timerViewport = null;
 let marcadoresMapa = [];
 let reencaixarMapa = true;
+let ignorarProximoMoveend = false;
+let sequenciaViewport = 0;
 let erroMapaMostrado = false;
 const visualizacoesRegistradas = new Set();
 
@@ -22,6 +25,33 @@ function tipoLoja(tipo) {
         .replace(/_/g, " ");
 }
 
+function distanciaKmLocal(lat1, lon1, lat2, lon2) {
+    const rad = (graus) => graus * Math.PI / 180;
+    const r = 6371;
+    const dLat = rad(lat2 - lat1);
+    const dLon = rad(lon2 - lon1);
+    const a = (
+        Math.sin(dLat / 2) ** 2
+        + Math.cos(rad(lat1))
+        * Math.cos(rad(lat2))
+        * Math.sin(dLon / 2) ** 2
+    );
+    return 2 * r * Math.asin(Math.sqrt(a));
+}
+
+function raioViewportKm() {
+    if (!mapa) return 15;
+    const centro = mapa.getCenter();
+    const nordeste = mapa.getBounds().getNorthEast();
+    const raio = distanciaKmLocal(
+        centro.lat,
+        centro.lng,
+        nordeste.lat,
+        nordeste.lng,
+    );
+    return Math.min(50, Math.max(2, raio * 1.15));
+}
+
 function limparMarcadoresMapa() {
     marcadoresMapa.forEach((marcador) => marcador.remove());
     marcadoresMapa = [];
@@ -35,79 +65,8 @@ function criarPopupMapa(html) {
     }).setHTML(html);
 }
 
-function inicializarMapa() {
-    const alvo = document.getElementById("mapa");
-
-    if (!window.maplibregl) {
-        alvo.innerHTML =
-            "<span>Não foi possível carregar a biblioteca do mapa (MapLibre). Recarregue a página com Ctrl+F5.</span>";
-        return false;
-    }
-    if (!posicaoAtual || !geoapifyMapKey) return false;
-    if (mapa) return true;
-
-    alvo.innerHTML = "";
-
-    const tilesUrl =
-        `https://maps.geoapify.com/v1/tile/osm-carto/{z}/{x}/{y}.png?apiKey=${encodeURIComponent(geoapifyMapKey)}`;
-
-    mapa = new maplibregl.Map({
-        container: alvo,
-        style: {
-            version: 8,
-            sources: {
-                geoapify: {
-                    type: "raster",
-                    tiles: [tilesUrl],
-                    tileSize: 256,
-                    maxzoom: 20,
-                    attribution:
-                        'Powered by <a href="https://www.geoapify.com/" target="_blank" rel="noopener">Geoapify</a> | © OpenStreetMap contributors',
-                },
-            },
-            layers: [
-                {
-                    id: "geoapify-base",
-                    type: "raster",
-                    source: "geoapify",
-                },
-            ],
-        },
-        center: [posicaoAtual.lng, posicaoAtual.lat],
-        zoom: 13,
-        minZoom: 2,
-        maxZoom: 20,
-        attributionControl: true,
-    });
-
-    mapa.addControl(
-        new maplibregl.NavigationControl({
-            showCompass: false,
-            visualizePitch: false,
-        }),
-        "top-left",
-    );
-
-    mapa.on("load", () => {
-        mapa.resize();
-    });
-
-    mapa.on("error", (evento) => {
-        const mensagem = String(evento?.error?.message || "");
-        if (erroMapaMostrado || !/(401|403|api.?key|tile|image)/i.test(mensagem)) return;
-        erroMapaMostrado = true;
-        mostrarMensagem(
-            document.getElementById("mapa-mensagem"),
-            "O Geoapify recusou alguns blocos do mapa. Confira a GEOAPIFY_MAP_API_KEY e as restrições de origem/referrer da chave.",
-            "erro",
-        );
-    });
-
-    return true;
-}
-
-function renderMapa(estabelecimentos) {
-    if (!inicializarMapa()) return;
+function renderMarcadoresMapa(estabelecimentos) {
+    if (!mapa || !posicaoAtual) return;
 
     limparMarcadoresMapa();
 
@@ -121,9 +80,6 @@ function renderMapa(estabelecimentos) {
         )
         .addTo(mapa);
     marcadoresMapa.push(voce);
-
-    const bounds = new maplibregl.LngLatBounds();
-    bounds.extend([posicaoAtual.lng, posicaoAtual.lat]);
 
     estabelecimentos.forEach((e) => {
         const fonte = e.fonte === "geoapify"
@@ -143,20 +99,157 @@ function renderMapa(estabelecimentos) {
             .addTo(mapa);
 
         marcadoresMapa.push(marcador);
-        bounds.extend([e.longitude, e.latitude]);
+    });
+}
+
+async function atualizarPontosDoViewport() {
+    if (!mapa || !posicaoAtual) return;
+
+    const centro = mapa.getCenter();
+    const raioKm = raioViewportKm();
+    const sequencia = ++sequenciaViewport;
+
+    try {
+        const proximos = await ChurrasPlanAPI.estabelecimentosProximos(
+            centro.lat,
+            centro.lng,
+            raioKm,
+        );
+
+        if (sequencia !== sequenciaViewport) return;
+        renderMarcadoresMapa(proximos);
+    } catch {
+        // Mover o mapa nunca deve bloquear o restante da página.
+    }
+}
+
+function agendarAtualizacaoViewport() {
+    if (!mapa) return;
+    window.clearTimeout(timerViewport);
+    timerViewport = window.setTimeout(atualizarPontosDoViewport, 350);
+}
+
+function inicializarMapa() {
+    const alvo = document.getElementById("mapa");
+
+    if (!window.maplibregl) {
+        alvo.innerHTML =
+            "<span>Não foi possível carregar a biblioteca do mapa (MapLibre). Recarregue a página com Ctrl+F5.</span>";
+        return false;
+    }
+    if (!posicaoAtual || !mapaDisponivel) return false;
+    if (mapa) return true;
+
+    alvo.innerHTML = "";
+
+    const baseApi = API_BASE_URL || window.location.origin;
+    const tilesUrl =
+        `${baseApi}/api/onde-comprar/mapa/tiles/{z}/{x}/{y}.png?estilo=osm-carto`;
+
+    mapa = new maplibregl.Map({
+        container: alvo,
+        style: {
+            version: 8,
+            sources: {
+                geoapify: {
+                    type: "raster",
+                    tiles: [tilesUrl],
+                    tileSize: 256,
+                    maxzoom: 20,
+                    attribution:
+                        'Powered by <a href="https://www.geoapify.com/" target="_blank" rel="noopener">Geoapify</a> | <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap contributors</a>',
+                },
+            },
+            layers: [
+                {
+                    id: "geoapify-base",
+                    type: "raster",
+                    source: "geoapify",
+                },
+            ],
+        },
+        center: [posicaoAtual.lng, posicaoAtual.lat],
+        zoom: 13,
+        minZoom: 2,
+        maxZoom: 20,
+        attributionControl: true,
+        transformRequest: (url) => {
+            if (url.includes("/api/onde-comprar/mapa/tiles/")) {
+                return {
+                    url,
+                    credentials: "include",
+                };
+            }
+            return { url };
+        },
     });
 
-    if (reencaixarMapa && !bounds.isEmpty()) {
-        mapa.fitBounds(bounds, {
-            padding: {
-                top: 55,
-                right: 55,
-                bottom: 55,
-                left: 55,
-            },
-            maxZoom: 15,
-            duration: 0,
+    mapa.addControl(
+        new maplibregl.NavigationControl({
+            showCompass: false,
+            visualizePitch: false,
+        }),
+        "top-left",
+    );
+
+    mapa.on("load", () => {
+        mapa.resize();
+    });
+
+    mapa.on("moveend", () => {
+        if (ignorarProximoMoveend) {
+            ignorarProximoMoveend = false;
+            return;
+        }
+        agendarAtualizacaoViewport();
+    });
+
+    mapa.on("error", (evento) => {
+        const mensagem = String(evento?.error?.message || "");
+        if (
+            erroMapaMostrado
+            || !/(401|403|502|tile|image|network|fetch)/i.test(mensagem)
+        ) {
+            return;
+        }
+        erroMapaMostrado = true;
+        mostrarMensagem(
+            document.getElementById("mapa-mensagem"),
+            "O mapa base não pôde ser carregado pela API do ChurrasPlan. Verifique se a API está ligada e se a GEOAPIFY_SERVER_API_KEY está válida.",
+            "erro",
+        );
+    });
+
+    return true;
+}
+
+function renderMapa(estabelecimentos) {
+    if (!inicializarMapa()) return;
+
+    renderMarcadoresMapa(estabelecimentos);
+
+    if (reencaixarMapa) {
+        const bounds = new maplibregl.LngLatBounds();
+        bounds.extend([posicaoAtual.lng, posicaoAtual.lat]);
+
+        estabelecimentos.forEach((e) => {
+            bounds.extend([e.longitude, e.latitude]);
         });
+
+        if (!bounds.isEmpty()) {
+            ignorarProximoMoveend = true;
+            mapa.fitBounds(bounds, {
+                padding: {
+                    top: 55,
+                    right: 55,
+                    bottom: 55,
+                    left: 55,
+                },
+                maxZoom: 15,
+                duration: 0,
+            });
+        }
+
         reencaixarMapa = false;
     }
 
@@ -285,7 +378,11 @@ async function atualizarTudo() {
         ]);
 
         renderProximos(proximos);
-        renderMapa(proximos);
+
+        if (!mapa || reencaixarMapa) {
+            renderMapa(proximos);
+        }
+
         renderOtimizacao(otim);
         mostrarMensagem(msg, null);
     } catch (erro) {
@@ -299,6 +396,7 @@ function usarPosicao(latitude, longitude, rotulo = null) {
         lng: Number(longitude),
     };
     reencaixarMapa = true;
+    sequenciaViewport += 1;
 
     if (rotulo) {
         document.getElementById("endereco-busca").value = rotulo;
@@ -403,11 +501,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     try {
         await ChurrasPlanAuth.vincularPlanejamentoAtual();
         const cfg = await ChurrasPlanAPI.configOndeComprar();
-        geoapifyMapKey = cfg.geoapify_map_api_key || null;
+        mapaDisponivel = Boolean(cfg.geoapify_map_disponivel);
 
-        if (!cfg.geoapify_map_disponivel) {
+        if (!mapaDisponivel) {
             document.getElementById("mapa").innerHTML =
-                "<span>Geoapify Map Tiles ainda não foi configurado. A lista e a otimização continuam disponíveis.</span>";
+                "<span>Geoapify ainda não foi configurado. A lista e a otimização continuam disponíveis.</span>";
         } else if (!cfg.geoapify_places_disponivel) {
             mostrarMensagem(
                 document.getElementById("mapa-mensagem"),
@@ -439,8 +537,6 @@ document.addEventListener("DOMContentLoaded", async () => {
             b.classList.add("active");
             modoAtual = b.dataset.modo;
 
-            // Atualiza ranking e marcadores sem destruir a câmera escolhida
-            // pelo usuário ao arrastar ou aplicar zoom no mapa.
             await atualizarTudo();
         };
     });
