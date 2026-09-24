@@ -29,6 +29,13 @@ class EstabelecimentoProximoOut(BaseModel):
     parceiro_verificado: bool = False
 
 
+class EnderecoAutocompleteIn(BaseModel):
+    texto: str = Field(min_length=3, max_length=120)
+    latitude: float | None = Field(default=None, ge=-90, le=90)
+    longitude: float | None = Field(default=None, ge=-180, le=180)
+    limite: int = Field(default=6, ge=1, le=10)
+
+
 class EnderecoAutocompleteOut(BaseModel):
     place_id: str | None = None
     label: str
