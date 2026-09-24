@@ -46,11 +46,23 @@ function renderMapa(estabelecimentos) {
 
     const normal = "https://maps.geoapify.com/v1/tile/osm-bright/{z}/{x}/{y}.png?apiKey={apiKey}";
     const retina = "https://maps.geoapify.com/v1/tile/osm-bright/{z}/{x}/{y}@2x.png?apiKey={apiKey}";
-    L.tileLayer(L.Browser.retina ? retina : normal, {
+    const tiles = L.tileLayer(L.Browser.retina ? retina : normal, {
         apiKey: geoapifyMapKey,
         maxZoom: 20,
         attribution: 'Powered by <a href="https://www.geoapify.com/" target="_blank" rel="noopener">Geoapify</a> | <a href="https://openmaptiles.org/" target="_blank" rel="noopener">© OpenMapTiles</a> <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap</a> contributors',
-    }).addTo(mapa);
+    });
+
+    let erroTilesMostrado = false;
+    tiles.on("tileerror", () => {
+        if (erroTilesMostrado) return;
+        erroTilesMostrado = true;
+        mostrarMensagem(
+            document.getElementById("mapa-mensagem"),
+            "O Leaflet carregou, mas os tiles do Geoapify foram recusados. Confira a GEOAPIFY_MAP_API_KEY e as restrições de domínio/origin da chave.",
+            "erro",
+        );
+    });
+    tiles.addTo(mapa);
 
     camadaMarcadores = L.layerGroup().addTo(mapa);
     const bounds = L.latLngBounds();
