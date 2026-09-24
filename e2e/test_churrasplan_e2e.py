@@ -155,7 +155,7 @@ def test_cadastro_login_conta_e_lgpd(page: Page):
     )
 
     expect(page).to_have_url(
-        "**/minha-conta.html"
+    url("minha-conta.html")
     )
 
     expect(
