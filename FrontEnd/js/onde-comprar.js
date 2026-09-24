@@ -29,9 +29,13 @@ function destruirMapa() {
 }
 
 function renderMapa(estabelecimentos) {
-    if (!window.L || !posicaoAtual || !geoapifyMapKey) return;
-
     const alvo = document.getElementById("mapa");
+
+    if (!window.L) {
+        alvo.innerHTML = "<span>Não foi possível carregar a biblioteca do mapa (Leaflet). Recarregue a página com Ctrl+F5.</span>";
+        return;
+    }
+    if (!posicaoAtual || !geoapifyMapKey) return;
     destruirMapa();
     alvo.innerHTML = "";
 
@@ -76,6 +80,7 @@ function renderMapa(estabelecimentos) {
     if (bounds.isValid()) {
         mapa.fitBounds(bounds, { padding: [32, 32], maxZoom: 16 });
     }
+    window.setTimeout(() => mapa?.invalidateSize(), 0);
 }
 
 function urlRota(e) {
