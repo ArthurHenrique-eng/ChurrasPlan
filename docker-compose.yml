@@ -64,7 +64,6 @@ services:
 
       GEOAPIFY_ENABLED: ${GEOAPIFY_ENABLED:-false}
       GEOAPIFY_SERVER_API_KEY: ${GEOAPIFY_SERVER_API_KEY:-}
-      GEOAPIFY_MAP_API_KEY: ${GEOAPIFY_MAP_API_KEY:-}
 
     command:
       - /bin/sh
