@@ -287,7 +287,7 @@ def test_config_geoapify_nao_expoe_chave_de_servidor(client, monkeypatch):
 
     cadastro_login(client, email="maps-config@example.com")
     monkeypatch.setattr(settings, "GEOAPIFY_ENABLED", True)
-    monkeypatch.setattr(settings, "GEOAPIFY_MAP_API_KEY", "map-publica-teste")
+    monkeypatch.setattr(settings, "GEOAPIFY_MAP_API_KEY", "legada-nao-usada")
     monkeypatch.setattr(settings, "GEOAPIFY_SERVER_API_KEY", "server-secreta-teste")
 
     r = client.get("/api/onde-comprar/config")
@@ -296,10 +296,26 @@ def test_config_geoapify_nao_expoe_chave_de_servidor(client, monkeypatch):
     assert dados == {
         "geoapify_map_disponivel": True,
         "geoapify_places_disponivel": True,
-        "geoapify_map_api_key": "map-publica-teste",
     }
     assert "server-secreta-teste" not in r.text
+    assert "legada-nao-usada" not in r.text
 
+
+
+def test_geoapify_tiles_passam_pelo_backend(client, monkeypatch):
+    from routers import onde_comprar
+
+    cadastro_login(client, email="map-tiles@example.com")
+    monkeypatch.setattr(
+        onde_comprar,
+        "buscar_tile_mapa",
+        lambda z, x, y, estilo: (b"png-teste", "image/png"),
+    )
+
+    r = client.get("/api/onde-comprar/mapa/tiles/10/1/1.png?estilo=osm-carto")
+    assert r.status_code == 200, r.text
+    assert r.content == b"png-teste"
+    assert r.headers["content-type"].startswith("image/png")
 
 
 def test_onde_comprar_post_nao_coloca_localizacao_na_url(client, monkeypatch):
