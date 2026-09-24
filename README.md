@@ -325,19 +325,18 @@ Veja `docs/DEPLOY_DOCKER_V6.3.md`.
 
 ## Geoapify
 
-A v6.5 usa Geoapify para mapa, busca de estabelecimentos próximos e autocomplete de endereços. A aplicação separa a chave pública dos tiles da chave de servidor:
+A v6.5 usa Geoapify para mapa, busca de estabelecimentos próximos e autocomplete de endereços. Uma única chave fica somente no backend:
 
 ```dotenv
 GEOAPIFY_ENABLED=true
 GEOAPIFY_SERVER_API_KEY=chave_restrita_ao_backend
-GEOAPIFY_MAP_API_KEY=chave_publica_restrita_aos_dominios
 ```
 
-Em desenvolvimento, as duas variáveis podem apontar temporariamente para a mesma chave. Em produção, prefira duas chaves distintas: restrinja a chave de servidor por IP/API e a chave do mapa por HTTP referrer/origin.
+O frontend não recebe a chave Geoapify. Os Map Tiles são carregados por um endpoint autenticado do próprio ChurrasPlan, que encaminha a requisição à Geoapify e permite cache HTTP no navegador. Isso evita problemas de restrição por referrer/origin e reduz exposição de credenciais.
 
-Fluxo implementado: usuário autenticado abre **Onde comprar** → usa geolocalização ou digita um endereço → o backend consulta Address Autocomplete/Places da Geoapify → o frontend desenha o mapa com Leaflet + Geoapify Map Tiles → a lista mostra distância e origem Geoapify → a otimização da cesta continua usando somente ofertas/preços próprios do ChurrasPlan.
+Fluxo implementado: usuário autenticado abre **Onde comprar** → usa geolocalização ou digita um endereço → o backend consulta Address Autocomplete/Places da Geoapify → o frontend desenha o mapa com MapLibre GL e Map Tiles Geoapify entregues pelo backend → ao arrastar ou alterar o zoom, novos pontos são consultados para a área visível → a lista lateral continua representando os estabelecimentos próximos da localização original → a otimização da cesta continua usando somente ofertas/preços próprios do ChurrasPlan.
 
-Sem as chaves, a página continua funcional com os estabelecimentos cadastrados e a otimização própria; mapa, autocomplete e busca externa ficam desativados de forma graciosa.
+Sem a chave de servidor, a página continua funcional com os estabelecimentos cadastrados e a otimização própria; mapa, autocomplete e busca externa ficam desativados de forma graciosa.
 
 ## Integrações externas restantes
 
