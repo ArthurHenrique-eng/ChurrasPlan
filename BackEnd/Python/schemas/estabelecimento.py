@@ -22,7 +22,6 @@ class EstabelecimentoOut(BaseModel):
     telefone: Optional[str] = None
     site: Optional[str] = None
     horario_funcionamento: Optional[str] = None
-    google_place_id: Optional[str] = None
     avaliacao: Optional[float] = None
     quantidade_avaliacoes: Optional[int] = None
     parceiro_verificado: bool = False
