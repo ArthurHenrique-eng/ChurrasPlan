@@ -10,7 +10,6 @@ import logging
 import urllib.error
 import urllib.parse
 import urllib.request
-from functools import lru_cache
 
 from config import settings
 
@@ -48,7 +47,6 @@ def _get_json(url: str) -> dict:
 
 
 
-@lru_cache(maxsize=512)
 def buscar_tile_mapa(
     z: int,
     x: int,
