@@ -118,7 +118,11 @@ const ChurrasPlanAPI = {
 
     configOndeComprar(opcoes = {}) { return requisitar("/api/onde-comprar/config", opcoes); },
     autocompleteEndereco(texto, latitude = null, longitude = null, limite = 6, opcoes = {}) {
-        return requisitar(`/api/onde-comprar/autocomplete${queryString({ texto, latitude, longitude, limite })}`, opcoes);
+        return requisitar("/api/onde-comprar/autocomplete", {
+            ...opcoes,
+            method: "POST",
+            body: JSON.stringify({ texto, latitude, longitude, limite }),
+        });
     },
     estabelecimentosProximos(latitude, longitude, raioKm = 15, opcoes = {}) {
         return requisitar("/api/onde-comprar/proximos", {
