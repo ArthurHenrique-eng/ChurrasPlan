@@ -66,6 +66,8 @@ class Settings:
     # Geoapify. Separe a chave de servidor (Places/Autocomplete) da chave
     # pública usada somente para tiles do mapa no navegador.
     GEOAPIFY_SERVER_API_KEY: str | None = os.getenv("GEOAPIFY_SERVER_API_KEY")
+    # Mantida por compatibilidade com .env antigos. O frontend não precisa mais
+    # receber esta chave porque os tiles são servidos pelo próprio backend.
     GEOAPIFY_MAP_API_KEY: str | None = os.getenv("GEOAPIFY_MAP_API_KEY")
     GEOAPIFY_ENABLED: bool = os.getenv("GEOAPIFY_ENABLED", "false").lower() in {"1", "true", "yes"}
 
@@ -270,8 +272,6 @@ def validar_configuracao_producao(configuracao: Settings = settings) -> None:
         erros.append("CORS_ORIGINS deve listar origens explícitas em produção")
     if configuracao.GEOAPIFY_ENABLED and not configuracao.GEOAPIFY_SERVER_API_KEY:
         erros.append("GEOAPIFY_SERVER_API_KEY é obrigatória quando GEOAPIFY_ENABLED=true")
-    if configuracao.GEOAPIFY_ENABLED and not configuracao.GEOAPIFY_MAP_API_KEY:
-        erros.append("GEOAPIFY_MAP_API_KEY é obrigatória quando GEOAPIFY_ENABLED=true")
     if not configuracao.TRUSTED_HOSTS or "*" in configuracao.TRUSTED_HOSTS:
         erros.append("TRUSTED_HOSTS deve listar hosts explícitos em produção")
     if len(configuracao.SECURITY_PEPPER) < 32 or configuracao.SECURITY_PEPPER == "dev-only-change-me":
