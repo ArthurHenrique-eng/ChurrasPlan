@@ -10,6 +10,7 @@ import logging
 import urllib.error
 import urllib.parse
 import urllib.request
+from functools import lru_cache
 
 from config import settings
 
@@ -45,6 +46,59 @@ def _get_json(url: str) -> dict:
         )
     return {}
 
+
+
+@lru_cache(maxsize=512)
+def buscar_tile_mapa(
+    z: int,
+    x: int,
+    y: int,
+    estilo: str = "osm-carto",
+) -> tuple[bytes, str] | None:
+    """Busca um tile raster pelo backend sem expor a chave Geoapify no browser."""
+    if not settings.GEOAPIFY_ENABLED or not settings.GEOAPIFY_SERVER_API_KEY:
+        return None
+
+    estilos_permitidos = {
+        "osm-carto",
+        "osm-bright",
+        "osm-bright-grey",
+        "osm-bright-smooth",
+        "positron",
+        "positron-blue",
+        "positron-red",
+        "klokantech-basic",
+        "osm-liberty",
+        "toner",
+        "toner-grey",
+    }
+    if estilo not in estilos_permitidos:
+        estilo = "osm-carto"
+
+    chave = urllib.parse.quote(settings.GEOAPIFY_SERVER_API_KEY, safe="")
+    url = (
+        f"https://maps.geoapify.com/v1/tile/{estilo}/{z}/{x}/{y}.png"
+        f"?apiKey={chave}"
+    )
+    req = urllib.request.Request(
+        url,
+        method="GET",
+        headers={
+            "Accept": "image/png",
+            "User-Agent": "ChurrasPlan/Geoapify",
+        },
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=8) as resp:
+            return resp.read(), resp.headers.get_content_type() or "image/png"
+    except urllib.error.HTTPError as exc:
+        logger.warning("Geoapify Map Tiles respondeu HTTP %s", exc.code)
+    except (urllib.error.URLError, TimeoutError, OSError) as exc:
+        logger.warning(
+            "Falha temporária ao consultar Geoapify Map Tiles: %s",
+            exc.__class__.__name__,
+        )
+    return None
 
 def buscar_proximos(
     latitude: float,
