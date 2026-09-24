@@ -6,17 +6,17 @@ A integração usa Geoapify em três partes:
 
 - Places API no backend para estabelecimentos próximos;
 - Address Autocomplete API no backend para busca por endereço;
-- Map Tiles no frontend, renderizados com Leaflet.
+- Map Tiles renderizados com MapLibre GL;
+- atualização de pontos conforme o usuário move ou altera o zoom do mapa.
 
 Variáveis:
 
 ```dotenv
 GEOAPIFY_ENABLED=true
 GEOAPIFY_SERVER_API_KEY=
-GEOAPIFY_MAP_API_KEY=
 ```
 
-A chave de servidor nunca é retornada ao navegador. A chave de mapa é necessariamente visível no frontend para carregar tiles e deve ser restrita por HTTP referrer/origin. Em produção, prefira duas chaves diferentes.
+A chave Geoapify nunca é retornada ao navegador. O frontend solicita os tiles ao backend autenticado do ChurrasPlan, e o backend consulta a Geoapify usando a chave de servidor.
 
 O mapa usa Geoapify Map Tiles com dados OpenStreetMap. Resultados externos são identificados como Geoapify e não são transformados automaticamente em preços/ofertas próprias.
 
