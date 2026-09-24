@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy.orm import Session
 
 from config import settings
@@ -9,7 +9,7 @@ from schemas.otimizacao import (
     LocalizacaoIn, OtimizacaoConsultaIn, OtimizacaoOut,
 )
 from services.auth import usuario_atual, usuario_atual_com_csrf
-from services.geoapify import autocomplete_enderecos, buscar_proximos
+from services.geoapify import autocomplete_enderecos, buscar_proximos, buscar_tile_mapa
 from services.otimizacao import distancia_km, otimizar_compra
 
 router = APIRouter(prefix="/api/onde-comprar", tags=["onde-comprar"])
@@ -24,14 +24,45 @@ def _churrasco_usuario(db: Session, churrasco_id: int, usuario: Usuario):
 
 @router.get("/config")
 def config_mapa(usuario: Usuario = Depends(usuario_atual)):
-    # A chave de mapa é necessariamente visível no navegador para carregar
-    # tiles Geoapify e deve ser restrita por HTTP referrer/origin. A chave de
-    # servidor usada por Places/Autocomplete nunca é retornada ao frontend.
+    # Mapa, Places e Autocomplete usam a chave de servidor. Os tiles são
+    # servidos pelo backend para que nenhuma chave Geoapify precise ser exposta
+    # no navegador.
+    disponivel = bool(settings.GEOAPIFY_ENABLED and settings.GEOAPIFY_SERVER_API_KEY)
     return {
-        "geoapify_map_disponivel": bool(settings.GEOAPIFY_ENABLED and settings.GEOAPIFY_MAP_API_KEY),
-        "geoapify_places_disponivel": bool(settings.GEOAPIFY_ENABLED and settings.GEOAPIFY_SERVER_API_KEY),
-        "geoapify_map_api_key": settings.GEOAPIFY_MAP_API_KEY or None,
+        "geoapify_map_disponivel": disponivel,
+        "geoapify_places_disponivel": disponivel,
     }
+
+
+@router.get("/mapa/tiles/{z}/{x}/{y}.png")
+def tile_mapa(
+    z: int,
+    x: int,
+    y: int,
+    estilo: str = Query(default="osm-carto", max_length=40),
+    usuario: Usuario = Depends(usuario_atual),
+):
+    if z < 0 or z > 20:
+        raise HTTPException(status_code=422, detail="Zoom de mapa inválido.")
+    limite = (1 << z) - 1
+    if x < 0 or x > limite or y < 0 or y > limite:
+        raise HTTPException(status_code=422, detail="Coordenada de tile inválida.")
+
+    tile = buscar_tile_mapa(z, x, y, estilo)
+    if tile is None:
+        raise HTTPException(
+            status_code=502,
+            detail="Não foi possível carregar o tile do Geoapify.",
+        )
+
+    conteudo, media_type = tile
+    return Response(
+        content=conteudo,
+        media_type=media_type,
+        headers={
+            "Cache-Control": "public, max-age=86400, immutable",
+        },
+    )
 
 
 @router.post("/autocomplete", response_model=list[EnderecoAutocompleteOut])
