@@ -49,9 +49,16 @@
             Compare sua cesta e veja uma combinação otimizada entre estabelecimentos cadastrados.
           </p>
         </div>
-        <button class="botao botao--primario" id="localizar" type="button">
-          Usar minha localização
-        </button>
+        <div class="location-actions">
+          <div class="location-search">
+            <label for="endereco-busca">Ou digite um endereço</label>
+            <input id="endereco-busca" type="search" autocomplete="off" placeholder="Rua, bairro ou cidade"/>
+            <div class="location-search__results" id="endereco-sugestoes" aria-live="polite"></div>
+          </div>
+          <button class="botao botao--primario" id="localizar" type="button">
+            Usar minha localização
+          </button>
+        </div>
       </section>
       <div class="mensagem" id="mapa-mensagem" style="display:none">
       </div>
@@ -115,6 +122,7 @@
     </script>
     <script src="js/icons.js">
     </script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
     <script src="js/onde-comprar.js">
     </script>
   <script src="js/pwa.js"></script>
