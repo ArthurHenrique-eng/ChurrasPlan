@@ -5,7 +5,7 @@ from config import settings
 from database.connection import get_db
 from models import Churrasco, Estabelecimento, ListaCompras, MetricaEstabelecimento, Usuario
 from schemas.otimizacao import (
-    EnderecoAutocompleteOut, EstabelecimentoProximoOut, InteracaoEstabelecimentosIn,
+    EnderecoAutocompleteIn, EnderecoAutocompleteOut, EstabelecimentoProximoOut, InteracaoEstabelecimentosIn,
     LocalizacaoIn, OtimizacaoConsultaIn, OtimizacaoOut,
 )
 from services.auth import usuario_atual, usuario_atual_com_csrf
@@ -34,19 +34,16 @@ def config_mapa(usuario: Usuario = Depends(usuario_atual)):
     }
 
 
-@router.get("/autocomplete", response_model=list[EnderecoAutocompleteOut])
+@router.post("/autocomplete", response_model=list[EnderecoAutocompleteOut])
 def autocomplete_local(
-    texto: str = Query(min_length=3, max_length=120),
-    latitude: float | None = Query(default=None, ge=-90, le=90),
-    longitude: float | None = Query(default=None, ge=-180, le=180),
-    limite: int = Query(default=6, ge=1, le=10),
+    payload: EnderecoAutocompleteIn,
     usuario: Usuario = Depends(usuario_atual),
 ):
     return autocomplete_enderecos(
-        texto.strip(),
-        latitude=latitude,
-        longitude=longitude,
-        limite=limite,
+        payload.texto.strip(),
+        latitude=payload.latitude,
+        longitude=payload.longitude,
+        limite=payload.limite,
     )
 
 
