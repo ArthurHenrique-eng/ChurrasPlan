@@ -49,20 +49,39 @@ function renderMapa(estabelecimentos) {
     const tiles = L.tileLayer(L.Browser.retina ? retina : normal, {
         apiKey: geoapifyMapKey,
         maxZoom: 20,
+        keepBuffer: 0,
+        updateWhenIdle: true,
+        updateWhenZooming: false,
         attribution: 'Powered by <a href="https://www.geoapify.com/" target="_blank" rel="noopener">Geoapify</a> | <a href="https://openmaptiles.org/" target="_blank" rel="noopener">© OpenMapTiles</a> <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap</a> contributors',
     });
 
     let erroTilesMostrado = false;
-    tiles.on("tileerror", () => {
+    tiles.on("tileerror", (evento) => {
+        const tile = evento.tile;
+        const tentativa = Number(tile?.dataset?.geoapifyRetry || 0);
+
+        if (tile && tentativa < 2) {
+            tile.dataset.geoapifyRetry = String(tentativa + 1);
+            window.setTimeout(() => {
+                try {
+                    const url = new URL(tile.src);
+                    url.searchParams.set("_retry", String(Date.now()));
+                    tile.src = url.toString();
+                } catch {
+                    // Se a URL não puder ser reconstruída, o Leaflet mantém o erro original.
+                }
+            }, 700 * (tentativa + 1));
+            return;
+        }
+
         if (erroTilesMostrado) return;
         erroTilesMostrado = true;
         mostrarMensagem(
             document.getElementById("mapa-mensagem"),
-            "O Leaflet carregou, mas os tiles do Geoapify foram recusados. Confira a GEOAPIFY_MAP_API_KEY e as restrições de domínio/origin da chave.",
-            "erro",
+            "Alguns blocos do mapa não puderam ser carregados pela Geoapify. Aguarde alguns segundos ou recarregue a página.",
+            "aviso",
         );
     });
-    tiles.addTo(mapa);
 
     camadaMarcadores = L.layerGroup().addTo(mapa);
     const bounds = L.latLngBounds();
@@ -92,6 +111,11 @@ function renderMapa(estabelecimentos) {
     if (bounds.isValid()) {
         mapa.fitBounds(bounds, { padding: [32, 32], maxZoom: 16 });
     }
+
+    // Adiciona os tiles apenas depois de definir a viewport final. Isso evita
+    // duas rajadas de requisições (setView inicial + fitBounds) no primeiro carregamento.
+    tiles.addTo(mapa);
+
     window.setTimeout(() => mapa?.invalidateSize(), 0);
 }
 
