@@ -12,10 +12,13 @@ def browser():
     if not executable and Path("/usr/bin/chromium").exists():
         executable = "/usr/bin/chromium"
     with sync_playwright() as playwright:
-        kwargs = {"headless": True, "args": ["--no-sandbox"]}
-        if executable:
-            kwargs["executable_path"] = executable
+        kwargs = {
+            "headless": True,
+            "args": ["--no-sandbox"],
+        }
+        
         browser = playwright.chromium.launch(**kwargs)
+
         yield browser
         browser.close()
 
