@@ -33,7 +33,7 @@ app = FastAPI(
     title=settings.APP_NAME,
     description="API do ChurrasPlan: planejamento, orçamento, convidados/RSVP, lista de compras, "
                  "preços reais, parceiros e otimização de onde comprar.",
-    version="6.4.0",
+    version="6.5.0",
 )
 
 
@@ -70,7 +70,7 @@ app.include_router(admin.router)
 @app.get("/api/health", tags=["health"])
 def health_check():
     """Liveness: confirma que o processo da API está respondendo."""
-    return {"status": "ok", "app": settings.APP_NAME, "version": "6.4.0"}
+    return {"status": "ok", "app": settings.APP_NAME, "version": "6.5.0"}
 
 
 @app.get("/api/health/ready", tags=["health"])
@@ -81,4 +81,4 @@ def readiness_check():
             conexao.execute(text("SELECT 1"))
     except Exception:
         raise HTTPException(status_code=503, detail="Banco de dados indisponível.")
-    return {"status": "ready", "database": "ok", "version": "6.4.0"}
+    return {"status": "ready", "database": "ok", "version": "6.5.0"}
