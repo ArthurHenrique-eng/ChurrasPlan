@@ -282,23 +282,21 @@ def test_registro_nao_autentica_antes_de_verificar_email_quando_obrigatorio(clie
 
 
 
-def test_config_google_maps_nao_expoe_chave_de_servidor(client, monkeypatch):
+def test_config_geoapify_nao_expoe_chave_de_servidor(client, monkeypatch):
     from config import settings
 
     cadastro_login(client, email="maps-config@example.com")
-    monkeypatch.setattr(settings, "GOOGLE_MAPS_JS_API_KEY", "js-publica-teste")
-    monkeypatch.setattr(settings, "GOOGLE_MAP_ID", "map-id-teste")
-    monkeypatch.setattr(settings, "GOOGLE_PLACES_ENABLED", True)
-    monkeypatch.setattr(settings, "GOOGLE_PLACES_API_KEY", "server-secreta-teste")
+    monkeypatch.setattr(settings, "GEOAPIFY_ENABLED", True)
+    monkeypatch.setattr(settings, "GEOAPIFY_MAP_API_KEY", "map-publica-teste")
+    monkeypatch.setattr(settings, "GEOAPIFY_SERVER_API_KEY", "server-secreta-teste")
 
     r = client.get("/api/onde-comprar/config")
     assert r.status_code == 200, r.text
     dados = r.json()
     assert dados == {
-        "google_maps_disponivel": True,
-        "google_places_disponivel": True,
-        "google_maps_js_api_key": "js-publica-teste",
-        "google_map_id": "map-id-teste",
+        "geoapify_map_disponivel": True,
+        "geoapify_places_disponivel": True,
+        "geoapify_map_api_key": "map-publica-teste",
     }
     assert "server-secreta-teste" not in r.text
 
@@ -308,7 +306,7 @@ def test_onde_comprar_post_nao_coloca_localizacao_na_url(client, monkeypatch):
     from config import settings
 
     _, h = cadastro_login(client, email="maps-post@example.com")
-    monkeypatch.setattr(settings, "GOOGLE_PLACES_ENABLED", False)
+    monkeypatch.setattr(settings, "GEOAPIFY_ENABLED", False)
     c = client.post(
         "/api/churrascos",
         json=payload_novo(chave_cliente="maps-post-0000001", vegetarianos=0, veganos=0),
@@ -333,45 +331,63 @@ def test_onde_comprar_post_nao_coloca_localizacao_na_url(client, monkeypatch):
     assert otim.status_code == 200, otim.text
     assert otim.json()["churrasco_id"] == cid
 
-def test_google_places_filtra_fechado_permanentemente(monkeypatch):
+def test_geoapify_places_e_autocomplete(monkeypatch):
     import json
     from config import settings
-    from services import google_places
+    from services import geoapify
 
-    monkeypatch.setattr(settings, "GOOGLE_PLACES_ENABLED", True)
-    monkeypatch.setattr(settings, "GOOGLE_PLACES_API_KEY", "server-key-teste")
+    monkeypatch.setattr(settings, "GEOAPIFY_ENABLED", True)
+    monkeypatch.setattr(settings, "GEOAPIFY_SERVER_API_KEY", "server-key-teste")
 
-    payload = {
-        "places": [
-            {
-                "id": "place-aberto",
-                "displayName": {"text": "Mercado Aberto"},
-                "primaryType": "supermarket",
-                "formattedAddress": "Rua Teste, 1",
-                "location": {"latitude": -19.9, "longitude": -43.9},
-                "rating": 4.5,
-                "userRatingCount": 10,
-                "googleMapsUri": "https://maps.google.com/?cid=1",
-                "businessStatus": "OPERATIONAL",
-            },
-            {
-                "id": "place-fechado",
-                "displayName": {"text": "Mercado Fechado"},
-                "location": {"latitude": -19.91, "longitude": -43.91},
-                "businessStatus": "CLOSED_PERMANENTLY",
-            },
-        ]
-    }
+    respostas = [
+        {
+            "features": [
+                {
+                    "properties": {
+                        "place_id": "mercado-1",
+                        "name": "Mercado Aberto",
+                        "formatted": "Rua Teste, 1",
+                        "categories": ["commercial.supermarket"],
+                    },
+                    "geometry": {
+                        "type": "Point",
+                        "coordinates": [-43.9, -19.9],
+                    },
+                }
+            ]
+        },
+        {
+            "results": [
+                {
+                    "place_id": "endereco-1",
+                    "formatted": "Rua Teste, 1, Belo Horizonte",
+                    "lat": -19.9,
+                    "lon": -43.9,
+                }
+            ]
+        },
+    ]
 
     class Resposta:
+        def __init__(self, payload):
+            self.payload = payload
         def __enter__(self): return self
         def __exit__(self, *args): return False
-        def read(self): return json.dumps(payload).encode("utf-8")
+        def read(self): return json.dumps(self.payload).encode("utf-8")
 
-    monkeypatch.setattr(google_places.urllib.request, "urlopen", lambda *args, **kwargs: Resposta())
-    saida = google_places.buscar_proximos(-19.9, -43.9)
-    assert [x["google_place_id"] for x in saida] == ["place-aberto"]
-    assert saida[0]["nome"] == "Mercado Aberto"
+    def fake_urlopen(*args, **kwargs):
+        return Resposta(respostas.pop(0))
+
+    monkeypatch.setattr(geoapify.urllib.request, "urlopen", fake_urlopen)
+
+    proximos = geoapify.buscar_proximos(-19.9, -43.9)
+    assert proximos[0]["provider_place_id"] == "mercado-1"
+    assert proximos[0]["nome"] == "Mercado Aberto"
+
+    enderecos = geoapify.autocomplete_enderecos("Rua Teste")
+    assert enderecos[0]["place_id"] == "endereco-1"
+    assert enderecos[0]["label"] == "Rua Teste, 1, Belo Horizonte"
+
 
 def test_validacao_de_producao_recusa_configuracao_insegura():
     from types import SimpleNamespace
@@ -379,7 +395,7 @@ def test_validacao_de_producao_recusa_configuracao_insegura():
     cfg = SimpleNamespace(
         APP_ENV="production", COOKIE_SECURE=False, REQUIRE_EMAIL_VERIFICATION=True,
         SMTP_HOST=None, PUBLIC_APP_URL="http://exemplo.com", CORS_ORIGINS=["*"],
-        GOOGLE_PLACES_ENABLED=True, GOOGLE_PLACES_API_KEY=None, GOOGLE_MAPS_JS_API_KEY=None, GOOGLE_MAP_ID=None,
+        GEOAPIFY_ENABLED=True, GEOAPIFY_SERVER_API_KEY=None, GEOAPIFY_MAP_API_KEY=None,
         TRUSTED_HOSTS=["*"], SECURITY_PEPPER="curto", FORCE_HTTPS=False,
         DATABASE_URL="sqlite:///inseguro.db", DATABASE_URL_OVERRIDE="sqlite:///inseguro.db", DB_PASSWORD="",
     )
