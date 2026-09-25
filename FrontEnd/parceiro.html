@@ -11,6 +11,7 @@
     <link href="css/integracao-v3.css" rel="stylesheet"/>
     <meta name="theme-color" content="#6f7c59">
   <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="assets/pwa/icon-192.png">
   <link rel="stylesheet" href="css/production-v63.css">
@@ -100,15 +101,18 @@
                 </label>
                 <label class="full">
                   Endereço
-                  <input id="est-endereco"/>
+                  <input id="est-endereco" placeholder="Rua, número e bairro"/>
                 </label>
+                <button class="botao botao--secundario full" id="est-localizar-endereco" type="button">
+                  Localizar endereço e preencher coordenadas
+                </button>
                 <label>
                   Latitude
-                  <input id="est-lat" step="any" type="number"/>
+                  <input id="est-lat" min="-90" max="90" step="any" inputmode="decimal" placeholder="-19.959383" type="number"/>
                 </label>
                 <label>
                   Longitude
-                  <input id="est-lng" step="any" type="number"/>
+                  <input id="est-lng" min="-180" max="180" step="any" inputmode="decimal" placeholder="-44.011870" type="number"/>
                 </label>
                 <button class="botao botao--primario full" type="submit">
                   Cadastrar estabelecimento
