@@ -29,6 +29,7 @@ A v6.5.0 preserva a base production-ready da v6.4 e substitui a integração Goo
 
 ### Produtos, parceiros e compras
 - produto genérico + SKU comercial;
+- catálogo genérico amplo por categoria para parceiros: carnes, bebidas, mercearia, laticínios, padaria, hortifruti, congelados, limpeza, higiene e descartáveis;
 - marca, variante, fabricante, EAN e embalagem;
 - estabelecimentos e ofertas;
 - parceiros verificados;
@@ -83,7 +84,7 @@ O Alembic é a fonte de verdade da evolução do banco.
 Head atual:
 
 ```text
-20260922_0006
+20260925_0007
 ```
 
 Cadeia:
@@ -95,6 +96,7 @@ Cadeia:
 20260918_0004  métricas agregadas de estabelecimentos
 20260918_0005  LGPD, rate limiting e auditoria admin
 20260922_0006  restaura defaults de timestamps em usuarios
+20260925_0007  amplia catálogo genérico para cadastro de produtos de parceiros
 ```
 
 `BackEnd/Python/sql/schema.sql` representa uma **instalação nova** no head atual. Para banco existente, use migrations.
