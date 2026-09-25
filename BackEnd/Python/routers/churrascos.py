@@ -142,6 +142,27 @@ def _montar_itens_e_persistir(db: Session, churrasco: Churrasco, payload: Churra
 
 
 def _item_out(model, categoria: str) -> ItemResultado:
+    preco_estimado = float(model.preco_unitario) if model.preco_unitario is not None else None
+    subtotal_estimado = float(model.subtotal_estimado) if model.subtotal_estimado is not None else None
+    preco_fonte = "melhor_oferta_atual" if model.preco_id is not None else None
+
+    # Planejamentos criados antes da tabela de referência podem ter sido
+    # persistidos sem preço. O GET também aplica a referência para que o
+    # histórico antigo volte a ter uma estimativa sem exigir recriação.
+    if preco_estimado is None:
+        referencia = obter_preco_referencia(model.produto_slug)
+        if referencia is not None:
+            preco_estimado = float(referencia)
+            quantidade_cobrada = (
+                float(model.quantidade_embalagens)
+                if model.quantidade_embalagens is not None
+                else float(model.quantidade_compra)
+            )
+            subtotal_estimado = round(preco_estimado * quantidade_cobrada, 2)
+            preco_fonte = "referencia_brasil_2026"
+    elif preco_fonte is None:
+        preco_fonte = "referencia_brasil_2026"
+
     return ItemResultado(
         produto_id=model.produto_id, produto_slug=model.produto_slug,
         percentual=float(model.percentual) if hasattr(model, "percentual") and model.percentual is not None else None,
@@ -151,15 +172,11 @@ def _item_out(model, categoria: str) -> ItemResultado:
         quantidade_embalagens=model.quantidade_embalagens,
         tamanho_embalagem=float(model.tamanho_embalagem) if model.tamanho_embalagem is not None else None,
         unidade_embalagem=model.unidade_embalagem, unidade_venda=model.unidade_venda,
-        preco_estimado=float(model.preco_unitario) if model.preco_unitario is not None else None,
-        preco_fonte=(
-            "melhor_oferta_atual"
-            if model.preco_id is not None
-            else ("referencia_brasil_2026" if model.preco_unitario is not None else None)
-        ),
+        preco_estimado=preco_estimado,
+        preco_fonte=preco_fonte,
         estabelecimento_id=model.estabelecimento_id,
         estabelecimento_nome=model.estabelecimento.nome if model.estabelecimento else None,
-        subtotal_estimado=float(model.subtotal_estimado) if model.subtotal_estimado is not None else None,
+        subtotal_estimado=subtotal_estimado,
     )
 
 
@@ -201,7 +218,10 @@ def _avisos_restricoes(churrasco: Churrasco) -> list[str]:
 
 
 def _montar_out(churrasco: Churrasco, itens: list[ItemResultado]) -> ChurrascoOut:
-    custo_total = float(churrasco.custo_total_estimado) if churrasco.custo_total_estimado is not None else None
+    # Recalcula a leitura a partir dos itens para que preços de referência
+    # também beneficiem planejamentos históricos salvos antes desse fallback.
+    subtotais = [float(i.subtotal_estimado) for i in itens if i.subtotal_estimado is not None]
+    custo_total = round(sum(subtotais), 2) if subtotais else None
     itens_com_preco = sum(1 for i in itens if i.subtotal_estimado is not None)
     itens_sem_preco = len(itens) - itens_com_preco
     estimativa_completa = bool(itens) and itens_sem_preco == 0
@@ -209,8 +229,8 @@ def _montar_out(churrasco: Churrasco, itens: list[ItemResultado]) -> ChurrascoOu
     # continua sendo útil ao usuário. Nessa situação `custo_por_pessoa` representa
     # uma estimativa PARCIAL; `estimativa_precos_completa` deixa isso explícito.
     custo_pessoa = (
-        float(churrasco.custo_por_pessoa)
-        if churrasco.custo_por_pessoa is not None
+        round(custo_total / churrasco.total_pessoas, 2)
+        if custo_total is not None and churrasco.total_pessoas > 0
         else None
     )
 
@@ -335,10 +355,11 @@ def meus_churrascos(usuario: Usuario = Depends(usuario_atual), db: Session = Dep
     for c in registros:
         itens = _itens_persistidos(c)
         estimativa_completa = bool(itens) and all(i.subtotal_estimado is not None for i in itens)
+        total_historico = round(sum(float(i.subtotal_estimado) for i in itens if i.subtotal_estimado is not None), 2) if itens else None
         resposta.append(ChurrascoHistoricoOut(
             id=c.id, nome=c.nome, data_evento=c.data_evento, tipo_evento=c.tipo_evento,
             total_pessoas=c.total_pessoas,
-            custo_total_estimado=float(c.custo_total_estimado) if c.custo_total_estimado is not None else None,
+            custo_total_estimado=total_historico,
             estimativa_precos_completa=estimativa_completa,
             status=c.status, criado_em=c.criado_em, atualizado_em=c.atualizado_em,
         ))
