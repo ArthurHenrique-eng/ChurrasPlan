@@ -93,6 +93,21 @@ def test_admin_dashboard_moderacao_e_auditoria(client):
     assert dash.status_code == 200
     assert dash.json()["usuarios"] >= 1
 
+    criado = client.post(
+        "/api/parceiro/estabelecimentos",
+        headers=h,
+        json={
+            "nome": "Mercado criado pelo admin",
+            "tipo": "supermercado",
+            "latitude": -19959383,
+            "longitude": -44011870,
+        },
+    )
+    assert criado.status_code == 201, criado.text
+    assert criado.json()["parceiro_verificado"] is True
+    assert criado.json()["latitude"] == pytest.approx(-19.959383)
+    assert criado.json()["longitude"] == pytest.approx(-44.01187)
+
     # Cria outro usuário via ORM para não trocar a sessão do admin.
     db = next(app.dependency_overrides[get_db]())
     try:
