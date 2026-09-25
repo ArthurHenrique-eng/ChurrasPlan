@@ -124,11 +124,21 @@
                 2. Produto comercial
               </h2>
               <form class="account-form" id="form-produto" style="margin-top:14px">
-                <label class="full">
-                  Produto genérico
-                  <select id="prod-pai" required="">
+                <label>
+                  Categoria
+                  <select id="prod-categoria" required="">
+                    <option value="">Selecione...</option>
                   </select>
                 </label>
+                <label>
+                  Produto genérico
+                  <select id="prod-pai" required="" disabled>
+                    <option value="">Selecione a categoria primeiro...</option>
+                  </select>
+                </label>
+                <p class="texto-suave full" id="prod-catalogo-ajuda">
+                  Escolha primeiro a categoria e depois o tipo de produto. Exemplos: bebidas, alimentos, limpeza, higiene, descartáveis e utilidades.
+                </p>
                 <label>
                   Marca
                   <input id="prod-marca" required=""/>
