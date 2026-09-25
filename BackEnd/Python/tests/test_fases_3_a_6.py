@@ -128,38 +128,38 @@ def test_otimizacao_requer_login_e_retorna_cestas(client):
     assert "cestas" in d and "compra_otimizada" in d
 
 
-def test_orcamento_nao_declara_dentro_quando_estimativa_e_parcial(client):
+def test_orcamento_usa_referencia_quando_nao_ha_oferta_real(client):
     r = client.post("/api/churrascos", json=payload_novo(
-        chave_cliente="budget-parcial-0001", extras_ativos=["copos"], orcamento_maximo=1000
+        chave_cliente="budget-referencia-0001", extras_ativos=["copos"], orcamento_maximo=1000
     ))
     assert r.status_code == 201, r.text
     d = r.json()
     assert d["custo_total_estimado"] is not None
-    assert d["estimativa_precos_completa"] is False
-    assert d["itens_sem_preco"] >= 1
-    assert d["orcamento_status"] == "estimativa_parcial"
-    assert d["orcamento_diferenca"] is None
-    # O custo por pessoa continua útil como subtotal conhecido / participantes,
-    # mas `estimativa_precos_completa=False` deixa claro que é parcial.
+    assert d["estimativa_precos_completa"] is True
+    assert d["itens_sem_preco"] == 0
+    assert d["orcamento_status"] in {"dentro", "acima"}
+    assert d["orcamento_diferenca"] is not None
     assert d["custo_por_pessoa"] == pytest.approx(d["custo_total_estimado"] / d["total_pessoas"], abs=0.01)
-    assert "Estimativa parcial" in d["aviso_precos"]
+    copos = next(i for i in d["itens"] if i["produto_slug"] == "copos")
+    assert copos["preco_fonte"] == "referencia_brasil_2026"
+    assert "referência Brasil 2026" in d["aviso_precos"]
 
 
 
-def test_divisao_funciona_com_estimativa_parcial(client):
+def test_divisao_funciona_com_precos_de_referencia(client):
     criado = client.post(
         "/api/churrascos",
         json=payload_novo(
-            chave_cliente="divisao-parcial-0001",
-            extras_ativos=["copos"],  # sem preço na fixture -> cesta parcial
+            chave_cliente="divisao-referencia-0001",
+            extras_ativos=["copos"],
             dividir_entre=4,
         ),
     )
     assert criado.status_code == 201, criado.text
     d = criado.json()
-    assert d["estimativa_precos_completa"] is False
+    assert d["estimativa_precos_completa"] is True
     assert d["custo_total_estimado"] is not None
-    assert d["base_divisao"] == "estimado_parcial"
+    assert d["base_divisao"] == "estimado"
     assert d["valor_por_divisao"] == pytest.approx(d["custo_total_estimado"] / 4, abs=0.01)
 
     alterada = client.patch(
@@ -169,16 +169,16 @@ def test_divisao_funciona_com_estimativa_parcial(client):
     assert alterada.status_code == 200, alterada.text
     out = alterada.json()
     assert out["dividir_entre"] == 3
-    assert out["base_divisao"] == "estimado_parcial"
+    assert out["base_divisao"] == "estimado"
     assert out["valor_por_divisao"] == pytest.approx(out["custo_total_estimado"] / 3, abs=0.01)
 
-def test_checklist_nao_calcula_economia_com_estimativa_ou_pagamento_incompleto(client):
+def test_checklist_nao_calcula_economia_com_pagamento_real_incompleto(client):
     c = client.post("/api/churrascos", json=payload_novo(
-        chave_cliente="lista-parcial-00001", extras_ativos=["copos"]
+        chave_cliente="lista-referencia-00001", extras_ativos=["copos"]
     )).json()
     lista = client.get(f"/api/lista-compras/{c['id']}").json()
-    assert lista["estimativa_completa"] is False
-    assert lista["itens_sem_preco"] >= 1
+    assert lista["estimativa_completa"] is True
+    assert lista["itens_sem_preco"] == 0
 
     for item in lista["itens"]:
         payload = {"comprado": True}
