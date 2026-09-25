@@ -81,7 +81,12 @@ function renderizarItens(itens) {
     Object.entries(porCategoria).forEach(([categoria, lista]) => {
         html += `<tr><td colspan="5" class="categoria-titulo">${escaparHTML(NOMES_CATEGORIA[categoria] || categoria)}</td></tr>`;
         lista.forEach((item) => {
-            const preco = item.preco_estimado != null ? `${formatarMoeda(item.preco_estimado)} / ${escaparHTML(item.unidade_venda)}${item.estabelecimento_nome ? `<br><small>${escaparHTML(item.estabelecimento_nome)}</small>` : ""}` : `<span class="sem-preco">sem oferta</span>`;
+            const origemPreco = item.preco_fonte === "referencia_brasil_2026"
+                ? '<br><small>Referência Brasil 2026</small>'
+                : (item.estabelecimento_nome ? `<br><small>${escaparHTML(item.estabelecimento_nome)}</small>` : "");
+            const preco = item.preco_estimado != null
+                ? `${formatarMoeda(item.preco_estimado)} / ${escaparHTML(item.unidade_venda)}${origemPreco}`
+                : `<span class="sem-preco">sem referência</span>`;
             html += `<tr><td>${escaparHTML(item.nome)}</td><td class="numero">${formatarNumero(item.quantidade_necessaria)} ${escaparHTML(item.unidade_necessaria)}</td><td class="numero">${descricaoCompra(item)}</td><td class="numero">${preco}</td><td class="numero">${item.subtotal_estimado != null ? formatarMoeda(item.subtotal_estimado) : "-"}</td></tr>`;
         });
     });
