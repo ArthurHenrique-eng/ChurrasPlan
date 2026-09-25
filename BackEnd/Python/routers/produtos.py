@@ -14,6 +14,8 @@ def produto_out(db: Session, p: Produto) -> ProdutoOut:
     return ProdutoOut(
         id=p.id, produto_pai_id=p.produto_pai_id, tipo_produto=p.tipo_produto,
         slug=p.slug, nome=p.nome, categoria_id=p.categoria_id,
+        categoria_nome=p.categoria.nome if p.categoria else None,
+        categoria_tipo=p.categoria.tipo if p.categoria else None,
         marca=p.marca, variante=p.variante, fabricante=p.fabricante, ean=p.ean, sku=p.sku,
         unidade_consumo=p.unidade_consumo, unidade_venda=p.unidade_venda,
         venda_fracionada=p.venda_fracionada,
