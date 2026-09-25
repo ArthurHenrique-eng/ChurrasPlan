@@ -13,6 +13,7 @@ from services import calculo_bebidas, calculo_carne, calculo_extras
 from services.auth import usuario_atual, usuario_atual_com_csrf, usuario_opcional, usuario_opcional_com_csrf
 from services.catalogo_produtos import ProdutoComercial, converter_produto, resolver_produto
 from services.calculo_precos import obter_melhor_oferta_atual
+from services.precos_referencia import obter_preco_referencia
 
 router = APIRouter(prefix="/api/churrascos", tags=["churrascos"])
 
@@ -41,14 +42,19 @@ def _verificar_acesso(churrasco: Churrasco, usuario: Usuario | None):
 
 
 def _financeiro(db: Session, produto: ProdutoComercial, compra):
-    if produto.id is None:
-        return None, None, None
-    oferta = obter_melhor_oferta_atual(db, produto.id)
-    if not oferta:
-        return None, None, None
+    oferta = obter_melhor_oferta_atual(db, produto.id) if produto.id is not None else None
     quantidade_cobrada = compra.compra if produto.venda_fracionada else (compra.embalagens or 0)
-    subtotal = round(float(oferta.preco) * float(quantidade_cobrada), 2)
-    return oferta, float(oferta.preco), subtotal
+
+    if oferta:
+        subtotal = round(float(oferta.preco) * float(quantidade_cobrada), 2)
+        return oferta, float(oferta.preco), subtotal
+
+    referencia = obter_preco_referencia(produto.slug)
+    if referencia is None:
+        return None, None, None
+
+    subtotal = round(float(referencia) * float(quantidade_cobrada), 2)
+    return None, float(referencia), subtotal
 
 
 def _criar_modelo_item(db: Session, model_cls, churrasco: Churrasco, produto: ProdutoComercial,
@@ -146,7 +152,11 @@ def _item_out(model, categoria: str) -> ItemResultado:
         tamanho_embalagem=float(model.tamanho_embalagem) if model.tamanho_embalagem is not None else None,
         unidade_embalagem=model.unidade_embalagem, unidade_venda=model.unidade_venda,
         preco_estimado=float(model.preco_unitario) if model.preco_unitario is not None else None,
-        preco_fonte="melhor_oferta_atual" if model.preco_unitario is not None else None,
+        preco_fonte=(
+            "melhor_oferta_atual"
+            if model.preco_id is not None
+            else ("referencia_brasil_2026" if model.preco_unitario is not None else None)
+        ),
         estabelecimento_id=model.estabelecimento_id,
         estabelecimento_nome=model.estabelecimento.nome if model.estabelecimento else None,
         subtotal_estimado=float(model.subtotal_estimado) if model.subtotal_estimado is not None else None,
@@ -225,12 +235,21 @@ def _montar_out(churrasco: Churrasco, itens: list[ItemResultado]) -> ChurrascoOu
             diferenca = round(orcamento - custo_total, 2)
             orcamento_status = "dentro" if diferenca >= 0 else "acima"
 
+    referencias = sum(1 for i in itens if i.preco_fonte == "referencia_brasil_2026")
+    ofertas_reais = sum(1 for i in itens if i.preco_fonte == "melhor_oferta_atual")
     if custo_total is None:
-        aviso = "Nenhuma oferta de preço atual está cadastrada para os itens deste churrasco."
+        aviso = "Ainda não há oferta real nem preço de referência para os itens deste churrasco."
     elif not estimativa_completa:
         aviso = (
-            f"Estimativa parcial: {itens_com_preco} de {len(itens)} item(ns) têm preço atual; "
-            f"{itens_sem_preco} item(ns) ainda não entraram no total."
+            f"Estimativa parcial: {itens_com_preco} de {len(itens)} item(ns) têm valor; "
+            f"{itens_sem_preco} item(ns) ainda não entraram no total. "
+            f"{referencias} usam referência nacional estimada."
+        )
+    elif referencias:
+        aviso = (
+            f"Estimativa de planejamento: {referencias} item(ns) usam preços de referência Brasil 2026"
+            + (f" e {ofertas_reais} usam ofertas reais cadastradas." if ofertas_reais else ".")
+            + " Os valores variam por cidade, marca, promoção e estabelecimento."
         )
     else:
         aviso = None
