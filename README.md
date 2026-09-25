@@ -1,5 +1,11 @@
 # ChurrasPlan v6.5.0 — Geoapify + administração segura
 
+<p align="center">
+  <img src="docs/assets/LogoChurrasPlan.png" alt="Ícone do ChurrasPlan" width="72" />
+  &nbsp;&nbsp;&nbsp;
+  <img src="docs/assets/LogoTXTChurrasPlan.png" alt="ChurrasPlan" width="230" />
+</p>
+
 O **ChurrasPlan** é uma plataforma Full Stack para planejar churrascos do início ao fim: convidados, quantidades, restrições alimentares, orçamento, lista/checklist de compras, preços, histórico, convites/RSVP, parceiros e otimização de onde comprar.
 
 A v6.5.0 preserva a base production-ready da v6.4 e substitui a integração Google Maps/Places por Geoapify Places, Address Autocomplete e Map Tiles, mantendo o bootstrap seguro do administrador e o pipeline completo de testes.
