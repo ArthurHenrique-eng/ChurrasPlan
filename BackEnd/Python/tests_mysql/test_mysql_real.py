@@ -33,7 +33,7 @@ def test_mysql_schema_head_e_utf8mb4():
     with engine.connect() as conn:
         head = conn.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
         charset = conn.execute(text("SELECT @@character_set_database")).scalar_one()
-    assert head == "20260922_0006"
+    assert head == "20260925_0007"
     assert str(charset).lower() == "utf8mb4"
 
 
