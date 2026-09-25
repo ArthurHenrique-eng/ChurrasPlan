@@ -38,6 +38,8 @@ def preco_publicavel(p: Preco) -> bool:
     estabelecimento é verificado. Fontes internas/importadas não dependem
     desse fluxo de aprovação.
     """
+    if p.origem == "referencia_planejamento":
+        return False
     return not (p.origem == "manual_parceiro" and not p.estabelecimento.parceiro_verificado)
 
 
