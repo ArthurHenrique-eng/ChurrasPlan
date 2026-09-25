@@ -99,8 +99,13 @@ def test_area_parceiro_produto_comercial_preco(client):
     _,h=cadastro_login(client)
     a=client.post("/api/parceiro/ativar",headers=h)
     assert a.status_code==200 and a.json()["papel"]=="parceiro"
-    est=client.post("/api/parceiro/estabelecimentos",headers=h,json={"nome":"Mercado Teste","tipo":"supermercado"})
+    est=client.post("/api/parceiro/estabelecimentos",headers=h,json={
+        "nome":"Mercado Teste","tipo":"supermercado",
+        "latitude":-19959383,"longitude":-44011870,
+    })
     assert est.status_code==201, est.text
+    assert est.json()["latitude"] == pytest.approx(-19.959383)
+    assert est.json()["longitude"] == pytest.approx(-44.01187)
     genericos=client.get("/api/produtos?tipo_produto=generico").json()
     pai=next(p for p in genericos if p["slug"]=="agua")
     prod=client.post("/api/parceiro/produtos",headers=h,json={
