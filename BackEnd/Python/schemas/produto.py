@@ -10,6 +10,8 @@ class ProdutoOut(BaseModel):
     slug: str
     nome: str
     categoria_id: int
+    categoria_nome: Optional[str] = None
+    categoria_tipo: Optional[str] = None
     marca: Optional[str] = None
     variante: Optional[str] = None
     fabricante: Optional[str] = None

@@ -63,12 +63,13 @@ class Settings:
     SMTP_FROM: str = os.getenv("SMTP_FROM", "ChurrasPlan <no-reply@churrasplan.local>")
     SMTP_TLS: bool = os.getenv("SMTP_TLS", "true").lower() in {"1", "true", "yes"}
 
-    # Integração opcional Google Maps/Places. A chave de servidor e a chave
-    # JavaScript podem ser separadas e restritas no Google Cloud.
-    GOOGLE_PLACES_API_KEY: str | None = os.getenv("GOOGLE_PLACES_API_KEY")
-    GOOGLE_MAPS_JS_API_KEY: str | None = os.getenv("GOOGLE_MAPS_JS_API_KEY")
-    GOOGLE_MAP_ID: str | None = os.getenv("GOOGLE_MAP_ID")
-    GOOGLE_PLACES_ENABLED: bool = os.getenv("GOOGLE_PLACES_ENABLED", "false").lower() in {"1", "true", "yes"}
+    # Geoapify. Separe a chave de servidor (Places/Autocomplete) da chave
+    # pública usada somente para tiles do mapa no navegador.
+    GEOAPIFY_SERVER_API_KEY: str | None = os.getenv("GEOAPIFY_SERVER_API_KEY")
+    # Mantida por compatibilidade com .env antigos. O frontend não precisa mais
+    # receber esta chave porque os tiles são servidos pelo próprio backend.
+    GEOAPIFY_MAP_API_KEY: str | None = os.getenv("GEOAPIFY_MAP_API_KEY")
+    GEOAPIFY_ENABLED: bool = os.getenv("GEOAPIFY_ENABLED", "false").lower() in {"1", "true", "yes"}
 
     # Hardening HTTP/rede. Em produção, use o backend atrás de um proxy reverso
     # que encerre TLS e encaminhe X-Forwarded-* apenas pela rede interna.
@@ -269,12 +270,8 @@ def validar_configuracao_producao(configuracao: Settings = settings) -> None:
         erros.append("PUBLIC_APP_URL deve usar HTTPS em produção")
     if not configuracao.CORS_ORIGINS or any(origem == "*" for origem in configuracao.CORS_ORIGINS):
         erros.append("CORS_ORIGINS deve listar origens explícitas em produção")
-    if configuracao.GOOGLE_PLACES_ENABLED and not configuracao.GOOGLE_PLACES_API_KEY:
-        erros.append("GOOGLE_PLACES_API_KEY é obrigatória quando GOOGLE_PLACES_ENABLED=true")
-    if configuracao.GOOGLE_PLACES_ENABLED and not configuracao.GOOGLE_MAPS_JS_API_KEY:
-        erros.append("GOOGLE_MAPS_JS_API_KEY é obrigatória quando GOOGLE_PLACES_ENABLED=true")
-    if configuracao.GOOGLE_MAP_ID and not configuracao.GOOGLE_MAPS_JS_API_KEY:
-        erros.append("GOOGLE_MAPS_JS_API_KEY é obrigatória quando GOOGLE_MAP_ID está configurado")
+    if configuracao.GEOAPIFY_ENABLED and not configuracao.GEOAPIFY_SERVER_API_KEY:
+        erros.append("GEOAPIFY_SERVER_API_KEY é obrigatória quando GEOAPIFY_ENABLED=true")
     if not configuracao.TRUSTED_HOSTS or "*" in configuracao.TRUSTED_HOSTS:
         erros.append("TRUSTED_HOSTS deve listar hosts explícitos em produção")
     if len(configuracao.SECURITY_PEPPER) < 32 or configuracao.SECURITY_PEPPER == "dev-only-change-me":

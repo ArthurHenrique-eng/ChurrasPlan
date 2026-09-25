@@ -1,15 +1,15 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy.orm import Session
 
 from config import settings
 from database.connection import get_db
 from models import Churrasco, Estabelecimento, ListaCompras, MetricaEstabelecimento, Usuario
 from schemas.otimizacao import (
-    EstabelecimentoProximoOut, InteracaoEstabelecimentosIn, LocalizacaoIn,
-    OtimizacaoConsultaIn, OtimizacaoOut,
+    EnderecoAutocompleteIn, EnderecoAutocompleteOut, EstabelecimentoProximoOut, InteracaoEstabelecimentosIn,
+    LocalizacaoIn, OtimizacaoConsultaIn, OtimizacaoOut,
 )
 from services.auth import usuario_atual, usuario_atual_com_csrf
-from services.google_places import buscar_proximos
+from services.geoapify import autocomplete_enderecos, buscar_proximos, buscar_tile_mapa
 from services.otimizacao import distancia_km, otimizar_compra
 
 router = APIRouter(prefix="/api/onde-comprar", tags=["onde-comprar"])
@@ -24,15 +24,58 @@ def _churrasco_usuario(db: Session, churrasco_id: int, usuario: Usuario):
 
 @router.get("/config")
 def config_mapa(usuario: Usuario = Depends(usuario_atual)):
-    # A chave JavaScript é necessariamente visível no navegador e deve ser
-    # protegida por restrição de referrer/API no Google Cloud. A chave da
-    # Places API de servidor nunca é retornada ao frontend.
+    # Mapa, Places e Autocomplete usam a chave de servidor. Os tiles são
+    # servidos pelo backend para que nenhuma chave Geoapify precise ser exposta
+    # no navegador.
+    disponivel = bool(settings.GEOAPIFY_ENABLED and settings.GEOAPIFY_SERVER_API_KEY)
     return {
-        "google_maps_disponivel": bool(settings.GOOGLE_MAPS_JS_API_KEY),
-        "google_places_disponivel": bool(settings.GOOGLE_PLACES_ENABLED and settings.GOOGLE_PLACES_API_KEY),
-        "google_maps_js_api_key": settings.GOOGLE_MAPS_JS_API_KEY or None,
-        "google_map_id": settings.GOOGLE_MAP_ID or None,
+        "geoapify_map_disponivel": disponivel,
+        "geoapify_places_disponivel": disponivel,
     }
+
+
+@router.get("/mapa/tiles/{z}/{x}/{y}.png")
+def tile_mapa(
+    z: int,
+    x: int,
+    y: int,
+    estilo: str = Query(default="osm-carto", max_length=40),
+    usuario: Usuario = Depends(usuario_atual),
+):
+    if z < 0 or z > 20:
+        raise HTTPException(status_code=422, detail="Zoom de mapa inválido.")
+    limite = (1 << z) - 1
+    if x < 0 or x > limite or y < 0 or y > limite:
+        raise HTTPException(status_code=422, detail="Coordenada de tile inválida.")
+
+    tile = buscar_tile_mapa(z, x, y, estilo)
+    if tile is None:
+        raise HTTPException(
+            status_code=502,
+            detail="Não foi possível carregar o tile do Geoapify.",
+        )
+
+    conteudo, media_type = tile
+    return Response(
+        content=conteudo,
+        media_type=media_type,
+        headers={
+            "Cache-Control": "public, max-age=86400, immutable",
+        },
+    )
+
+
+@router.post("/autocomplete", response_model=list[EnderecoAutocompleteOut])
+def autocomplete_local(
+    payload: EnderecoAutocompleteIn,
+    usuario: Usuario = Depends(usuario_atual),
+):
+    return autocomplete_enderecos(
+        payload.texto.strip(),
+        latitude=payload.latitude,
+        longitude=payload.longitude,
+        limite=payload.limite,
+    )
 
 
 def _listar_proximos(latitude: float, longitude: float, raio_km: float, db: Session):
@@ -43,21 +86,18 @@ def _listar_proximos(latitude: float, longitude: float, raio_km: float, db: Sess
         d = distancia_km(latitude, longitude, e.latitude, e.longitude)
         if d is not None and d <= raio_km:
             saida.append(EstabelecimentoProximoOut(
-                fonte="churrasplan", estabelecimento_id=e.id, google_place_id=e.google_place_id, nome=e.nome, tipo=e.tipo,
+                fonte="churrasplan", estabelecimento_id=e.id, provider_place_id=None, nome=e.nome, tipo=e.tipo,
                 endereco=e.endereco, latitude=e.latitude, longitude=e.longitude, distancia_km=round(d, 2),
                 avaliacao=float(e.avaliacao) if e.avaliacao is not None else None, quantidade_avaliacoes=e.quantidade_avaliacoes,
                 parceiro_verificado=e.parceiro_verificado,
             ))
-    ids_google = {x.google_place_id for x in saida if x.google_place_id}
     for p in buscar_proximos(latitude, longitude, raio_km * 1000):
-        if p.get("google_place_id") in ids_google:
-            continue
         d = distancia_km(latitude, longitude, p["latitude"], p["longitude"])
         saida.append(EstabelecimentoProximoOut(
-            fonte="google", nome=p["nome"], tipo=p.get("tipo"), endereco=p.get("endereco"),
+            fonte="geoapify", nome=p["nome"], tipo=p.get("tipo"), endereco=p.get("endereco"),
             latitude=p["latitude"], longitude=p["longitude"], distancia_km=round(d, 2) if d is not None else None,
             avaliacao=p.get("avaliacao"), quantidade_avaliacoes=p.get("quantidade_avaliacoes"),
-            google_place_id=p.get("google_place_id"), google_maps_uri=p.get("google_maps_uri"), parceiro_verificado=False,
+            provider_place_id=p.get("provider_place_id"), provider_url=None, parceiro_verificado=False,
         ))
     return sorted(saida, key=lambda x: x.distancia_km if x.distancia_km is not None else 999999)
 

@@ -81,7 +81,12 @@ function renderizarItens(itens) {
     Object.entries(porCategoria).forEach(([categoria, lista]) => {
         html += `<tr><td colspan="5" class="categoria-titulo">${escaparHTML(NOMES_CATEGORIA[categoria] || categoria)}</td></tr>`;
         lista.forEach((item) => {
-            const preco = item.preco_estimado != null ? `${formatarMoeda(item.preco_estimado)} / ${escaparHTML(item.unidade_venda)}${item.estabelecimento_nome ? `<br><small>${escaparHTML(item.estabelecimento_nome)}</small>` : ""}` : `<span class="sem-preco">sem oferta</span>`;
+            const origemPreco = item.preco_fonte === "referencia_brasil_2026"
+                ? '<br><small>Referência Brasil 2026</small>'
+                : (item.estabelecimento_nome ? `<br><small>${escaparHTML(item.estabelecimento_nome)}</small>` : "");
+            const preco = item.preco_estimado != null
+                ? `${formatarMoeda(item.preco_estimado)} / ${escaparHTML(item.unidade_venda)}${origemPreco}`
+                : `<span class="sem-preco">sem referência</span>`;
             html += `<tr><td>${escaparHTML(item.nome)}</td><td class="numero">${formatarNumero(item.quantidade_necessaria)} ${escaparHTML(item.unidade_necessaria)}</td><td class="numero">${descricaoCompra(item)}</td><td class="numero">${preco}</td><td class="numero">${item.subtotal_estimado != null ? formatarMoeda(item.subtotal_estimado) : "-"}</td></tr>`;
         });
     });
@@ -283,10 +288,33 @@ async function abrirPainelConvite(churrascoId) {
     const painel = document.getElementById("painel-convite"); painel.hidden = false; painel.innerHTML = `<p class="texto-suave">Preparando seu link...</p>`;
     try {
         const [convite, resumo] = await Promise.all([ChurrasPlanAPI.criarConvite(churrascoId), ChurrasPlanAPI.resumoConvite(churrascoId)]);
-        painel.innerHTML = `<div class="invite-head"><div><span class="eyebrow"><span></span>LINK PARA CONVIDADOS</span><h3>Confirmação de presença</h3></div><button class="botao botao--secundario" id="copiar-convite" type="button">Copiar link</button></div><div class="invite-link"><input readonly value="${escaparHTML(convite.url)}" id="input-convite-url"></div><div class="invite-stats"><div><strong>${resumo.confirmados}</strong><span>confirmados</span></div><div><strong>${resumo.talvez}</strong><span>talvez</span></div><div><strong>${resumo.nao}</strong><span>não vão</span></div><div><strong>${resumo.total_respostas}</strong><span>respostas</span></div></div>${resumo.confirmados > 0 ? `<button class="botao botao--primario" type="button" id="aplicar-confirmados">Recalcular usando confirmados</button>` : `<p class="texto-suave">Quando houver confirmações, você poderá recalcular o planejamento com os dados reais.</p>`}<div class="rsvp-mini-list">${resumo.respostas.slice(0, 8).map((r) => `<span><strong>${escaparHTML(r.nome)}</strong> · ${r.resposta === "confirmado" ? "vai" : r.resposta}</span>`).join("")}</div>`;
+        const conviteUrl = new URL(
+            `convite.html?codigo=${encodeURIComponent(convite.codigo)}`,
+            window.location.href,
+        ).href;
+        const ambienteLocal = ["localhost", "127.0.0.1"].includes(window.location.hostname);
+        const avisoLocal = ambienteLocal
+            ? '<p class="mensagem mensagem--aviso">Este link usa o endereço local deste computador. Para abrir em outro celular/computador durante o desenvolvimento, acesse o ChurrasPlan por um endereço da rede local ou pelo domínio público.</p>'
+            : "";
+        painel.innerHTML = `<div class="invite-head"><div><span class="eyebrow"><span></span>LINK PARA CONVIDADOS</span><h3>Confirmação de presença</h3></div><div class="invite-head__actions"><button class="botao botao--secundario" id="abrir-convite" type="button">Abrir convite</button><button class="botao botao--secundario" id="copiar-convite" type="button">Copiar link</button>${navigator.share ? '<button class="botao botao--secundario" id="compartilhar-convite" type="button">Compartilhar</button>' : ""}</div></div><div class="invite-link"><input readonly value="${escaparHTML(conviteUrl)}" id="input-convite-url"></div>${avisoLocal}<div class="invite-stats"><div><strong>${resumo.confirmados}</strong><span>confirmados</span></div><div><strong>${resumo.talvez}</strong><span>talvez</span></div><div><strong>${resumo.nao}</strong><span>não vão</span></div><div><strong>${resumo.total_respostas}</strong><span>respostas</span></div></div>${resumo.confirmados > 0 ? `<button class="botao botao--primario" type="button" id="aplicar-confirmados">Recalcular usando confirmados</button>` : `<p class="texto-suave">Quando houver confirmações, você poderá recalcular o planejamento com os dados reais.</p>`}<div class="rsvp-mini-list">${resumo.respostas.slice(0, 8).map((r) => `<span><strong>${escaparHTML(r.nome)}</strong> · ${r.resposta === "confirmado" ? "vai" : r.resposta}</span>`).join("")}</div>`;
+        document.getElementById("abrir-convite").onclick = () => window.open(conviteUrl, "_blank", "noopener");
         document.getElementById("copiar-convite").onclick = async () => {
-            const url = convite.url; try { await navigator.clipboard.writeText(url); } catch { document.getElementById("input-convite-url").select(); document.execCommand("copy"); }
+            try { await navigator.clipboard.writeText(conviteUrl); } catch { document.getElementById("input-convite-url").select(); document.execCommand("copy"); }
             document.getElementById("copiar-convite").textContent = "Copiado ✓";
+        };
+        const compartilhar = document.getElementById("compartilhar-convite");
+        if (compartilhar) compartilhar.onclick = async () => {
+            try {
+                await navigator.share({
+                    title: convite.nome_churrasco || "Convite ChurrasPlan",
+                    text: "Você foi convidado para um churrasco. Confirme sua presença no ChurrasPlan.",
+                    url: conviteUrl,
+                });
+            } catch (erro) {
+                if (erro?.name !== "AbortError") {
+                    painel.insertAdjacentHTML("beforeend", `<p class="mensagem mensagem--erro">${escaparHTML(erro.message || "Não foi possível compartilhar o convite.")}</p>`);
+                }
+            }
         };
         const aplicar = document.getElementById("aplicar-confirmados");
         if (aplicar) aplicar.onclick = async () => {

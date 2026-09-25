@@ -171,6 +171,27 @@ def test_cadastro_login_conta_e_lgpd(page: Page):
     ).to_be_visible()
 
 
+def test_convite_publico_renderiza_estado_visivel(page: Page):
+    page.goto(
+        url("convite.html"),
+        wait_until="domcontentloaded",
+    )
+
+    expect(
+        page.get_by_role(
+            "heading",
+            name="Você foi convidado para um churrasco.",
+        )
+    ).to_be_visible()
+
+    expect(
+        page.get_by_role(
+            "heading",
+            name="Não foi possível abrir este convite.",
+        )
+    ).to_be_visible(timeout=10000)
+
+
 def test_pwa_manifest_e_service_worker(page: Page):
     response = page.request.get(
         url("manifest.webmanifest")
@@ -214,6 +235,7 @@ def test_mobile_sem_overflow_horizontal_e_com_alvos_de_toque(
             "index.html",
             "planejamento.html",
             "privacidade.html",
+            "convite.html",
         ]
 
         for pagina in paginas:

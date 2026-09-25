@@ -1,8 +1,8 @@
-# ChurrasPlan v6.4.0 — Google Maps + administração segura
+# ChurrasPlan v6.5.0 — Geoapify + administração segura
 
 O **ChurrasPlan** é uma plataforma Full Stack para planejar churrascos do início ao fim: convidados, quantidades, restrições alimentares, orçamento, lista/checklist de compras, preços, histórico, convites/RSVP, parceiros e otimização de onde comprar.
 
-A v6.4.0 preserva a base production-ready da v6.3.1 e finaliza a integração Google Maps/Places, o bootstrap seguro do administrador e os ajustes de MySQL/Alembic descobertos nos testes reais.
+A v6.5.0 preserva a base production-ready da v6.4 e substitui a integração Google Maps/Places por Geoapify Places, Address Autocomplete e Map Tiles, mantendo o bootstrap seguro do administrador e o pipeline completo de testes.
 
 ## Estado da plataforma
 
@@ -29,12 +29,13 @@ A v6.4.0 preserva a base production-ready da v6.3.1 e finaliza a integração Go
 
 ### Produtos, parceiros e compras
 - produto genérico + SKU comercial;
+- catálogo genérico amplo por categoria para parceiros: carnes, bebidas, mercearia, laticínios, padaria, hortifruti, congelados, limpeza, higiene e descartáveis;
 - marca, variante, fabricante, EAN e embalagem;
 - estabelecimentos e ofertas;
 - parceiros verificados;
 - comparação por preço, distância, avaliação e equilíbrio;
 - otimização multiestabelecimento;
-- suporte opcional a Google Maps/Places;
+- suporte opcional a Geoapify Places, Address Autocomplete e Map Tiles;
 - métricas agregadas de parceiros.
 
 ### Administração
@@ -80,10 +81,10 @@ ChurrasPlan/
 
 O Alembic é a fonte de verdade da evolução do banco.
 
-Head da v6.3:
+Head atual:
 
 ```text
-20260918_0005
+20260925_0008
 ```
 
 Cadeia:
@@ -94,6 +95,9 @@ Cadeia:
 20260918_0003  alinhamentos de schema
 20260918_0004  métricas agregadas de estabelecimentos
 20260918_0005  LGPD, rate limiting e auditoria admin
+20260922_0006  restaura defaults de timestamps em usuarios
+20260925_0007  amplia catálogo genérico para cadastro de produtos de parceiros
+20260925_0008  garante catálogo base do planejador em toda instalação
 ```
 
 `BackEnd/Python/sql/schema.sql` representa uma **instalação nova** no head atual. Para banco existente, use migrations.
@@ -119,7 +123,7 @@ Swagger:
 http://localhost:8080/docs
 ```
 
-A stack sobe MySQL 8.4, aplica migrations, carrega um catálogo/preços **demonstrativos** em desenvolvimento, inicia FastAPI e serve o frontend via Nginx.
+A stack sobe MySQL 8.4, aplica migrations, garante o catálogo genérico e carrega registros de **referência de planejamento** em desenvolvimento, inicia FastAPI e serve o frontend via Nginx.
 
 Os preços de desenvolvimento existem somente para exercitar orçamento, custo por pessoa e divisão. Para desabilitá-los:
 
@@ -127,7 +131,7 @@ Os preços de desenvolvimento existem somente para exercitar orçamento, custo p
 LOAD_DEMO_DATA=false docker compose up --build
 ```
 
-Nunca trate esses valores como preços reais de mercado.
+Os valores de referência servem para estimativa de orçamento. Eles não são ofertas comerciais nem preços garantidos; ofertas reais cadastradas e verificadas sempre têm prioridade no cálculo.
 
 ## Rodar sem Docker
 
@@ -322,31 +326,29 @@ MySQL em rede interna
 
 Veja `docs/DEPLOY_DOCKER_V6.3.md`.
 
-## Google Maps / Places
+## Geoapify
 
-A v6.4 já possui a integração de código completa. Para ativá-la, habilite no mesmo projeto Google Cloud a **Maps JavaScript API** e a **Places API (New)** e use duas chaves separadas:
+A v6.5 usa Geoapify para mapa, busca de estabelecimentos próximos e autocomplete de endereços. Uma única chave fica somente no backend:
 
 ```dotenv
-GOOGLE_MAPS_JS_API_KEY=chave_do_navegador
-GOOGLE_MAP_ID=map_id_opcional_para_advanced_markers
-GOOGLE_PLACES_ENABLED=true
-GOOGLE_PLACES_API_KEY=chave_do_backend
+GEOAPIFY_ENABLED=true
+GEOAPIFY_SERVER_API_KEY=chave_restrita_ao_backend
 ```
 
-A chave JavaScript deve ser restrita aos seus domínios/referrers e somente à Maps JavaScript API. A chave da Places API é usada apenas pelo backend e deve ser restrita à Places API (New) e, quando a infraestrutura permitir, aos IPs do servidor. Nunca use a chave de servidor no frontend.
+O frontend não recebe a chave Geoapify. Os Map Tiles são carregados por um endpoint autenticado do próprio ChurrasPlan, que encaminha a requisição à Geoapify e permite cache HTTP no navegador. Isso evita problemas de restrição por referrer/origin e reduz exposição de credenciais.
 
-Fluxo implementado: usuário autenticado abre **Onde comprar** → autoriza geolocalização → o frontend desenha o Google Map → o backend combina estabelecimentos próprios com Nearby Search (New) → o resultado mostra distância/avaliação, origem Google Maps quando aplicável e link de rota → a otimização de cesta continua usando apenas ofertas/preços do catálogo ChurrasPlan.
+Fluxo implementado: usuário autenticado abre **Onde comprar** → usa geolocalização ou digita um endereço → o backend consulta Address Autocomplete/Places da Geoapify → o frontend desenha o mapa com MapLibre GL e Map Tiles Geoapify entregues pelo backend → ao arrastar ou alterar o zoom, novos pontos são consultados para a área visível → a lista lateral continua representando os estabelecimentos próximos da localização original → a otimização da cesta continua usando somente ofertas/preços próprios do ChurrasPlan.
 
-Sem as chaves, a página continua funcional com os estabelecimentos próprios; o mapa/Places ficam desativados de forma graciosa.
+Sem a chave de servidor, a página continua funcional com os estabelecimentos cadastrados e a otimização própria; mapa, autocomplete e busca externa ficam desativados de forma graciosa.
 
 ## Integrações externas restantes
 
 Ainda exigem credenciais reais:
 - SMTP para verificação/reset de e-mail;
-- Google Maps/Places conforme configuração acima;
+- Geoapify conforme configuração acima;
 - eventual provedor de pagamento, ainda não conectado.
 
-Preços demonstrativos do seed **não são preços reais de mercado**.
+Preços de referência do planejador são **estimativas nacionais de orçamento**, não ofertas comerciais nem preços garantidos. Quando há oferta real/verificada para um item, ela substitui a referência no cálculo.
 
 ## Documentação desta etapa
 
@@ -354,8 +356,8 @@ Preços demonstrativos do seed **não são preços reais de mercado**.
 - `docs/DEPLOY_DOCKER_V6.3.md`
 - `docs/LGPD_SEGURANCA_V6.3.md`
 - `docs/E2E_MYSQL_V6.3.md`
-- `docs/GOOGLE_MAPS_ADMIN_V6.4.md`
-- `docs/RELEASE_NOTES_V6.4.md`
+- `docs/GEOAPIFY_ADMIN_V6.5.md`
+- `docs/RELEASE_NOTES_V6.5.md`
 - `docs/VALIDACAO_V6.4.md`
 
 Os documentos antigos permanecem no repositório como histórico das versões anteriores.

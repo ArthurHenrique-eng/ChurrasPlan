@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Optional
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class EstabelecimentoOut(BaseModel):
@@ -22,12 +22,31 @@ class EstabelecimentoOut(BaseModel):
     telefone: Optional[str] = None
     site: Optional[str] = None
     horario_funcionamento: Optional[str] = None
-    google_place_id: Optional[str] = None
     avaliacao: Optional[float] = None
     quantidade_avaliacoes: Optional[int] = None
     parceiro_verificado: bool = False
     ativo: bool
     distancia_km: Optional[float] = None
+
+
+def _normalizar_coordenada(valor, limite: float):
+    if valor is None or valor == "":
+        return None
+    if isinstance(valor, str):
+        valor = valor.strip().replace(",", ".")
+    numero = float(valor)
+
+    # Alguns serviços/copias de coordenadas entregam micrograus sem o ponto
+    # decimal (ex.: -19959383 -> -19.959383). Normalizamos somente valores
+    # inteiros grandes para não transformar coordenadas simplesmente inválidas.
+    if (
+        abs(numero) >= 1_000_000
+        and abs(numero) <= limite * 1_000_000
+        and numero.is_integer()
+    ):
+        numero /= 1_000_000
+
+    return numero
 
 
 class EstabelecimentoParceiroCreate(BaseModel):
@@ -42,6 +61,16 @@ class EstabelecimentoParceiroCreate(BaseModel):
     cep: Optional[str] = Field(default=None, max_length=12)
     latitude: Optional[float] = Field(default=None, ge=-90, le=90)
     longitude: Optional[float] = Field(default=None, ge=-180, le=180)
+
+    @field_validator("latitude", mode="before")
+    @classmethod
+    def normalizar_latitude(cls, valor):
+        return _normalizar_coordenada(valor, 90)
+
+    @field_validator("longitude", mode="before")
+    @classmethod
+    def normalizar_longitude(cls, valor):
+        return _normalizar_coordenada(valor, 180)
     telefone: Optional[str] = Field(default=None, max_length=30)
     site: Optional[str] = Field(default=None, max_length=255)
     horario_funcionamento: Optional[str] = Field(default=None, max_length=120)

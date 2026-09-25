@@ -2,12 +2,54 @@ from datetime import datetime, UTC
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from config import CATALOGO_PRODUTOS_PADRAO
 from database.connection import get_db
 from models import Churrasco, Estabelecimento, ListaCompras, ListaComprasItem, Usuario
 from schemas.lista_compras import ListaComprasItemOut, ListaComprasItemUpdate, ListaComprasOut
 from services.auth import usuario_opcional, usuario_opcional_com_csrf
+from services.precos_referencia import obter_preco_referencia
 
 router = APIRouter(prefix="/api/lista-compras", tags=["lista-compras"])
+
+
+NOME_CATALOGO_PARA_SLUG = {
+    dados["nome"].strip().casefold(): slug
+    for slug, dados in CATALOGO_PRODUTOS_PADRAO.items()
+}
+
+
+def _item_out(item: ListaComprasItem) -> ListaComprasItemOut:
+    preco_unitario = float(item.preco_unitario) if item.preco_unitario is not None else None
+    subtotal_estimado = float(item.subtotal_estimado) if item.subtotal_estimado is not None else None
+
+    if preco_unitario is None:
+        slug = item.produto.slug if item.produto is not None else NOME_CATALOGO_PARA_SLUG.get(item.descricao.strip().casefold())
+        referencia = obter_preco_referencia(slug)
+        if referencia is not None:
+            preco_unitario = float(referencia)
+            quantidade_cobrada = (
+                float(item.quantidade_embalagens)
+                if item.quantidade_embalagens is not None
+                else float(item.quantidade)
+            )
+            subtotal_estimado = round(preco_unitario * quantidade_cobrada, 2)
+
+    return ListaComprasItemOut(
+        id=item.id,
+        produto_id=item.produto_id,
+        estabelecimento_compra_id=item.estabelecimento_compra_id,
+        descricao=item.descricao,
+        quantidade=float(item.quantidade),
+        unidade=item.unidade,
+        quantidade_embalagens=item.quantidade_embalagens,
+        unidade_venda=item.unidade_venda,
+        categoria=item.categoria,
+        preco_unitario=preco_unitario,
+        subtotal_estimado=subtotal_estimado,
+        valor_pago_total=float(item.valor_pago_total) if item.valor_pago_total is not None else None,
+        comprado=item.comprado,
+        comprado_em=item.comprado_em,
+    )
 
 
 def _acesso(lista: ListaCompras, usuario: Usuario | None):
@@ -17,17 +59,17 @@ def _acesso(lista: ListaCompras, usuario: Usuario | None):
 
 
 def _out(lista: ListaCompras) -> ListaComprasOut:
-    itens = [ListaComprasItemOut.model_validate(i) for i in lista.itens]
-    total = len(lista.itens)
-    estimados = [float(i.subtotal_estimado) for i in lista.itens if i.subtotal_estimado is not None]
+    itens = [_item_out(i) for i in lista.itens]
+    total = len(itens)
+    estimados = [float(i.subtotal_estimado) for i in itens if i.subtotal_estimado is not None]
     itens_com_preco = len(estimados)
     itens_sem_preco = total - itens_com_preco
     total_estimado = round(sum(estimados), 2) if estimados else None
     estimativa_completa = total > 0 and itens_sem_preco == 0
 
-    comprados = sum(1 for i in lista.itens if i.comprado)
-    itens_com_valor_pago = sum(1 for i in lista.itens if i.comprado and i.valor_pago_total is not None)
-    total_pago = round(sum(float(i.valor_pago_total) for i in lista.itens if i.comprado and i.valor_pago_total is not None), 2)
+    comprados = sum(1 for i in itens if i.comprado)
+    itens_com_valor_pago = sum(1 for i in itens if i.comprado and i.valor_pago_total is not None)
+    total_pago = round(sum(float(i.valor_pago_total) for i in itens if i.comprado and i.valor_pago_total is not None), 2)
     valor_pago_completo = total > 0 and comprados == total and itens_com_valor_pago == total
     economia = (
         round(total_estimado - total_pago, 2)
