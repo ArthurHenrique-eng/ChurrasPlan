@@ -325,3 +325,9 @@ body.app-page{background:var(--bg);color:var(--text);font-family:'DM Sans',Arial
   .invite-rsvp-form{grid-template-columns:1fr}
   .invite-rsvp-form>*{grid-column:1!important}
 }
+
+.invite-head__actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:7px}
+@media(max-width:640px){
+  .invite-head{align-items:flex-start;flex-direction:column}
+  .invite-head__actions{width:100%;justify-content:flex-start}
+}
