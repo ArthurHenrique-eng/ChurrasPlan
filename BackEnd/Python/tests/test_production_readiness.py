@@ -171,3 +171,10 @@ def test_seed_demo_cobre_catalogo_padrao():
     assert set(PRECOS_DEMO) == set(CATALOGO_PRODUTOS_PADRAO)
     assert set(PRECOS_REFERENCIA_BRASIL) == set(CATALOGO_PRODUTOS_PADRAO)
     assert all(valor > 0 for valor in PRECOS_REFERENCIA_BRASIL.values())
+
+
+def test_precos_referencia_aceitam_aliases_legados():
+    from services.precos_referencia import obter_preco_referencia
+
+    assert obter_preco_referencia("linguica-generica") == pytest.approx(24.90)
+    assert obter_preco_referencia("frango-generico") == pytest.approx(13.90)
