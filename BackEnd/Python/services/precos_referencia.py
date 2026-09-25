@@ -77,7 +77,18 @@ PRECOS_REFERENCIA_BRASIL: dict[str, float] = {
 }
 
 
+# Compatibilidade com planejamentos criados quando o catálogo ampliado de
+# parceiros ainda possuía produtos genéricos com slugs diferentes dos usados
+# pelo planejador. Frango e linguiça podiam ficar persistidos com estes slugs,
+# embora representassem os mesmos itens de referência.
+ALIASES_PRECOS_REFERENCIA: dict[str, str] = {
+    "frango-generico": "frango",
+    "linguica-generica": "linguica",
+}
+
+
 def obter_preco_referencia(slug: str | None) -> float | None:
     if not slug:
         return None
-    return PRECOS_REFERENCIA_BRASIL.get(slug)
+    slug_canonico = ALIASES_PRECOS_REFERENCIA.get(slug, slug)
+    return PRECOS_REFERENCIA_BRASIL.get(slug_canonico)
