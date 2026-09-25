@@ -166,5 +166,8 @@ def test_readiness_verifica_banco(client):
 def test_seed_demo_cobre_catalogo_padrao():
     from config import CATALOGO_PRODUTOS_PADRAO
     from scripts.seed_demo import PRECOS_DEMO
+    from services.precos_referencia import PRECOS_REFERENCIA_BRASIL
 
     assert set(PRECOS_DEMO) == set(CATALOGO_PRODUTOS_PADRAO)
+    assert set(PRECOS_REFERENCIA_BRASIL) == set(CATALOGO_PRODUTOS_PADRAO)
+    assert all(valor > 0 for valor in PRECOS_REFERENCIA_BRASIL.values())
