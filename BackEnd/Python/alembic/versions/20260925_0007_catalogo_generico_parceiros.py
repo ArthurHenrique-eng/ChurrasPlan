@@ -35,6 +35,7 @@ PRODUTOS = [
     ("frango-generico", "Frango", "Carnes", "kg", "kg"),
     ("linguica-generica", "Linguiça", "Carnes", "kg", "kg"),
     ("peixe", "Peixe", "Carnes", "kg", "kg"),
+    ("outra-carne", "Outra carne", "Carnes", "kg", "kg"),
 
     # Bebidas
     ("agua-mineral-generica", "Água mineral", "Bebidas", "litro", "unidade"),
@@ -46,6 +47,7 @@ PRODUTOS = [
     ("agua-coco", "Água de coco", "Bebidas", "litro", "unidade"),
     ("cha-pronto", "Chá pronto", "Bebidas", "litro", "unidade"),
     ("cafe", "Café", "Bebidas", "kg", "pacote"),
+    ("outra-bebida", "Outra bebida", "Bebidas", "litro", "unidade"),
 
     # Mercearia
     ("feijao", "Feijão", "Mercearia e alimentos", "kg", "pacote"),
@@ -60,6 +62,7 @@ PRODUTOS = [
     ("tempero", "Tempero", "Mercearia e alimentos", "kg", "unidade"),
     ("conserva", "Conserva", "Mercearia e alimentos", "kg", "unidade"),
     ("biscoito", "Biscoito", "Mercearia e alimentos", "kg", "pacote"),
+    ("outro-alimento", "Outro alimento", "Mercearia e alimentos", "unidade", "unidade"),
 
     # Laticínios e frios
     ("leite", "Leite", "Laticínios e frios", "litro", "unidade"),
@@ -100,12 +103,14 @@ PRODUTOS = [
     ("sabao-po", "Sabão em pó", "Limpeza", "kg", "unidade"),
     ("sabao-liquido", "Sabão líquido", "Limpeza", "litro", "unidade"),
     ("limpador-multiuso", "Limpador multiuso", "Limpeza", "litro", "unidade"),
+    ("outro-produto-limpeza", "Outro produto de limpeza", "Limpeza", "unidade", "unidade"),
 
     # Higiene
     ("papel-higienico", "Papel higiênico", "Higiene pessoal", "unidade", "pacote"),
     ("sabonete", "Sabonete", "Higiene pessoal", "unidade", "unidade"),
     ("alcool-gel", "Álcool em gel", "Higiene pessoal", "litro", "unidade"),
     ("lenco-umedecido", "Lenço umedecido", "Higiene pessoal", "unidade", "pacote"),
+    ("outro-produto-higiene", "Outro produto de higiene", "Higiene pessoal", "unidade", "unidade"),
 
     # Descartáveis e utilidades
     ("copo-descartavel", "Copo descartável", "Descartáveis e utilidades", "unidade", "pacote"),
@@ -118,6 +123,7 @@ PRODUTOS = [
     ("carvao-generico", "Carvão", "Descartáveis e utilidades", "kg", "saco"),
     ("acendedor-generico", "Acendedor", "Descartáveis e utilidades", "unidade", "unidade"),
     ("fosforo-isqueiro-generico", "Fósforo / isqueiro", "Descartáveis e utilidades", "unidade", "unidade"),
+    ("outra-utilidade", "Outro descartável / utilidade", "Descartáveis e utilidades", "unidade", "unidade"),
 ]
 
 
