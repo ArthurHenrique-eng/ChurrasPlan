@@ -12,6 +12,37 @@ function fmtAdminData(valor) {
     return Number.isNaN(d.getTime()) ? "—" : d.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
 }
 
+function coordenadaAdmin(id, limite) {
+    const campo = document.getElementById(id);
+    const bruto = campo.value.trim();
+    if (!bruto) return null;
+    let valor = Number(bruto.replace(",", "."));
+    if (!Number.isFinite(valor)) throw new Error("Informe uma coordenada válida.");
+    if (Math.abs(valor) >= 1000000 && Math.abs(valor) <= limite * 1000000 && Number.isInteger(valor)) {
+        valor /= 1000000;
+    }
+    if (Math.abs(valor) > limite) {
+        throw new Error(`Coordenada fora do intervalo permitido (-${limite} a ${limite}).`);
+    }
+    campo.value = String(valor);
+    return valor;
+}
+
+async function localizarEnderecoAdmin() {
+    const ids = ["admin-est-endereco", "admin-est-cidade", "admin-est-estado", "admin-est-cep"];
+    const partes = ids.map((id) => document.getElementById(id).value.trim()).filter(Boolean);
+    if (!partes.length) throw new Error("Informe pelo menos o endereço ou a cidade para localizar.");
+
+    const resultados = await ChurrasPlanAPI.autocompleteEndereco(partes.join(", "), null, null, 1);
+    if (!resultados.length) throw new Error("Não foi possível localizar esse endereço.");
+
+    const item = resultados[0];
+    document.getElementById("admin-est-endereco").value = item.label;
+    document.getElementById("admin-est-lat").value = item.latitude;
+    document.getElementById("admin-est-lng").value = item.longitude;
+    return item;
+}
+
 async function carregarDashboardAdmin() {
     const dados = await ChurrasPlanAPI.adminDashboard();
     const itens = [
@@ -80,6 +111,64 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (usuario.papel !== "admin") { irPara("minha-conta.html"); return; }
     try { await Promise.all([carregarDashboardAdmin(), carregarUsuariosAdmin(), carregarEstabelecimentosAdmin(), carregarAuditoriaAdmin()]); }
     catch (e) { adminMensagem(e.message, "erro"); }
+
+    document.getElementById("admin-est-localizar").addEventListener("click", async (event) => {
+        const botao = event.currentTarget;
+        botao.disabled = true;
+        try {
+            await localizarEnderecoAdmin();
+            adminMensagem("Endereço localizado e coordenadas preenchidas.", "sucesso");
+        } catch (e) {
+            adminMensagem(e.message, "erro");
+        } finally {
+            botao.disabled = false;
+        }
+    });
+
+    document.getElementById("admin-form-estabelecimento").addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const botao = event.currentTarget.querySelector('button[type="submit"]');
+        botao.disabled = true;
+        try {
+            let latitude = coordenadaAdmin("admin-est-lat", 90);
+            let longitude = coordenadaAdmin("admin-est-lng", 180);
+
+            if (
+                (latitude === null || longitude === null)
+                && document.getElementById("admin-est-endereco").value.trim()
+            ) {
+                await localizarEnderecoAdmin();
+                latitude = coordenadaAdmin("admin-est-lat", 90);
+                longitude = coordenadaAdmin("admin-est-lng", 180);
+            }
+
+            await ChurrasPlanAPI.criarEstabelecimento({
+                nome: document.getElementById("admin-est-nome").value.trim(),
+                tipo: document.getElementById("admin-est-tipo").value,
+                endereco: document.getElementById("admin-est-endereco").value.trim() || null,
+                cidade: document.getElementById("admin-est-cidade").value.trim() || null,
+                estado: document.getElementById("admin-est-estado").value.trim().toUpperCase() || null,
+                cep: document.getElementById("admin-est-cep").value.trim() || null,
+                latitude,
+                longitude,
+                logradouro: null,
+                numero: null,
+                bairro: null,
+                telefone: null,
+                site: null,
+                horario_funcionamento: null,
+            });
+
+            event.currentTarget.reset();
+            await Promise.all([carregarEstabelecimentosAdmin(), carregarDashboardAdmin()]);
+            adminMensagem("Estabelecimento cadastrado e verificado.", "sucesso");
+        } catch (e) {
+            adminMensagem(e.message, "erro");
+        } finally {
+            botao.disabled = false;
+        }
+    });
+
     let timer;
     document.getElementById("admin-busca").addEventListener("input", () => { clearTimeout(timer); timer = setTimeout(() => carregarUsuariosAdmin().catch((e) => adminMensagem(e.message, "erro")), 250); });
     document.getElementById("admin-somente-pendentes").addEventListener("change", () => carregarEstabelecimentosAdmin().catch((e) => adminMensagem(e.message, "erro")));
