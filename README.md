@@ -84,7 +84,7 @@ O Alembic é a fonte de verdade da evolução do banco.
 Head atual:
 
 ```text
-20260925_0007
+20260925_0008
 ```
 
 Cadeia:
@@ -97,6 +97,7 @@ Cadeia:
 20260918_0005  LGPD, rate limiting e auditoria admin
 20260922_0006  restaura defaults de timestamps em usuarios
 20260925_0007  amplia catálogo genérico para cadastro de produtos de parceiros
+20260925_0008  garante catálogo base do planejador em toda instalação
 ```
 
 `BackEnd/Python/sql/schema.sql` representa uma **instalação nova** no head atual. Para banco existente, use migrations.
@@ -122,7 +123,7 @@ Swagger:
 http://localhost:8080/docs
 ```
 
-A stack sobe MySQL 8.4, aplica migrations, carrega um catálogo/preços **demonstrativos** em desenvolvimento, inicia FastAPI e serve o frontend via Nginx.
+A stack sobe MySQL 8.4, aplica migrations, garante o catálogo genérico e carrega registros de **referência de planejamento** em desenvolvimento, inicia FastAPI e serve o frontend via Nginx.
 
 Os preços de desenvolvimento existem somente para exercitar orçamento, custo por pessoa e divisão. Para desabilitá-los:
 
@@ -130,7 +131,7 @@ Os preços de desenvolvimento existem somente para exercitar orçamento, custo p
 LOAD_DEMO_DATA=false docker compose up --build
 ```
 
-Nunca trate esses valores como preços reais de mercado.
+Os valores de referência servem para estimativa de orçamento. Eles não são ofertas comerciais nem preços garantidos; ofertas reais cadastradas e verificadas sempre têm prioridade no cálculo.
 
 ## Rodar sem Docker
 
@@ -347,7 +348,7 @@ Ainda exigem credenciais reais:
 - Geoapify conforme configuração acima;
 - eventual provedor de pagamento, ainda não conectado.
 
-Preços demonstrativos do seed **não são preços reais de mercado**.
+Preços de referência do planejador são **estimativas nacionais de orçamento**, não ofertas comerciais nem preços garantidos. Quando há oferta real/verificada para um item, ela substitui a referência no cálculo.
 
 ## Documentação desta etapa
 
