@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="css/production-v63.css">
   <meta name="theme-color" content="#6f7c59">
   <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="assets/pwa/icon-192.png">
 </head>
@@ -23,6 +24,21 @@
     <section class="account-section admin-section">
       <div class="admin-section-head"><div><h2>Usuários</h2><p>Gerencie acesso sem expor senhas ou sessões.</p></div><input id="admin-busca" type="search" placeholder="Buscar nome ou e-mail" autocomplete="off"></div>
       <div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Usuário</th><th>Papel</th><th>Status</th><th>Cadastro</th><th>Ações</th></tr></thead><tbody id="admin-usuarios"></tbody></table></div>
+    </section>
+    <section class="account-section admin-section">
+      <div class="admin-section-head"><div><h2>Cadastrar estabelecimento</h2><p>Cadastros feitos por administrador já entram como verificados. O endereço pode preencher as coordenadas automaticamente.</p></div></div>
+      <form class="account-form" id="admin-form-estabelecimento">
+        <label class="full">Nome<input id="admin-est-nome" required maxlength="150"></label>
+        <label>Tipo<select id="admin-est-tipo"><option value="mercado">Mercado</option><option value="supermercado">Supermercado</option><option value="acougue">Açougue</option><option value="atacarejo">Atacarejo</option></select></label>
+        <label>Cidade<input id="admin-est-cidade" maxlength="100"></label>
+        <label>Estado<input id="admin-est-estado" maxlength="2" placeholder="MG"></label>
+        <label>CEP<input id="admin-est-cep" maxlength="12"></label>
+        <label class="full">Endereço<input id="admin-est-endereco" maxlength="255" placeholder="Rua, número e bairro"></label>
+        <button class="botao botao--secundario full" id="admin-est-localizar" type="button">Localizar endereço e preencher coordenadas</button>
+        <label>Latitude<input id="admin-est-lat" type="number" min="-90" max="90" step="any" inputmode="decimal" placeholder="-19.959383"></label>
+        <label>Longitude<input id="admin-est-lng" type="number" min="-180" max="180" step="any" inputmode="decimal" placeholder="-44.011870"></label>
+        <button class="botao botao--primario full" type="submit">Cadastrar e verificar estabelecimento</button>
+      </form>
     </section>
     <section class="account-section admin-section">
       <div class="admin-section-head"><div><h2>Estabelecimentos</h2><p>Somente parceiros verificados entram nas recomendações públicas.</p></div><label class="legal-check"><input id="admin-somente-pendentes" type="checkbox"><span>Somente pendentes</span></label></div>
