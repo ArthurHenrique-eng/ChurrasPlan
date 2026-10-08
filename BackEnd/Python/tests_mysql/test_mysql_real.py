@@ -28,13 +28,13 @@ def test_mysql_schema_head_e_utf8mb4():
     esperadas = {
         "usuarios", "churrascos", "produtos", "precos", "estabelecimentos",
         "consentimentos_usuario", "eventos_seguranca", "auditoria_admin",
-        "organizacoes", "organizacao_membros", "concessoes_organizacao", "convites_organizacao", "auditoria_organizacao",
+        "organizacoes", "organizacao_membros", "importacoes_ofertas", "concessoes_organizacao", "convites_organizacao", "auditoria_organizacao",
     }
     assert esperadas.issubset(set(insp.get_table_names()))
     with engine.connect() as conn:
         head = conn.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
         charset = conn.execute(text("SELECT @@character_set_database")).scalar_one()
-    assert head == "20261008_0011"
+    assert head == "20261008_0012"
     assert str(charset).lower() == "utf8mb4"
 
 
@@ -146,7 +146,7 @@ def test_mysql_tenant_migration_backfill_preserva_dados():
     from models import Estabelecimento, Organizacao, OrganizacaoMembro, Preco, Produto, Usuario
 
     insp = inspect(engine)
-    assert {"organizacoes", "organizacao_membros", "concessoes_organizacao", "convites_organizacao", "auditoria_organizacao"}.issubset(insp.get_table_names())
+    assert {"organizacoes", "organizacao_membros", "importacoes_ofertas", "concessoes_organizacao", "convites_organizacao", "auditoria_organizacao"}.issubset(insp.get_table_names())
     assert "organizacao_id" in {c["name"] for c in insp.get_columns("estabelecimentos")}
     assert "organizacao_id" in {c["name"] for c in insp.get_columns("produtos")}
     fk_est = {fk["name"] for fk in insp.get_foreign_keys("estabelecimentos")}
