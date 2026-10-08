@@ -94,7 +94,7 @@ O Alembic é a fonte de verdade da evolução do banco.
 Head atual:
 
 ```text
-20261008_0010
+20261008_0011
 ```
 
 Cadeia:
@@ -110,6 +110,7 @@ Cadeia:
 20260925_0008  garante catálogo base do planejador em toda instalação
 20261008_0009  organizações B2B, membros e backfill conservador de parceiros
 20261008_0010  concessões administrativas temporárias e limites B2B (sem billing)
+20261008_0011  convites B2B, equipes, auditoria e gestão de membros
 
 O painel de parceiros aplica cotas B2B transacionais. Organizações começam sempre no tier Free; concessões temporárias Pro/Business dependem de administrador global, CSRF e registro de auditoria. **Pagamento e checkout não estão habilitados**. Contratos, limites e rollback: `docs/SAAS_FASE_2B_ENTITLEMENTS.md`.
 ```
