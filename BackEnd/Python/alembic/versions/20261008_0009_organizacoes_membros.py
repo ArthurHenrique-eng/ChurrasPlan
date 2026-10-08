@@ -47,6 +47,13 @@ def upgrade() -> None:
         ["organizacao_id"], ["id"], ondelete="SET NULL",
     )
 
+    op.add_column("produtos", sa.Column("organizacao_id", sa.Integer(), nullable=True))
+    op.create_index("ix_produtos_organizacao_id", "produtos", ["organizacao_id"])
+    op.create_foreign_key(
+        "fk_produtos_organizacao_id", "produtos", "organizacoes",
+        ["organizacao_id"], ["id"], ondelete="SET NULL",
+    )
+
     conn = op.get_bind()
     usuarios = conn.execute(sa.text("""
         SELECT id, nome FROM usuarios
@@ -81,9 +88,30 @@ def upgrade() -> None:
             """), {"oid": oid, "uid": uid},
         )
 
+    # SKUs comerciais legados associados a ofertas de uma única organização.
+    # SKUs sem oferta ou compartilhados entre organizações ficam globais (NULL)
+    # para não atribuir propriedade sem evidência.
+    associados = conn.execute(sa.text("""
+        SELECT p.id AS produto_id, MIN(e.organizacao_id) AS organizacao_id
+        FROM produtos p
+        JOIN precos pr ON pr.produto_id = p.id
+        JOIN estabelecimentos e ON e.id = pr.estabelecimento_id
+        WHERE p.tipo_produto = 'comercial' AND e.organizacao_id IS NOT NULL
+        GROUP BY p.id
+        HAVING COUNT(DISTINCT e.organizacao_id) = 1
+    """)).mappings().all()
+    for item in associados:
+        conn.execute(
+            sa.text("UPDATE produtos SET organizacao_id=:org WHERE id=:pid"),
+            {"org": int(item["organizacao_id"]), "pid": int(item["produto_id"])},
+        )
+
 
 def downgrade() -> None:
-    # A associação legada usuario_responsavel_id nunca foi apagada.
+    # As chaves legadas de proprietários e ofertas continuam preservadas.
+    op.drop_constraint("fk_produtos_organizacao_id", "produtos", type_="foreignkey")
+    op.drop_index("ix_produtos_organizacao_id", table_name="produtos")
+    op.drop_column("produtos", "organizacao_id")
     op.drop_constraint("fk_estabelecimentos_organizacao_id", "estabelecimentos", type_="foreignkey")
     op.drop_index("ix_estabelecimentos_organizacao_id", table_name="estabelecimentos")
     op.drop_column("estabelecimentos", "organizacao_id")
