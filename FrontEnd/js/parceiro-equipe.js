@@ -159,5 +159,5 @@ const ChurrasPlanEquipe = (() => {
         });
     }
 
-    return { iniciar };
+    return { iniciar, papel: perfil };
 })();
