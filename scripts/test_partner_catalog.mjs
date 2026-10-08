@@ -9,7 +9,7 @@ const get = (id) => {
     return elements.get(id);
 };
 const gen = [
-    { id: 11, nome: "Água", categoria_nome: "Bebidas", preco_referencia: 3.99, preco_referencia_unidade: "garrafa" },
+    { id: 11, nome: "Água", categoria_nome: "Bebidas", preco_referencia: 3.99, preco_referencia_unidade: "garrafa", venda_fracionada: false, quantidade_embalagem: 1.5, unidade_embalagem: "litro" },
     { id: 12, nome: "Detergente", categoria_nome: "Limpeza", preco_referencia: null, preco_referencia_unidade: null },
 ];
 const results = {
@@ -36,7 +36,7 @@ get("prod-categoria").value = "Bebidas";
 runInContext("renderProdutosGenericos()", sandbox);
 assert.equal(get("prod-pai").disabled, false);
 assert.match(get("prod-pai").innerHTML, /Água/);
-assert.match(get("prod-pai").innerHTML, /ref. estimada R\$ 3,99\/garrafa/);
+assert.match(get("prod-pai").innerHTML, /ref. estimada R\$ 3,99\/garrafa de 1,5 litro/);
 get("prod-categoria").value = "Limpeza";
 runInContext("renderProdutosGenericos()", sandbox);
 assert.match(get("prod-pai").innerHTML, /Detergente/);
