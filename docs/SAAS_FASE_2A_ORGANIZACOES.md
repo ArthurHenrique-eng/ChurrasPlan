@@ -13,7 +13,7 @@ A primeira fatia do núcleo multi-tenant estabelece **organizações, membros, p
 - Downgrade remove apenas a estrutura nova, preservando `usuario_responsavel_id`, SKUs, preços e demais dados legados. Após novo upgrade, as associações determinísticas são refeitas; IDs de organização poderão mudar, portanto não persistir relações externas baseadas em seus IDs antes de estabilizar a migration.
 
 ## Isolamento e contratos API
-- `POST /api/parceiro/ativar`: cria a primeira organização e vínculo `proprietario` no mesmo commit de ativação, de maneira idempotente. Administradores preservam fluxos globais existentes.
+- `POST /api/parceiro/ativar`: cria a primeira organização e vínculo `proprietario` no mesmo commit de ativação, de maneira idempotente. A promoção pelo administrador também provisiona uma organização para evitar bloqueio do painel. Lock do usuário e leitura corrente dos membros serializam duas ativações simultâneas no MySQL. Administradores preservam fluxos globais existentes.
 - `GET /api/parceiro/organizacoes`: lista apenas organizações ativas das quais o usuário é membro ativo; **não permite listar organizações alheias por ID**.
 - `X-Organizacao-ID`: opcional para quem tem uma única organização, **obrigatório se for membro de várias** (HTTP 409 sem seleção); organização alheia ou desativada retorna HTTP 404.
 - Rotas `/api/parceiro/estabelecimentos` GET/POST/PUT, `/dashboard`, `/produtos` GET/POST e `/precos` POST consultam contexto e associações no backend, não confiam no ID fornecido pelo frontend.
