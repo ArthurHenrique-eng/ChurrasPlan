@@ -132,6 +132,21 @@ CREATE TABLE auditoria_organizacao (
 ) ENGINE=InnoDB;
 CREATE INDEX ix_auditoria_organizacao_organizacao_id ON auditoria_organizacao (organizacao_id);
 
+CREATE TABLE importacoes_ofertas (
+	id INTEGER NOT NULL AUTO_INCREMENT,
+	organizacao_id INTEGER NOT NULL,
+	usuario_id INTEGER,
+	chave_idempotencia VARCHAR(80) NOT NULL,
+	payload_hash VARCHAR(64) NOT NULL,
+	resultado JSON NOT NULL,
+	criado_em DATETIME NOT NULL DEFAULT now(),
+	PRIMARY KEY (id),
+	CONSTRAINT uq_importacao_ofertas_org_chave UNIQUE (organizacao_id, chave_idempotencia),
+	FOREIGN KEY(organizacao_id) REFERENCES organizacoes (id) ON DELETE CASCADE,
+	FOREIGN KEY(usuario_id) REFERENCES usuarios (id) ON DELETE SET NULL
+) ENGINE=InnoDB;
+CREATE INDEX ix_importacoes_ofertas_organizacao_id ON importacoes_ofertas (organizacao_id);
+
 CREATE TABLE assinaturas_usuario (
 	id INTEGER NOT NULL AUTO_INCREMENT, 
 	usuario_id INTEGER NOT NULL, 
@@ -233,6 +248,8 @@ CREATE TABLE estabelecimentos (
 	slug VARCHAR(170) NOT NULL, 
 	nome VARCHAR(150) NOT NULL, 
 	tipo VARCHAR(60) NOT NULL, 
+	codigo_filial VARCHAR(40), 
+	unidade_matriz BOOL NOT NULL DEFAULT '0', 
 	endereco VARCHAR(255), 
 	logradouro VARCHAR(160), 
 	numero VARCHAR(30), 
@@ -251,6 +268,7 @@ CREATE TABLE estabelecimentos (
 	parceiro_verificado BOOL NOT NULL DEFAULT '0', 
 	ativo BOOL NOT NULL DEFAULT '1', 
 	PRIMARY KEY (id), 
+	CONSTRAINT uq_estabelecimentos_org_codigo_filial UNIQUE (organizacao_id, codigo_filial), 
 	FOREIGN KEY(usuario_responsavel_id) REFERENCES usuarios (id) ON DELETE SET NULL,
 	CONSTRAINT fk_estabelecimentos_organizacao_id FOREIGN KEY(organizacao_id) REFERENCES organizacoes (id) ON DELETE SET NULL
 ) ENGINE=InnoDB;
