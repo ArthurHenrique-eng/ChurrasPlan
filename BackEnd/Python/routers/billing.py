@@ -83,7 +83,7 @@ def criar_checkout(
     org = _proprietario(db, usuario, organizacao_id)
     bloquear_organizacao(db, org.id)
     tentativa = db.query(TentativaCheckout).filter_by(
-        organizacao_id=org.id, chave_idempotencia=chave).first()
+        organizacao_id=org.id, chave_idempotencia=chave).with_for_update().first()
     if tentativa:
         if tentativa.plano_slug != payload.plano:
             raise HTTPException(status_code=409, detail="Chave já usada com outro plano.")
@@ -270,7 +270,9 @@ async def webhook_stripe(request: Request, db: Session = Depends(get_db)):
     elif kind in ("invoice.paid", "invoice.payment_failed", "invoice.marked_uncollectible"):
         stripe_sub = obj.get("subscription")
         if not stripe_sub:
-            stripe_sub = (obj.get("parent") or {}).get("subscription_details", {}).get("subscription")
+            parent = obj.get("parent") or {}
+            details = parent.get("subscription_details") or {}
+            stripe_sub = details.get("subscription")
     if isinstance(stripe_sub, dict):
         stripe_sub = stripe_sub.get("id")
     organizacao_id = None
