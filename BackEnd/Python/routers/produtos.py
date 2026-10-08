@@ -1,12 +1,23 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from database.connection import get_db
 from models import Produto
-from schemas.produto import ProdutoOut
+from schemas.produto import ProdutoGenericoOut, ProdutoOut
+from services.precos_referencia import REFERENCIA_PRECOS_ATUALIZADA_EM, obter_preco_referencia
 from services.calculo_precos import obter_resumo_preco
 
 router = APIRouter(prefix="/api/produtos", tags=["produtos"])
+
+
+def _referencia_catalogo(p: Produto) -> dict:
+    """Somente valores estimados do planejador; não são preços de SKUs ou ofertas."""
+    valor = obter_preco_referencia(p.slug) if p.tipo_produto == "generico" else None
+    return {
+        "preco_referencia": valor,
+        "preco_referencia_data_base": REFERENCIA_PRECOS_ATUALIZADA_EM if valor is not None else None,
+        "preco_referencia_unidade": p.unidade_venda if valor is not None else None,
+    }
 
 
 def produto_out(db: Session, p: Produto) -> ProdutoOut:
@@ -25,6 +36,7 @@ def produto_out(db: Session, p: Produto) -> ProdutoOut:
         imagem_url=p.imagem_url, descricao=p.descricao,
         preco_medio_historico=resumo.preco_medio_historico if resumo else None,
         preco_minimo_atual=resumo.preco_minimo_atual if resumo else None,
+        **_referencia_catalogo(p),
     )
 
 
@@ -43,6 +55,25 @@ def listar_produtos(
         termo = f"%{busca.strip()}%"
         query = query.filter((Produto.nome.ilike(termo)) | (Produto.marca.ilike(termo)) | (Produto.ean.ilike(termo)))
     return [produto_out(db, p) for p in query.order_by(Produto.nome.asc()).all()]
+
+
+@router.get("/genericos", response_model=list[ProdutoGenericoOut])
+def listar_genericos(db: Session = Depends(get_db)):
+    """Lista leve e independente de histórico para o seletor comercial."""
+    produtos = (
+        db.query(Produto)
+        .options(joinedload(Produto.categoria))
+        .filter(Produto.tipo_produto == "generico", Produto.ativo.is_(True))
+        .order_by(Produto.nome.asc(), Produto.id.asc())
+        .all()
+    )
+    return [
+        ProdutoGenericoOut(
+            id=p.id, slug=p.slug, nome=p.nome, categoria_id=p.categoria_id,
+            categoria_nome=p.categoria.nome, categoria_tipo=p.categoria.tipo,
+            **_referencia_catalogo(p),
+        ) for p in produtos
+    ]
 
 
 @router.get("/{produto_id}", response_model=ProdutoOut)
