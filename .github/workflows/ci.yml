@@ -104,6 +104,8 @@ jobs:
         run: node scripts/test_partner_operations.mjs
       - name: Partner commercial catalogue and campaign UI
         run: node scripts/test_partner_commercial.mjs
+      - name: Partner billing sandbox and financial RBAC UI
+        run: node scripts/test_partner_billing.mjs
       - name: Frontend CSP security contract
         run: node scripts/test_frontend_csp.mjs
 
