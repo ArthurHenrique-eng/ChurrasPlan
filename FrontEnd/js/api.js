@@ -72,6 +72,15 @@ function queryString(parametros = {}) {
     return texto ? `?${texto}` : "";
 }
 
+
+/** Contexto de organização mantido por aba. O servidor revalida a participação. */
+function opcoesOrganizacao(opcoes = {}) {
+    let id = null;
+    try { id = sessionStorage.getItem("churrasplan_organizacao_id"); } catch { /* armazenamento indisponível */ }
+    if (!id || !/^[1-9][0-9]*$/.test(id)) return opcoes;
+    return { ...opcoes, headers: { ...(opcoes.headers || {}), "X-Organizacao-ID": id } };
+}
+
 const ChurrasPlanAPI = {
     calcularCarnes(payload, opcoes = {}) { return requisitar("/api/calculadora/carnes", { ...opcoes, method: "POST", body: JSON.stringify(payload) }); },
     calcularBebidas(payload, opcoes = {}) { return requisitar("/api/calculadora/bebidas", { ...opcoes, method: "POST", body: JSON.stringify(payload) }); },
@@ -110,12 +119,21 @@ const ChurrasPlanAPI = {
     listarGenericos(opcoes = {}) { return requisitar("/api/produtos/genericos", opcoes); },
 
     ativarParceiro(opcoes = {}) { return requisitar("/api/parceiro/ativar", { ...opcoes, method: "POST" }); },
-    dashboardParceiro(opcoes = {}) { return requisitar("/api/parceiro/dashboard", opcoes); },
-    estabelecimentosParceiro(opcoes = {}) { return requisitar("/api/parceiro/estabelecimentos", opcoes); },
-    criarEstabelecimento(payload, opcoes = {}) { return requisitar("/api/parceiro/estabelecimentos", { ...opcoes, method: "POST", body: JSON.stringify(payload) }); },
-    produtosParceiro(opcoes = {}) { return requisitar("/api/parceiro/produtos", opcoes); },
-    criarProdutoComercial(payload, opcoes = {}) { return requisitar("/api/parceiro/produtos", { ...opcoes, method: "POST", body: JSON.stringify(payload) }); },
-    cadastrarPrecoParceiro(payload, opcoes = {}) { return requisitar("/api/parceiro/precos", { ...opcoes, method: "POST", body: JSON.stringify(payload) }); },
+    organizacoesParceiro(opcoes = {}) { return requisitar("/api/parceiro/organizacoes", opcoes); },
+    entitlementsParceiro(opcoes = {}) { return requisitar("/api/parceiro/entitlements", opcoesOrganizacao(opcoes)); },
+    membrosOrganizacao(opcoes = {}) { return requisitar("/api/parceiro/equipe/membros", opcoesOrganizacao(opcoes)); },
+    convitesOrganizacao(opcoes = {}) { return requisitar("/api/parceiro/equipe/convites", opcoesOrganizacao(opcoes)); },
+    enviarConviteOrganizacao(payload, opcoes = {}) { return requisitar("/api/parceiro/equipe/convites", { ...opcoesOrganizacao(opcoes), method: "POST", body: JSON.stringify(payload) }); },
+    revogarConviteOrganizacao(id, opcoes = {}) { return requisitar(`/api/parceiro/equipe/convites/${id}`, { ...opcoesOrganizacao(opcoes), method: "DELETE" }); },
+    aceitarConviteOrganizacao(token, opcoes = {}) { return requisitar("/api/parceiro/convites/aceitar", { ...opcoes, method: "POST", body: JSON.stringify({ token }) }); },
+    alterarPapelMembro(id, papel, opcoes = {}) { return requisitar(`/api/parceiro/equipe/membros/${id}`, { ...opcoesOrganizacao(opcoes), method: "PATCH", body: JSON.stringify({ papel }) }); },
+    removerMembroOrganizacao(id, opcoes = {}) { return requisitar(`/api/parceiro/equipe/membros/${id}`, { ...opcoesOrganizacao(opcoes), method: "DELETE" }); },
+    dashboardParceiro(opcoes = {}) { return requisitar("/api/parceiro/dashboard", opcoesOrganizacao(opcoes)); },
+    estabelecimentosParceiro(opcoes = {}) { return requisitar("/api/parceiro/estabelecimentos", opcoesOrganizacao(opcoes)); },
+    criarEstabelecimento(payload, opcoes = {}) { return requisitar("/api/parceiro/estabelecimentos", { ...opcoesOrganizacao(opcoes), method: "POST", body: JSON.stringify(payload) }); },
+    produtosParceiro(opcoes = {}) { return requisitar("/api/parceiro/produtos", opcoesOrganizacao(opcoes)); },
+    criarProdutoComercial(payload, opcoes = {}) { return requisitar("/api/parceiro/produtos", { ...opcoesOrganizacao(opcoes), method: "POST", body: JSON.stringify(payload) }); },
+    cadastrarPrecoParceiro(payload, opcoes = {}) { return requisitar("/api/parceiro/precos", { ...opcoesOrganizacao(opcoes), method: "POST", body: JSON.stringify(payload) }); },
 
     configOndeComprar(opcoes = {}) { return requisitar("/api/onde-comprar/config", opcoes); },
     autocompleteEndereco(texto, latitude = null, longitude = null, limite = 6, opcoes = {}) {
