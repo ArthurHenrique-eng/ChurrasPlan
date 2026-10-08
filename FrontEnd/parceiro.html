@@ -115,6 +115,47 @@
           </form>
           <p id="importar-csv-resultado" class="texto-suave" role="status" aria-live="polite"></p>
         </section>
+        <section class="account-section" id="catalogo-massa" aria-labelledby="catalogo-massa-titulo">
+          <h2 id="catalogo-massa-titulo">Catálogo comercial em escala</h2>
+          <p class="texto-suave">Importe ou atualize até 200 SKUs por lote usando o código SKU da sua empresa. O catálogo genérico é identificado por <code>produto_pai_id</code>; ofertas e preços de referência não são alterados.</p>
+          <p class="texto-suave">Colunas: <code>sku;produto_pai_id;nome;marca;unidade_venda;quantidade_embalagem;unidade_embalagem;ean;ativo</code>. Use ponto ou vírgula para decimais.</p>
+          <form class="account-form" id="form-catalogo-massa">
+            <label class="full">Arquivo de produtos (CSV)
+              <input id="catalogo-arquivo" type="file" accept=".csv,text/csv">
+            </label>
+            <label class="full">Conteúdo do CSV
+              <textarea id="catalogo-texto" rows="5" maxlength="100000" required placeholder="sku;produto_pai_id;nome;marca;unidade_venda;quantidade_embalagem;unidade_embalagem;ean;ativo"></textarea>
+            </label>
+            <button type="submit" class="botao botao--primario full">Importar/atualizar SKUs</button>
+          </form>
+          <p id="catalogo-resultado" class="texto-suave" role="status" aria-live="polite"></p>
+        </section>
+        <section class="account-section" id="campanhas-painel" aria-labelledby="campanhas-titulo">
+          <h2 id="campanhas-titulo">Campanhas comerciais</h2>
+          <p class="texto-suave">Campanhas não geram cobrança nem novos preços. Uma campanha só se torna pública após revisão administrativa, vigência válida e verificação da loja.</p>
+          <form id="form-campanha" class="account-form" hidden>
+            <label>Código da campanha
+              <input id="campanha-codigo" minlength="3" maxlength="60" pattern="[A-Za-z0-9][A-Za-z0-9_-]*" required>
+            </label>
+            <label>Nome da campanha
+              <input id="campanha-nome" minlength="3" maxlength="150" required>
+            </label>
+            <label>Início
+              <input id="campanha-inicio" type="datetime-local" required>
+            </label>
+            <label>Fim (até 90 dias)
+              <input id="campanha-fim" type="datetime-local" required>
+            </label>
+            <label class="full">Descrição (opcional)
+              <textarea id="campanha-descricao" maxlength="500" rows="2"></textarea>
+            </label>
+            <label class="full">Ofertas já cadastradas (use Ctrl ou Cmd para múltiplas)
+              <select id="campanha-ofertas" multiple required size="5"></select>
+            </label>
+            <button type="submit" class="botao botao--primario full">Criar campanha em rascunho</button>
+          </form>
+          <div id="campanhas-lista" class="basket-table" aria-live="polite"></div>
+        </section>
         <section class="account-section" id="operacao-relatorios">
           <h2>Indicadores por filial</h2>
           <p class="texto-suave">Interações de descoberta. Visualizações e cliques não são vendas confirmadas.</p>
@@ -328,6 +369,7 @@
     </script>
     <script src="js/parceiro-equipe.js"></script>
     <script src="js/parceiro-operacao.js"></script>
+    <script src="js/parceiro-comercial.js"></script>
     <script src="js/parceiro.js">
     </script>
   <script src="js/pwa.js"></script>
