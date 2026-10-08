@@ -6,6 +6,7 @@ const ChurrasPlanEquipe = (() => {
     const PAPEIS = ["proprietario", "gestor", "editor", "leitor"];
 
     function guardarOrganizacao(id) {
+        ChurrasPlanAPI.definirOrganizacaoAtiva(id);
         try {
             if (id) sessionStorage.setItem("churrasplan_organizacao_id", String(id));
             else sessionStorage.removeItem("churrasplan_organizacao_id");
