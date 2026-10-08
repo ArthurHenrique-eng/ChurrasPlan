@@ -6,6 +6,7 @@ Um erro em qualquer uma das quatro chamadas paralelas de `carregarParceiro()` in
 ## Implementação
 - `GET /api/produtos/genericos`: lista genéricos ativos com categoria e referência estimada opcional, sem consultar o histórico de ofertas. O endpoint anterior permanece compatível.
 - `GET /api/produtos` e `GET /api/produtos/{id}`: três campos adicionais compatíveis, sem alterar preço comercial: `preco_referencia`, `preco_referencia_data_base`, `preco_referencia_unidade`.
+- O seletor exibe o conteúdo da embalagem vinculado à estimativa (ex.: água R$ 3,99/garrafa de 1,5 litro), não só o tipo de recipiente; considera se a venda é fracionada. Isso evita comparar indevidamente tamanhos distintos.
 - Somente slugs genéricos cobertos pelo catálogo de referência BR-2026-09 retornam estimativa. SKUs comerciais, limpeza e outros itens sem calibração retornam `null` e não recebem preço fictício.
 - O painel usa `Promise.allSettled`: métricas indisponíveis não bloqueiam seleção de produtos e cada área que falhar apresenta aviso. Quando o catálogo falha, a lista fica desabilitada e exibe mensagem específica.
 - Categorias previstas em `20260925_0007`: carnes, bebidas, mercearia, laticínios, padaria, hortifruti, congelados, limpeza, higiene e descartáveis. `20260925_0008` completa produtos base do planejador.
