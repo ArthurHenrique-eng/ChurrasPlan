@@ -44,8 +44,13 @@ def _assinatura(db: Session, org_id: int):
 
 
 @router.get("/catalogo")
-def catalogo_stripe_test():
+def catalogo_stripe_test(
+    usuario: Usuario = Depends(exigir_papeis("parceiro", "admin")),
+    db: Session = Depends(get_db),
+    organizacao_id: int | None = Header(default=None, alias="X-Organizacao-ID"),
+):
     """Dados monetários vêm exclusivamente de Prices do Stripe Test."""
+    _proprietario(db, usuario, organizacao_id)
     exigir_billing()
     return {"sandbox": True, "pagamentos_reais_habilitados": False,
             "planos": [preco_mensal_validado(p) for p in ("pro", "business")]}
