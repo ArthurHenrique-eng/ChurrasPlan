@@ -24,6 +24,7 @@ from services.entitlements import agora_utc
 VALID_STATUSES = {"active", "trialing", "past_due", "canceled", "unpaid", "incomplete", "incomplete_expired", "paused"}
 ELIGIBLE_STATUSES = {"active"}
 PRICE_FIELDS = {"pro": "STRIPE_PRICE_PRO", "business": "STRIPE_PRICE_BUSINESS"}
+PRICE_FIELDS_YEARLY = {"pro": "STRIPE_PRICE_PRO_YEARLY", "business": "STRIPE_PRICE_BUSINESS_YEARLY"}
 
 
 def billing_habilitado() -> bool:
@@ -40,10 +41,14 @@ def exigir_billing() -> None:
         raise HTTPException(status_code=503, detail="Stripe Test não configurado. Cobrança real permanece desativada.")
 
 
-def preco_configurado(plano: str) -> str:
-    if plano not in PRICE_FIELDS:
-        raise HTTPException(status_code=422, detail="Plano B2B inválido.")
-    return getattr(settings, PRICE_FIELDS[plano])
+def preco_configurado(plano: str, periodicidade: str = "mensal") -> str:
+    if plano not in PRICE_FIELDS or periodicidade not in ("mensal", "anual"):
+        raise HTTPException(status_code=422, detail="Plano ou periodicidade B2B inválidos.")
+    campo = (PRICE_FIELDS if periodicidade == "mensal" else PRICE_FIELDS_YEARLY)[plano]
+    price_id = getattr(settings, campo)
+    if not price_id.startswith("price_"):
+        raise HTTPException(status_code=503, detail="Preço do período não configurado no Stripe Test.")
+    return price_id
 
 
 def stripe_request(method: str, path: str, campos: dict | None = None, *, idempotency: str | None = None) -> dict:
@@ -73,18 +78,18 @@ def validar_destino(url: str, dominio: str) -> str:
     return url
 
 
-def preco_mensal_validado(plano: str) -> dict:
-    """Nunca confiar em preço do frontend; a Stripe dita moeda, valor e recorrência."""
-    price_id = preco_configurado(plano)
+def preco_mensal_validado(plano: str, periodicidade: str = "mensal") -> dict:
+    """Valida preço recorrente mensal/anual; nunca aceita valor do browser."""
+    price_id = preco_configurado(plano, periodicidade)
     dado = stripe_request("GET", "/v1/prices/" + urllib.parse.quote(price_id, safe=""))
     intervalo = (dado.get("recurring") or {}).get("interval")
     if (dado.get("id") != price_id or dado.get("currency") != "brl"
-            or intervalo != "month" or (dado.get("recurring") or {}).get("interval_count", 1) != 1
+            or intervalo != ("month" if periodicidade == "mensal" else "year") or (dado.get("recurring") or {}).get("interval_count", 1) != 1
             or not isinstance(dado.get("unit_amount"), int)
             or dado["unit_amount"] <= 0 or not dado.get("active")):
         raise HTTPException(status_code=503, detail="Preço BRL mensal do plano não está configurado no Stripe Test.")
     return {"plano": plano, "moeda": "BRL", "centavos": dado["unit_amount"],
-            "preco_id": price_id, "periodicidade": "mensal"}
+            "preco_id": price_id, "periodicidade": periodicidade}
 
 
 def verificar_assinatura_webhook(payload: bytes, assinatura: str) -> dict:
@@ -146,9 +151,13 @@ def reconciliar_assinatura(db: Session, stripe_id: str, *, sessao: TentativaChec
     preco_real = itens[0]["price"].get("id")
     # A lista de Price IDs configurados no servidor é a fonte do tier.
     # Evita metadata antiga após troca pelo Customer Portal.
-    plano = next((slug for slug in PRICE_FIELDS if preco_real == preco_configurado(slug)), None)
-    if plano is None or org_id < 1:
+    selecionado = next(((slug, periodo) for periodo, campos in
+                       (("mensal", PRICE_FIELDS), ("anual", PRICE_FIELDS_YEARLY))
+                       for slug, nome_campo in campos.items()
+                       if getattr(settings, nome_campo, "") and preco_real == getattr(settings, nome_campo)), None)
+    if selecionado is None or org_id < 1:
         raise HTTPException(status_code=409, detail="Price ID da assinatura não autorizado.")
+    plano, periodicidade = selecionado
     cliente = remoto.get("customer")
     if isinstance(cliente, dict):
         cliente = cliente.get("id")
@@ -194,7 +203,7 @@ def reconciliar_assinatura(db: Session, stripe_id: str, *, sessao: TentativaChec
             atual.tolerancia_ate = limite
     else:
         atual.tolerancia_ate = None
-    atual.status, atual.plano_slug = status, plano
+    atual.status, atual.plano_slug, atual.periodicidade = status, plano, periodicidade
     atual.stripe_subscription_id, atual.stripe_customer_id = stripe_id, cliente
     atual.periodo_fim_em, atual.cancelamento_agendado = fim, bool(remoto.get("cancel_at_period_end"))
     atual.sincronizado_em = agora
@@ -219,6 +228,7 @@ def assinatura_efetiva(assinatura: AssinaturaOrganizacao | None) -> bool:
 def resumo_billing(assinatura: AssinaturaOrganizacao | None) -> dict:
     return {
         "plano": assinatura.plano_slug if assinatura else "free",
+        "periodicidade": assinatura.periodicidade if assinatura else None,
         "status": assinatura.status if assinatura else "sem_assinatura",
         "periodo_fim_em": assinatura.periodo_fim_em if assinatura else None,
         "tolerancia_ate": assinatura.tolerancia_ate if assinatura else None,
