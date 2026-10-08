@@ -69,6 +69,20 @@ def validar_destino(url: str, dominio: str) -> str:
     return url
 
 
+def preco_mensal_validado(plano: str) -> dict:
+    """Nunca confiar em preço do frontend; a Stripe dita moeda, valor e recorrência."""
+    price_id = preco_configurado(plano)
+    dado = stripe_request("GET", "/v1/prices/" + urllib.parse.quote(price_id, safe=""))
+    intervalo = (dado.get("recurring") or {}).get("interval")
+    if (dado.get("id") != price_id or dado.get("currency") != "brl"
+            or intervalo != "month" or (dado.get("recurring") or {}).get("interval_count", 1) != 1
+            or not isinstance(dado.get("unit_amount"), int)
+            or dado["unit_amount"] <= 0 or not dado.get("active")):
+        raise HTTPException(status_code=503, detail="Preço BRL mensal do plano não está configurado no Stripe Test.")
+    return {"plano": plano, "moeda": "BRL", "centavos": dado["unit_amount"],
+            "preco_id": price_id, "periodicidade": "mensal"}
+
+
 def verificar_assinatura_webhook(payload: bytes, assinatura: str) -> dict:
     exigir_billing()
     if len(payload) > 250000:
@@ -149,7 +163,13 @@ def reconciliar_assinatura(db: Session, stripe_id: str, *, sessao: TentativaChec
         atual = AssinaturaOrganizacao(organizacao_id=org_id)
         db.add(atual)
     elif atual.stripe_subscription_id and atual.stripe_subscription_id != stripe_id:
-        raise HTTPException(status_code=409, detail="Outra assinatura já pertence à organização.")
+        # Novo checkout permitido apenas depois de término efetivo da antiga.
+        tentativa = sessao or db.query(TentativaCheckout).filter_by(
+            organizacao_id=org_id, plano_slug=plano,
+            stripe_subscription_id=stripe_id).first()
+        if (assinatura_efetiva(atual) or atual.status not in ("canceled", "incomplete_expired")
+                or not tentativa):
+            raise HTTPException(status_code=409, detail="Outra assinatura já pertence à organização.")
     if atual.stripe_customer_id and atual.stripe_customer_id != cliente:
         raise HTTPException(status_code=409, detail="Customer Stripe divergente.")
     status = remoto.get("status")
