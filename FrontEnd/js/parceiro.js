@@ -95,6 +95,8 @@ document.addEventListener("DOMContentLoaded", async()=>{
     // O token somente existe no link enviado ao destinatário. Não salvar em storage.
     const tokenConvite = new URLSearchParams(window.location.search).get("convite");
     if(tokenConvite){
+        // Limpa antes de chamar API para reduzir exposição do segredo no Referer.
+        window.history.replaceState({}, "", window.location.pathname);
         try {
             const aceite = await ChurrasPlanAPI.aceitarConviteOrganizacao(tokenConvite);
             ChurrasPlanAuth.limparCache();
@@ -102,8 +104,7 @@ document.addEventListener("DOMContentLoaded", async()=>{
             try { sessionStorage.setItem("churrasplan_organizacao_id", String(aceite.organizacao_id)); } catch { /* opcional */ }
             mensagemParceiro("Convite aceito. Sua organização já está disponível.");
         } catch(e) { mensagemParceiro(e.message,"erro"); }
-        // Remove o segredo do histórico e da barra de URL, mesmo após falha.
-        window.history.replaceState({}, "", window.location.pathname);
+
     }
     const ativar=document.getElementById("ativar-parceiro"), conteudo=document.getElementById("parceiro-conteudo");
     if(!["parceiro","admin"].includes(parceiroUsuario.papel)){
