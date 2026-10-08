@@ -6,6 +6,7 @@ from models import AssinaturaUsuario, PlanoAssinatura, Usuario
 from services.auth import usuario_atual
 from services.entitlements import LIMITES_PLANOS, RECURSOS_PLANOS
 from services.equipe_organizacao import LIMITES_MEMBROS
+from services.billing import billing_habilitado
 
 router = APIRouter(prefix="/api/planos", tags=["planos"])
 
@@ -29,6 +30,7 @@ def planos_parceiros():
             "limites": {**limites, "membros": LIMITES_MEMBROS[slug]}, "recursos": RECURSOS_PLANOS[slug].copy(),
             "preco_mensal": None, "moeda": "BRL",
             "checkout_habilitado": False, "pagamentos_habilitados": False,
+            "checkout_sandbox_habilitado": billing_habilitado() and slug != "free",
             "disponibilidade": "cortesia_administrativa" if slug != "free" else "gratuito",
         }
         for slug, limites in LIMITES_PLANOS.items()
