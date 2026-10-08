@@ -69,7 +69,9 @@ def _contagem_atual(db: Session, org_id: int, recurso: str, *, bloqueio: bool = 
 
 def resumo_entitlements(db: Session, org: Organizacao) -> dict:
     slug, fonte, validade = resolver_plano(db, org.id)
+    from services.equipe_organizacao import resumo_equipe
     return {
+        "equipe": resumo_equipe(db, org),
         "organizacao_id": org.id,
         "plano": slug,
         "fonte": fonte,
