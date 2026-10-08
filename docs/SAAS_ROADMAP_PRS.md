@@ -1,6 +1,6 @@
 # Roadmap SaaS — PR por fase, gates de qualidade
 
-Branch-base exclusiva para integração SaaS: `Saas-ChurrasPlan` (não `main`). Criar `saas/fase-N-...` **a partir do último commit da branch-base** e abrir PR com base `Saas-ChurrasPlan`. Não comitar diretamente na branch-base, pois isso inviabiliza a revisão de PR. Não fazer merge automático; exigir revisão, check de cada job e ausência de falhas introduzidas. Uma fase ampla pode precisar de **vários PRs pequenos dentro do mesmo marco**, mantendo foco por domínio técnico; jamais empilhar fases sem passar pelos gates.
+Branch de trabalho **exclusiva** definida pelo mantenedor: `Saas-ChurrasPlan` (nunca `main`). **Não criar outras branches de fase.** Commits de incremento devem ocorrer diretamente nesta branch, com verificações de cada commit final por GitHub Actions (CI e CodeQL), documentação e ausência de falhas antes de marcar a entrega como concluída. Os PRs #3 a #8 pertencem ao histórico já consolidado.
 
 | Ordem | Fase | Incremento principal | Gate verificável |
 | --- | --- | --- | --- |
@@ -13,15 +13,15 @@ Branch-base exclusiva para integração SaaS: `Saas-ChurrasPlan` (não `main`). 
 | 6 | IA/automações | AGENTS e revisão, assistente opcional estruturado, limites custos, outbox/fila se necessária | Falha de LLM não quebra cálculo; nenhuma mutação financeira pelo LLM; jobs idempotentes |
 | 7 | Piloto/lançamento | Staging, smoke/rollback, carga, restore, suporte, documentação, piloto regional | Relatório com aprovações e bloqueios reais; lançamento só após gates de produto, segurança, billing e operação |
 
-## Regras para cada PR
+## Regras de cada incremento na Saas-ChurrasPlan
 
-1. Listar escopo, arquivos alterados, migrations e contrato de API; registrar efeitos B2C/B2B/admin.
+1. Listar escopo, arquivos alterados, migrations e contrato de API; registrar efeitos B2C/B2B/admin. Commit diretamente na branch SaaS conforme instrução do mantenedor, sem ramificações auxiliares.
 2. Demonstrar comandos, testes passados/falhos, referências à execução GitHub Actions e limitações de ambiente.
 3. Testar no MySQL real quando houver persistência; validar `alembic check`, retenção de dados legados e rollback adequado.
 4. Cobrir segurança de rota por backend: CSRF, papéis, isolamento organizacional, rate limit, webhooks autenticados e idempotência conforme escopo.
 5. Evidenciar impacto no planejador: regras determinísticas, preços (referência vs oferta), PWA, e fronteiras entre compra física e quantidade comercial.
 6. Não esconder falhas de CI nem declarar integrações externas ativas sem sandbox/produção demonstrados.
-7. Bloquear merge com falhas dos jobs: `Backend unit/integration (SQLite)`, `MySQL 8 real + Alembic`, `Frontend static checks`, `Security audit`, `Docker configuration and images`, `E2E Chromium + MySQL`.
+7. Bloquear conclusão da fase com falhas dos jobs: `Backend unit/integration (SQLite)`, `MySQL 8 real + Alembic`, `Frontend static checks`, `Security audit`, `Docker configuration and images`, `E2E Chromium + MySQL`.
 8. Atualizar esse roadmap com o status **somente depois** da prova e revisão. Sem assinatura paga fictícia, sem deploy/push para `main`.
 
 ## Dependências arquiteturais
@@ -30,6 +30,8 @@ Branch-base exclusiva para integração SaaS: `Saas-ChurrasPlan` (não `main`). 
 
 Dependências humanas explícitas: configurar conta real de cobrança, chaves/contratos, DNS e servidores, backups externos, consultoria jurídica/tributária, recrutamento de parceiros e validação de disposição a pagar. Parte técnica pode ser desenvolvida com adapters/mocks/sandbox, sem simular resultado financeiro real.
 
-## Próximo PR sugerido (após Fase 0 aprovada)
-
-`saas/fase-1-correcao-cadastro-catalogo-precos`: priorizar exclusivamente os três fluxos P0 relatados; novos testes Playwright de parceiro/admin e regressão de orçamentos; ajustar `README.md`/Compose no mesmo marco, idealmente commit separado. MFA/CSP/observabilidade/backup entram em incrementos separados de Fase 1 para não concentrar riscos numa revisão única.
+## Status e próximas lacunas
+- **Fases 0, 1A–1C e 2A–2C:** implementadas e comprovadas por CI; ver histórico PR #3 a #8 e documentação de cada etapa.
+- **Fase 2D (operação essencial B2B):** filiais via estabelecimentos com código/matriz, CSV de ofertas idempotente, onboarding e métricas agregadas, documentados em `docs/SAAS_FASE_2D_OPERACAO_B2B.md`. A aprovação deve ser registrada só após CI/CodeQL do commit de entrega.
+- **Pendente na operação comercial da Fase 4:** catálogo comercial por CSV, atualização em massa, campanhas com vigência e governança, integrações ERP e análises transacionais com dados reais.
+- **Pendente nas Fases 1/3/7:** MFA, observabilidade operacional, backups/restore externo, gateway de cobrança real com sandbox/webhooks, infraestrutura de staging e homologação para piloto. Não declarar disponibilidade comercial antes dessas validações.
