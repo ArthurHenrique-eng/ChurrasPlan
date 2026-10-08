@@ -1,8 +1,8 @@
 """Autoridade única para planos B2B e limites de uso.
 
 A existência de assinaturas_usuario, o campo usuarios.plano e os valores de
-plano enviados pelo browser NUNCA concedem direitos B2B. Só concessões
-administrativas válidas podem elevar Free a Pro/Business até integrar billing.
+plano enviados pelo browser NUNCA concedem direitos B2B. Somente concessões administrativas válidas ou uma assinatura Stripe Test
+reconciliada no backend podem elevar Free a Pro/Business.
 """
 from datetime import UTC, datetime
 
@@ -10,7 +10,7 @@ from fastapi import HTTPException
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from models import ConcessaoOrganizacao, Estabelecimento, Organizacao, Preco, Produto, Usuario
+from models import ConcessaoOrganizacao, AssinaturaOrganizacao, Estabelecimento, Organizacao, Preco, Produto, Usuario
 
 # Valores operacionais iniciais, NÃO preços nem ofertas comerciais.
 # Contagens incluem dados legados e registros inativos (evita contorno de quota).
@@ -31,6 +31,14 @@ def agora_utc() -> datetime:
 
 
 def resolver_plano(db: Session, organizacao_id: int, *, bloqueio: bool = False) -> tuple[str, str, datetime | None]:
+    from services.billing import billing_habilitado, assinatura_efetiva
+    if billing_habilitado():
+        assinatura = db.query(AssinaturaOrganizacao).filter_by(organizacao_id=organizacao_id)
+        if bloqueio:
+            assinatura = assinatura.with_for_update()
+        registro = assinatura.first()
+        if assinatura_efetiva(registro):
+            return registro.plano_slug, "stripe_test", registro.periodo_fim_em
     consulta = db.query(ConcessaoOrganizacao).filter_by(organizacao_id=organizacao_id)
     if bloqueio:
         consulta = consulta.with_for_update()
@@ -69,9 +77,13 @@ def _contagem_atual(db: Session, org_id: int, recurso: str, *, bloqueio: bool = 
 
 def resumo_entitlements(db: Session, org: Organizacao) -> dict:
     slug, fonte, validade = resolver_plano(db, org.id)
+    from services.billing import billing_habilitado, resumo_billing
+    assinatura = db.query(AssinaturaOrganizacao).filter_by(organizacao_id=org.id).first()
     from services.equipe_organizacao import resumo_equipe
     return {
         "equipe": resumo_equipe(db, org),
+        "billing": resumo_billing(assinatura),
+        "checkout_sandbox_habilitado": billing_habilitado(),
         "organizacao_id": org.id,
         "plano": slug,
         "fonte": fonte,
