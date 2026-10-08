@@ -1,6 +1,6 @@
--- ChurrasPlan SaaS - schema MySQL de referência (Alembic head 20261008_0010).
+-- ChurrasPlan SaaS - schema MySQL de referência (Alembic head 20261008_0011).
 -- Fonte de verdade para evolução: Alembic (`alembic upgrade head`).
--- Este arquivo representa uma instalação NOVA no head 20261008_0010.
+-- Este arquivo representa uma instalação NOVA no head 20261008_0011.
 -- Para bancos existentes, NÃO recrie tabelas: aplique as migrations.
 CREATE DATABASE IF NOT EXISTS churrasplan CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE churrasplan;
@@ -96,6 +96,41 @@ CREATE TABLE concessoes_organizacao (
 	FOREIGN KEY(organizacao_id) REFERENCES organizacoes (id) ON DELETE CASCADE,
 	FOREIGN KEY(alterado_por_usuario_id) REFERENCES usuarios (id) ON DELETE SET NULL
 ) ENGINE=InnoDB;
+
+CREATE TABLE convites_organizacao (
+	id INTEGER NOT NULL AUTO_INCREMENT,
+	organizacao_id INTEGER NOT NULL,
+	email VARCHAR(160) NOT NULL,
+	papel VARCHAR(20) NOT NULL,
+	token_hash VARCHAR(64) NOT NULL,
+	criado_por_usuario_id INTEGER,
+	expira_em DATETIME NOT NULL,
+	usado_em DATETIME,
+	revogado_em DATETIME,
+	criado_em DATETIME NOT NULL DEFAULT now(),
+	PRIMARY KEY (id),
+	CONSTRAINT ck_convite_org_papel CHECK (papel IN ('proprietario','gestor','editor','leitor')),
+	FOREIGN KEY(organizacao_id) REFERENCES organizacoes (id) ON DELETE CASCADE,
+	FOREIGN KEY(criado_por_usuario_id) REFERENCES usuarios (id) ON DELETE SET NULL
+) ENGINE=InnoDB;
+CREATE INDEX ix_convites_organizacao_organizacao_id ON convites_organizacao (organizacao_id);
+CREATE UNIQUE INDEX ix_convites_organizacao_token_hash ON convites_organizacao (token_hash);
+CREATE INDEX ix_convite_org_org_email ON convites_organizacao (organizacao_id, email);
+
+CREATE TABLE auditoria_organizacao (
+	id INTEGER NOT NULL AUTO_INCREMENT,
+	organizacao_id INTEGER NOT NULL,
+	autor_usuario_id INTEGER,
+	acao VARCHAR(60) NOT NULL,
+	alvo_usuario_id INTEGER,
+	detalhes JSON,
+	criado_em DATETIME NOT NULL DEFAULT now(),
+	PRIMARY KEY (id),
+	FOREIGN KEY(organizacao_id) REFERENCES organizacoes (id) ON DELETE CASCADE,
+	FOREIGN KEY(autor_usuario_id) REFERENCES usuarios (id) ON DELETE SET NULL,
+	FOREIGN KEY(alvo_usuario_id) REFERENCES usuarios (id) ON DELETE SET NULL
+) ENGINE=InnoDB;
+CREATE INDEX ix_auditoria_organizacao_organizacao_id ON auditoria_organizacao (organizacao_id);
 
 CREATE TABLE assinaturas_usuario (
 	id INTEGER NOT NULL AUTO_INCREMENT, 
