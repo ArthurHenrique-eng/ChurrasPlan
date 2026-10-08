@@ -167,6 +167,11 @@ def test_mysql_tenant_migration_backfill_preserva_dados():
         assert loja.usuario_responsavel_id == usuario.id
         assert loja.organizacao_id == org.id
         assert sku.organizacao_id == org.id
+        compartilhado = db.query(Produto).filter_by(slug="saas-sku-ambiguo-ci").one()
+        assert compartilhado.organizacao_id is None
+        loja_sem_dono = db.query(Estabelecimento).filter_by(slug="saas-loja-sem-dono-ci").one()
+        assert loja_sem_dono.organizacao_id is None
+        assert db.query(Preco).filter_by(produto_id=compartilhado.id).count() == 2
         assert float(db.query(Preco).filter_by(
             produto_id=sku.id, estabelecimento_id=loja.id
         ).one().preco) == pytest.approx(3.79)
