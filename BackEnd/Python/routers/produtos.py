@@ -71,6 +71,9 @@ def listar_genericos(db: Session = Depends(get_db)):
         ProdutoGenericoOut(
             id=p.id, slug=p.slug, nome=p.nome, categoria_id=p.categoria_id,
             categoria_nome=p.categoria.nome, categoria_tipo=p.categoria.tipo,
+            venda_fracionada=p.venda_fracionada,
+            quantidade_embalagem=float(p.quantidade_embalagem) if p.quantidade_embalagem is not None else None,
+            unidade_embalagem=p.unidade_embalagem,
             **_referencia_catalogo(p),
         ) for p in produtos
     ]
