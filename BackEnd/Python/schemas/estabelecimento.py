@@ -8,6 +8,7 @@ class EstabelecimentoOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
     usuario_responsavel_id: Optional[int] = None
+    organizacao_id: Optional[int] = None
     slug: str
     nome: str
     tipo: str
