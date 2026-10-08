@@ -46,6 +46,28 @@ def main():
                       'manual_parceiro', 'disponivel', 1)
         """), {"pid": pid, "eid": eid, "uid": uid})
 
+        # Outro SKU ofertado tanto por loja associada quanto por loja SEM
+        # responsável: a migração não pode atribuir essa marca a um tenant.
+        nao_associada = conn.execute(text("""
+            INSERT INTO estabelecimentos (slug, nome, tipo, parceiro_verificado, ativo)
+            VALUES ('saas-loja-sem-dono-ci', 'Loja sem responsável CI', 'mercado', 0, 1)
+        """)).lastrowid
+        compartilhado = conn.execute(text("""
+            INSERT INTO produtos (
+                categoria_id, tipo_produto, slug, nome, marca, unidade_consumo,
+                unidade_venda, venda_fracionada, ativo
+            ) VALUES (
+                (SELECT categoria_id FROM (SELECT categoria_id FROM produtos WHERE slug='agua') AS base),
+                'comercial', 'saas-sku-ambiguo-ci', 'SKU ambíguo CI',
+                'Marca compartilhada', 'litro', 'garrafa', 0, 1
+            )
+        """)).lastrowid
+        for loja_id in [eid, nao_associada]:
+            conn.execute(text("""
+                INSERT INTO precos (produto_id, estabelecimento_id, preco, origem)
+                VALUES (:pid, :eid, 5.19, 'ci-legado')
+            """), {"pid": compartilhado, "eid": loja_id})
+
 
 if __name__ == "__main__":
     main()
