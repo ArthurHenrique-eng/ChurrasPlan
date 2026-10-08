@@ -141,6 +141,11 @@ const ChurrasPlanAPI = {
     produtosParceiro(opcoes = {}) { return requisitar("/api/parceiro/produtos", opcoesOrganizacao(opcoes)); },
     criarProdutoComercial(payload, opcoes = {}) { return requisitar("/api/parceiro/produtos", { ...opcoesOrganizacao(opcoes), method: "POST", body: JSON.stringify(payload) }); },
     cadastrarPrecoParceiro(payload, opcoes = {}) { return requisitar("/api/parceiro/precos", { ...opcoesOrganizacao(opcoes), method: "POST", body: JSON.stringify(payload) }); },
+    filiaisParceiro(opcoes = {}) { return requisitar("/api/parceiro/filiais", opcoesOrganizacao(opcoes)); },
+    alterarFilial(id, payload, opcoes = {}) { return requisitar(`/api/parceiro/filiais/${id}`, { ...opcoesOrganizacao(opcoes), method: "PATCH", body: JSON.stringify(payload) }); },
+    onboardingParceiro(opcoes = {}) { return requisitar("/api/parceiro/onboarding", opcoesOrganizacao(opcoes)); },
+    relatorioComercialParceiro(dias = 30, opcoes = {}) { return requisitar(`/api/parceiro/relatorios/comercial?periodo_dias=${Number(dias)}`, opcoesOrganizacao(opcoes)); },
+    importarOfertasCSV(payload, opcoes = {}) { return requisitar("/api/parceiro/importacoes/ofertas", { ...opcoesOrganizacao(opcoes), method: "POST", body: JSON.stringify(payload) }); },
 
     configOndeComprar(opcoes = {}) { return requisitar("/api/onde-comprar/config", opcoes); },
     autocompleteEndereco(texto, latitude = null, longitude = null, limite = 6, opcoes = {}) {
