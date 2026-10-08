@@ -14,9 +14,9 @@ Execução aprovada: https://github.com/ArthurHenrique-eng/ChurrasPlan/actions/r
 ## Implementado neste PR
 - CSP do Nginx permite somente origem local e CDN jsDelivr para MapLibre JS/CSS; Geoapify/tiles são acessados pelo proxy próprio `/api/`, mantendo `connect-src 'self'`; removes Google Maps/Places.
 - Permite `worker-src 'self' blob:` para o worker do MapLibre. Não libera `unsafe-eval` nem `unsafe-inline` em scripts.
-- Teste automatizado Node valida as diretivas CSP, bibliotecas referenciadas no HTML e comandos Docker no README.
+- Teste automatizado Node valida as diretivas CSP, bibliotecas referenciadas no HTML e comandos Docker no README, com verificações literais para origens externas (sem regex de URL não ancorada).
 - Build Docker valida sintaxe Nginx com `nginx -t` dentro da imagem gerada.
-- Dependabot: pip, GitHub Actions e imagens Docker, sempre abrindo PRs para `Saas-ChurrasPlan`, nunca direto na `main`.
+- Dependabot: pip, GitHub Actions e imagens Docker em `/`, `/BackEnd/Python` e `/FrontEnd`, incluindo a intenção de monitorar as imagens MySQL/Caddy declaradas no Compose da raiz; propostas de atualização sempre direcionadas à `Saas-ChurrasPlan`, nunca diretamente à `main`.
 - CodeQL v4 em Python e JavaScript/TypeScript para PR, push e varredura agendada; `security-extended`.
 - README documenta comandos dev/prod com os nomes reais dos arquivos e o carregamento explícito de secrets.
 
