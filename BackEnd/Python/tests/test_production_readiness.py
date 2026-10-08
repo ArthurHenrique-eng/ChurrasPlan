@@ -99,8 +99,8 @@ def test_admin_dashboard_moderacao_e_auditoria(client):
         json={
             "nome": "Mercado criado pelo admin",
             "tipo": "supermercado",
-            "latitude": -19959383,
-            "longitude": -44011870,
+            "latitude": -19.959383,
+            "longitude": -44.01187,
         },
     )
     assert criado.status_code == 201, criado.text
