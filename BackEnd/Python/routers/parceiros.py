@@ -12,6 +12,7 @@ from schemas.estabelecimento import EstabelecimentoOut, EstabelecimentoParceiroC
 from schemas.produto import ProdutoComercialCreate, ProdutoOut
 from services.auth import exigir_papeis, usuario_atual_com_csrf
 from services.catalogo_produtos import slugificar
+from services.entitlements import exigir_cota_criacao, resumo_entitlements
 from services.organizacoes import garantir_organizacao_inicial, selecionar_organizacao
 from routers.produtos import produto_out
 
@@ -65,6 +66,21 @@ def minhas_organizacoes(
     ]
 
 
+@router.get("/entitlements")
+def meus_entitlements(
+    usuario: Usuario = Depends(exigir_papeis("parceiro", "admin")),
+    db: Session = Depends(get_db),
+    organizacao_id: int | None = Header(default=None, alias="X-Organizacao-ID"),
+):
+    org = selecionar_organizacao(db, usuario, organizacao_id)
+    if org is None:
+        return {"organizacao_id": None, "plano": "admin_global",
+                "fonte": "operacao_administrativa", "expira_em": None,
+                "pagamentos_habilitados": False, "checkout_habilitado": False,
+                "limites": None, "uso": None, "recursos": {}}
+    return resumo_entitlements(db, org)
+
+
 @router.get("/estabelecimentos", response_model=list[EstabelecimentoOut])
 def meus_estabelecimentos(
     usuario: Usuario = Depends(exigir_papeis("parceiro", "admin")),
@@ -86,6 +102,7 @@ def criar_estabelecimento(
     organizacao_id: int | None = Header(default=None, alias="X-Organizacao-ID"),
 ):
     org = selecionar_organizacao(db, usuario, organizacao_id, editar=True)
+    exigir_cota_criacao(db, org, usuario, "estabelecimentos")
     base = slugificar(payload.nome) or "estabelecimento"
     slug = base
     while db.query(Estabelecimento).filter(Estabelecimento.slug == slug).first():
@@ -125,6 +142,7 @@ def criar_produto_comercial(
         raise HTTPException(status_code=422, detail="Selecione um produto genérico válido como categoria comercial.")
     if payload.ean and db.query(Produto).filter(Produto.ean == payload.ean).first():
         raise HTTPException(status_code=409, detail="Já existe um produto com este EAN.")
+    exigir_cota_criacao(db, org, usuario, "produtos_comerciais")
     base = slugificar(f"{payload.marca}-{payload.nome}-{payload.quantidade_embalagem}-{payload.unidade_embalagem}")
     slug = base or f"produto-{secrets.token_hex(4)}"
     while db.query(Produto).filter(Produto.slug == slug).first(): slug = f"{base}-{secrets.token_hex(3)}"
@@ -173,6 +191,8 @@ def cadastrar_preco(
     # SKUs com proprietário B2B nunca podem ser ofertados por outro tenant.
     if p.organizacao_id is not None and p.organizacao_id != e.organizacao_id:
         raise HTTPException(status_code=404, detail="Produto não encontrado.")
+    org = selecionar_organizacao(db, usuario, organizacao_id, editar=True)
+    exigir_cota_criacao(db, org, usuario, "ofertas")
     preco = Preco(
         produto_id=p.id, estabelecimento_id=e.id, criado_por_usuario_id=usuario.id,
         preco=payload.preco, preco_original=payload.preco_original, moeda="BRL",
