@@ -3,8 +3,14 @@
 Executar somente no banco EFÊMERO de testes já migrado até 20260925_0008.
 Nunca executar em produção.
 """
+import sys
+from pathlib import Path
+
 from sqlalchemy import text
 
+# Scripts chamados por caminho a partir de BackEnd/Python precisam incluir o
+# diretório do aplicativo para importar o pacote database de forma explícita.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from database.connection import engine
 
 
