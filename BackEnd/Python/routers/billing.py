@@ -2,13 +2,13 @@
 from __future__ import annotations
 
 import hashlib
-import uuid
 from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from pydantic import BaseModel
 from typing import Literal
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 
 from config import settings
 from database.connection import get_db
@@ -16,7 +16,7 @@ from models import (AssinaturaOrganizacao, EventoBilling, OrganizacaoMembro,
                     TentativaCheckout, Usuario)
 from services.auth import exigir_papeis
 from services.billing import (billing_habilitado, exigir_billing, preco_configurado,
-    reconciliar_assinatura, resumo_billing, stripe_request, validar_destino,
+    reconciliar_assinatura, resumo_billing, stripe_request, preco_mensal_validado, validar_destino,
     verificar_assinatura_webhook, assinatura_efetiva)
 from services.equipe_organizacao import bloquear_organizacao, membro_ativo
 from services.organizacoes import selecionar_organizacao
@@ -41,6 +41,14 @@ def _proprietario(db: Session, usuario: Usuario, org_id: int | None):
 
 def _assinatura(db: Session, org_id: int):
     return db.query(AssinaturaOrganizacao).filter_by(organizacao_id=org_id).first()
+
+
+@router.get("/catalogo")
+def catalogo_stripe_test():
+    """Dados monetários vêm exclusivamente de Prices do Stripe Test."""
+    exigir_billing()
+    return {"sandbox": True, "pagamentos_reais_habilitados": False,
+            "planos": [preco_mensal_validado(p) for p in ("pro", "business")]}
 
 
 @router.get("/assinatura")
@@ -82,6 +90,7 @@ def criar_checkout(
     atual = _assinatura(db, org.id)
     if assinatura_efetiva(atual) or (atual and atual.status in ("incomplete", "trialing")):
         raise HTTPException(status_code=409, detail="Organização já possui assinatura; utilize gestão da assinatura.")
+    preco_mensal_validado(payload.plano)
     campos = {
         "mode": "subscription",
         "line_items[0][price]": preco_configurado(payload.plano),
@@ -201,7 +210,18 @@ async def webhook_stripe(request: Request, db: Session = Depends(get_db)):
     if stripe_sub:
         atual = reconciliar_assinatura(db, stripe_sub, sessao=tentativa)
         organizacao_id = atual.organizacao_id
+    # Check again under the tenant lock: concurrent delivery of the same event
+    # must never turn a uniqueness conflict into a 500/retry storm.
+    if db.get(EventoBilling, eid):
+        db.rollback()
+        return {"status": "duplicado"}
     db.add(EventoBilling(event_id=eid, event_type=kind[:100],
         organizacao_id=organizacao_id, resultado="reconciliado" if stripe_sub else "ignorado"))
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        if db.get(EventoBilling, eid):
+            return {"status": "duplicado"}
+        raise
     return {"status": "processado" if stripe_sub else "ignorado"}
