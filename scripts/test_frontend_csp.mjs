@@ -12,8 +12,8 @@ const directive = (name) => policy.split(";").map((x) => x.trim()).find((x) => x
 for (const key of ["default-src", "script-src", "style-src", "img-src", "connect-src", "worker-src", "frame-ancestors", "object-src"]) {
     assert.ok(directive(key), "Diretiva de segurança ausente: " + key);
 }
-assert.ok(directive("script-src").split(" ").includes("https://cdn.jsdelivr.net"));
-assert.ok(directive("style-src").split(" ").includes("https://cdn.jsdelivr.net"));
+assert.equal(directive("script-src"), "script-src 'self' https://cdn.jsdelivr.net", "permitir somente MapLibre CDN como script externo");
+assert.equal(directive("style-src"), "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net", "limitar origens externas de estilo");
 assert.match(directive("worker-src"), /blob:/, "MapLibre requer worker blob:");
 assert.equal(directive("connect-src"), "connect-src 'self'", "Geoapify deve operar pelo backend");
 assert.equal(directive("object-src"), "object-src 'none'");
