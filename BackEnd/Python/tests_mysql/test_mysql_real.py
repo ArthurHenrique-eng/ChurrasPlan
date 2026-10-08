@@ -137,3 +137,41 @@ def test_mysql_catalogo_generico_aplicado_por_migrations_sem_seed_demo():
         ).count() == 1
     finally:
         db.close()
+
+
+
+def test_mysql_tenant_migration_backfill_preserva_dados():
+    _setup_url()
+    from database.connection import SessionLocal, engine
+    from models import Estabelecimento, Organizacao, OrganizacaoMembro, Preco, Produto, Usuario
+
+    insp = inspect(engine)
+    assert {"organizacoes", "organizacao_membros"}.issubset(insp.get_table_names())
+    assert "organizacao_id" in {c["name"] for c in insp.get_columns("estabelecimentos")}
+    assert "organizacao_id" in {c["name"] for c in insp.get_columns("produtos")}
+    fk_est = {fk["name"] for fk in insp.get_foreign_keys("estabelecimentos")}
+    fk_prod = {fk["name"] for fk in insp.get_foreign_keys("produtos")}
+    assert "fk_estabelecimentos_organizacao_id" in fk_est
+    assert "fk_produtos_organizacao_id" in fk_prod
+
+    db = SessionLocal()
+    try:
+        usuario = db.query(Usuario).filter_by(email="saas-legado-migracao@example.invalid").one()
+        loja = db.query(Estabelecimento).filter_by(slug="saas-loja-legada-ci").one()
+        sku = db.query(Produto).filter_by(slug="saas-produto-legado-ci").one()
+        org = db.query(Organizacao).filter_by(slug=f"legado-parceiro-{usuario.id}").one()
+        membro = db.query(OrganizacaoMembro).filter_by(
+            organizacao_id=org.id, usuario_id=usuario.id
+        ).one()
+        assert membro.papel == "proprietario" and membro.ativo is True
+        assert loja.usuario_responsavel_id == usuario.id
+        assert loja.organizacao_id == org.id
+        assert sku.organizacao_id == org.id
+        assert db.query(Preco).filter_by(
+            produto_id=sku.id, estabelecimento_id=loja.id
+        ).one().preco == 3.79
+        assert db.query(OrganizacaoMembro).filter_by(
+            organizacao_id=org.id, usuario_id=usuario.id
+        ).count() == 1
+    finally:
+        db.close()
