@@ -82,6 +82,8 @@ jobs:
         run: node --check FrontEnd/sw.js
       - name: Basic local references
         run: python scripts/validate_frontend.py
+      - name: Coordinate forms (Brazilian decimal format)
+        run: node scripts/test_coordinates_ui.mjs
 
 
   security-static:
