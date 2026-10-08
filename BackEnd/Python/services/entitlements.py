@@ -7,7 +7,7 @@ administrativas válidas podem elevar Free a Pro/Business até integrar billing.
 from datetime import UTC, datetime
 
 from fastapi import HTTPException
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from models import ConcessaoOrganizacao, Estabelecimento, Organizacao, Preco, Produto, Usuario
@@ -45,22 +45,26 @@ def resolver_plano(db: Session, organizacao_id: int, *, bloqueio: bool = False) 
 
 
 def _contagem_atual(db: Session, org_id: int, recurso: str, *, bloqueio: bool = False) -> int:
-    # SELECT ... FOR UPDATE é leitura corrente no InnoDB; o lock da organização
-    # serializa mutações deste tenant e evita snapshots repeatable-read defasados.
+    # Agregação no banco: nunca trafegar 100 mil IDs à aplicação.
+    # Após o lock da linha organizacoes, SELECT ... FOR UPDATE é leitura
+    # corrente no InnoDB, mesmo quando uma transação abriu snapshot RR antes.
     if recurso == "estabelecimentos":
-        stmt = select(Estabelecimento.id).where(Estabelecimento.organizacao_id == org_id)
+        stmt = select(func.count(Estabelecimento.id)).where(
+            Estabelecimento.organizacao_id == org_id
+        )
     elif recurso == "produtos_comerciais":
-        stmt = select(Produto.id).where(Produto.organizacao_id == org_id,
-                                       Produto.tipo_produto == "comercial")
+        stmt = select(func.count(Produto.id)).where(
+            Produto.organizacao_id == org_id, Produto.tipo_produto == "comercial"
+        )
     elif recurso == "ofertas":
-        stmt = select(Preco.id).join(Estabelecimento).where(
+        stmt = select(func.count(Preco.id)).select_from(Preco).join(Estabelecimento).where(
             Estabelecimento.organizacao_id == org_id
         )
     else:
         raise ValueError("Recurso B2B desconhecido")
     if bloqueio:
         stmt = stmt.with_for_update()
-    return len(db.execute(stmt).all())
+    return int(db.execute(stmt).scalar_one())
 
 
 def resumo_entitlements(db: Session, org: Organizacao) -> dict:
