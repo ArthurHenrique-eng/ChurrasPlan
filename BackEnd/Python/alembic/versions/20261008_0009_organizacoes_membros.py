@@ -115,8 +115,7 @@ def downgrade() -> None:
     op.drop_constraint("fk_estabelecimentos_organizacao_id", "estabelecimentos", type_="foreignkey")
     op.drop_index("ix_estabelecimentos_organizacao_id", table_name="estabelecimentos")
     op.drop_column("estabelecimentos", "organizacao_id")
-    op.drop_index("ix_organizacao_membros_usuario_id", table_name="organizacao_membros")
-    op.drop_index("ix_organizacao_membros_organizacao_id", table_name="organizacao_membros")
+    # MySQL exige índices de suporte enquanto as foreign keys da tabela
+    # existem. DROP TABLE remove constraints + índices na ordem correta.
     op.drop_table("organizacao_membros")
-    op.drop_index("ix_organizacoes_slug", table_name="organizacoes")
     op.drop_table("organizacoes")
