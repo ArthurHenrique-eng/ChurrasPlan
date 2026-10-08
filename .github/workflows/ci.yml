@@ -129,7 +129,7 @@ jobs:
       - name: Build frontend image
         run: docker build -t churrasplan-frontend-ci FrontEnd
       - name: Validate Nginx configuration in built frontend image
-        run: docker run --rm --entrypoint nginx churrasplan-frontend-ci -t
+        run: docker run --rm --add-host backend:127.0.0.1 --entrypoint nginx churrasplan-frontend-ci -t
 
   e2e:
     name: E2E Chromium + MySQL
