@@ -47,7 +47,11 @@ def preco_configurado(plano: str) -> str:
 
 
 def stripe_request(method: str, path: str, campos: dict | None = None, *, idempotency: str | None = None) -> dict:
-    exigir_billing()
+    # A API é compartilhada por Billing B2B e Premium B2C; não exige ambos os
+    # preços de mercados para a contratação pessoal. Sempre recusa modo live.
+    if not (settings.BILLING_ENABLED and settings.STRIPE_SECRET_KEY.startswith("sk_test_")
+            and settings.STRIPE_WEBHOOK_SECRET.startswith("whsec_")):
+        raise HTTPException(status_code=503, detail="Stripe Test não configurado.")
     if not path.startswith("/v1/") or "://" in path or ".." in path:
         raise ValueError("Endpoint Stripe inválido")
     body = urllib.parse.urlencode(campos).encode("utf-8") if campos is not None else None
