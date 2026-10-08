@@ -22,6 +22,7 @@ def garantir_organizacao_inicial(db: Session, usuario: Usuario) -> Organizacao:
                 OrganizacaoMembro.ativo.is_(True),
                 Organizacao.ativo.is_(True))
         .order_by(OrganizacaoMembro.id)
+        .with_for_update()  # leitura corrente evita snapshot obsoleto após lock do usuário
         .first()
     )
     if membro:
