@@ -286,3 +286,48 @@ def test_mysql_convites_concorrentes_respeitam_lotacao(monkeypatch):
         assert db.query(ConviteOrganizacao).filter_by(organizacao_id=org_id).count() == 1
     finally:
         db.close()
+
+
+def test_mysql_importacao_csv_idempotente_concorrente():
+    """Reenvios da mesma chave geram uma só oferta no MySQL real."""
+    from concurrent.futures import ThreadPoolExecutor
+    from threading import Barrier
+
+    from database.connection import SessionLocal
+    from models import Estabelecimento, ImportacaoOfertas, Preco, Produto, Usuario
+    from routers.operacao_b2b import importar_ofertas_csv
+    from schemas.operacao_b2b import ImportacaoOfertasCSV
+
+    db = SessionLocal()
+    try:
+        u = db.query(Usuario).filter_by(email="saas-legado-migracao@example.invalid").one()
+        loja = db.query(Estabelecimento).filter_by(slug="saas-loja-legada-ci").one()
+        produto = db.query(Produto).filter_by(slug="saas-produto-legado-ci").one()
+        org_id, uid, loja_id, produto_id = loja.organizacao_id, u.id, loja.id, produto.id
+        antes = db.query(Preco).filter_by(estabelecimento_id=loja_id, produto_id=produto_id).count()
+    finally:
+        db.close()
+    csv_texto = ("estabelecimento_id;produto_id;preco;estoque_status\\n"
+                 f"{loja_id};{produto_id};5,50;disponivel\\n")
+    payload = ImportacaoOfertasCSV(chave_idempotencia="mysql-idempotencia-lote", csv_texto=csv_texto)
+    barreira = Barrier(2)
+
+    def worker():
+        db = SessionLocal()
+        try:
+            usuario = db.get(Usuario, uid)
+            barreira.wait(timeout=25)
+            return importar_ofertas_csv(payload, usuario, db, org_id)
+        finally:
+            db.close()
+
+    with ThreadPoolExecutor(max_workers=2) as ex:
+        resultados = list(ex.map(lambda _: worker(), (1, 2)))
+    assert sorted(x["repetida"] for x in resultados) == [False, True]
+    assert all(x["criadas"] == 1 for x in resultados)
+    db = SessionLocal()
+    try:
+        assert db.query(Preco).filter_by(estabelecimento_id=loja_id, produto_id=produto_id).count() == antes + 1
+        assert db.query(ImportacaoOfertas).filter_by(organizacao_id=org_id).count() == 1
+    finally:
+        db.close()
