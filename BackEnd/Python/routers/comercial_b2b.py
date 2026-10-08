@@ -232,6 +232,24 @@ def _alterar_campos(db: Session, campanha: CampanhaComercial, payload: CampanhaC
         campanha.itens.append(CampanhaComercialItem(preco_id=p.id))
 
 
+@router.get("/ofertas/campanhas")
+def ofertas_elegiveis(
+    usuario: Usuario = Depends(exigir_papeis("parceiro", "admin")),
+    db: Session = Depends(get_db),
+    organizacao_id: int | None = Header(default=None, alias="X-Organizacao-ID"),
+):
+    """Seleção de ofertas internas, não um catálogo público de promoções."""
+    org = _org(db, usuario, organizacao_id)
+    ofertas = db.query(Preco).join(Estabelecimento).filter(
+        Estabelecimento.organizacao_id == org.id,
+        Estabelecimento.ativo.is_(True),
+        Preco.disponivel.is_(True),
+    ).order_by(Preco.id.desc()).limit(200).all()
+    return [{"id": p.id, "produto": p.produto.nome, "estabelecimento": p.estabelecimento.nome,
+             "preco": float(p.preco), "verificada": p.estabelecimento.parceiro_verificado}
+            for p in ofertas if p.produto.organizacao_id in (None, org.id) and p.produto.ativo]
+
+
 @router.get("/campanhas")
 def listar_campanhas(usuario: Usuario = Depends(exigir_papeis("parceiro", "admin")),
                     db: Session = Depends(get_db),
