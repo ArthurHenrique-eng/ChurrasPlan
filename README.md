@@ -94,7 +94,7 @@ O Alembic é a fonte de verdade da evolução do banco.
 Head atual:
 
 ```text
-20261008_0012
+20261008_0013
 ```
 
 Cadeia:
@@ -112,6 +112,7 @@ Cadeia:
 20261008_0010  concessões administrativas temporárias e limites B2B (sem billing)
 20261008_0011  convites B2B, equipes, auditoria e gestão de membros
 20261008_0012  filiais com código/matriz e lotes de ofertas CSV idempotentes
+20261008_0013  importação em massa de SKUs e campanhas comerciais moderadas
 
 A Fase 2C permite convidar equipes, revogar membros, aplicar papéis por organização e alternar entre contas no painel. Segurança, fluxos, migração/rollback e cotas: `docs/SAAS_FASE_2C_MEMBROS_CONVITES.md`. **Não há checkout nem assinatura paga funcional.**
 
@@ -383,3 +384,7 @@ Preços de referência do planejador são **estimativas nacionais de orçamento*
 - `docs/VALIDACAO_V6.4.md`
 
 Os documentos antigos permanecem no repositório como histórico das versões anteriores.
+
+### Fase 4A — Catálogo e campanhas B2B
+
+Importação CSV de produtos comerciais com criação/atualização por SKU, verificação de EAN, cotas e repetição idempotente; campanhas associadas a ofertas existentes, submetidas à revisão de administrador e exibidas publicamente só após aprovação e dentro da vigência. Consulte `docs/SAAS_FASE_4A_CATALOGO_CAMPANHAS.md`. **Pagamentos, checkout e assinaturas pagas continuam desativados.**
