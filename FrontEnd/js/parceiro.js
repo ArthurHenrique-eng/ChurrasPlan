@@ -113,7 +113,12 @@ document.addEventListener("DOMContentLoaded", async()=>{
         return;
     }
     try {
-        await ChurrasPlanEquipe.iniciar(parceiroUsuario, carregarParceiro);
+        ChurrasPlanOperacao.iniciar();
+        await ChurrasPlanEquipe.iniciar(parceiroUsuario, async () => {
+            await carregarParceiro();
+            try { await ChurrasPlanOperacao.carregar(); }
+            catch (erro) { mensagemParceiro(`Falha ao carregar a operação B2B: ${erro.message}`, "erro"); }
+        });
         conteudo.hidden=false;
     } catch(e) { conteudo.hidden=true; mensagemParceiro(e.message,"erro"); return; }
     document.getElementById("prod-categoria").addEventListener("change", renderProdutosGenericos);
