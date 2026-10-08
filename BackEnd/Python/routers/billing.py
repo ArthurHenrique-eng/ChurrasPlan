@@ -119,6 +119,68 @@ def criar_checkout(
     return {"checkout_url": url, "plano": payload.plano, "repetida": False}
 
 
+@router.get("/faturas")
+def listar_faturas(
+    usuario: Usuario = Depends(exigir_papeis("parceiro", "admin")),
+    db: Session = Depends(get_db),
+    organizacao_id: int | None = Header(default=None, alias="X-Organizacao-ID"),
+):
+    exigir_billing()
+    org = _proprietario(db, usuario, organizacao_id)
+    atual = _assinatura(db, org.id)
+    if not atual or not atual.stripe_customer_id:
+        return []
+    from urllib.parse import urlencode
+    resposta = stripe_request("GET", "/v1/invoices?" + urlencode({
+        "customer": atual.stripe_customer_id, "limit": 20,
+    }))
+    return [{
+        "id": i["id"], "status": i.get("status"), "moeda": (i.get("currency") or "").upper(),
+        "total_centavos": i.get("total"), "pago_centavos": i.get("amount_paid"),
+        "criado_em": i.get("created"),
+    } for i in resposta.get("data", [])
+        if isinstance(i, dict) and i.get("customer") == atual.stripe_customer_id
+        and isinstance(i.get("id"), str) and i["id"].startswith("in_")]
+
+
+@router.post("/trocar-plano")
+def trocar_plano(
+    payload: CheckoutBody,
+    usuario: Usuario = Depends(exigir_papeis("parceiro", "admin", mutacao=True)),
+    db: Session = Depends(get_db),
+    organizacao_id: int | None = Header(default=None, alias="X-Organizacao-ID"),
+):
+    exigir_billing()
+    org = _proprietario(db, usuario, organizacao_id)
+    bloquear_organizacao(db, org.id)
+    atual = _assinatura(db, org.id)
+    if not atual or not atual.stripe_subscription_id or not assinatura_efetiva(atual):
+        raise HTTPException(status_code=409, detail="Não há assinatura vigente para alterar.")
+    if atual.cancelamento_agendado or atual.plano_slug == payload.plano:
+        raise HTTPException(status_code=409, detail="Plano já selecionado ou cancelamento agendado.")
+    preco_mensal_validado(payload.plano)
+    remoto = stripe_request("GET", "/v1/subscriptions/" + quote(atual.stripe_subscription_id))
+    itens = (remoto.get("items") or {}).get("data", [])
+    if len(itens) != 1 or not isinstance(itens[0].get("id"), str):
+        raise HTTPException(status_code=409, detail="Itens da assinatura inválidos.")
+    if itens[0].get("price", {}).get("id") != preco_configurado(atual.plano_slug):
+        raise HTTPException(status_code=409, detail="Plano Stripe divergente; sincronize antes de trocar.")
+    # Stripe pending_if_incomplete: upgrades só passam a valer após pagamento.
+    resposta = stripe_request("POST", "/v1/subscriptions/" + quote(atual.stripe_subscription_id), {
+        "items[0][id]": itens[0]["id"],
+        "items[0][price]": preco_configurado(payload.plano),
+        "payment_behavior": "pending_if_incomplete",
+        "proration_behavior": "always_invoice",
+    }, idempotency=hashlib.sha256(
+        f"churrasplan-change|{org.id}|{payload.chave_idempotencia}|{payload.plano}".encode()).hexdigest())
+    if resposta.get("id") != atual.stripe_subscription_id:
+        raise HTTPException(status_code=502, detail="Troca não confirmada pelo Stripe Test.")
+    reconciliar_assinatura(db, atual.stripe_subscription_id)
+    db.commit()
+    return {**resumo_billing(atual),
+            "mensagem": "Troca solicitada. O tier só muda após confirmação do Stripe Test."}
+
+
 @router.post("/cancelar")
 def cancelar_assinatura(
     usuario: Usuario = Depends(exigir_papeis("parceiro", "admin", mutacao=True)),
