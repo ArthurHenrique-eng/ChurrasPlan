@@ -96,9 +96,10 @@ def upgrade() -> None:
         FROM produtos p
         JOIN precos pr ON pr.produto_id = p.id
         JOIN estabelecimentos e ON e.id = pr.estabelecimento_id
-        WHERE p.tipo_produto = 'comercial' AND e.organizacao_id IS NOT NULL
+        WHERE p.tipo_produto = 'comercial'
         GROUP BY p.id
         HAVING COUNT(DISTINCT e.organizacao_id) = 1
+           AND SUM(CASE WHEN e.organizacao_id IS NULL THEN 1 ELSE 0 END) = 0
     """)).mappings().all()
     for item in associados:
         conn.execute(
