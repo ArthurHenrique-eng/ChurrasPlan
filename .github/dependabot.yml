@@ -33,3 +33,10 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 3
+
+  - package-ecosystem: docker
+    directory: "/"
+    target-branch: Saas-ChurrasPlan
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 3
