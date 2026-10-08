@@ -63,6 +63,14 @@ class Settings:
     SMTP_FROM: str = os.getenv("SMTP_FROM", "ChurrasPlan <no-reply@churrasplan.local>")
     SMTP_TLS: bool = os.getenv("SMTP_TLS", "true").lower() in {"1", "true", "yes"}
 
+    # Fase 3: operação apenas no ambiente TEST do Stripe. Nenhum modo live.
+    BILLING_ENABLED: bool = os.getenv("BILLING_ENABLED", "false").lower() in {"1", "true", "yes"}
+    STRIPE_SECRET_KEY: str = os.getenv("STRIPE_SECRET_KEY", "")
+    STRIPE_WEBHOOK_SECRET: str = os.getenv("STRIPE_WEBHOOK_SECRET", "")
+    STRIPE_PRICE_PRO: str = os.getenv("STRIPE_PRICE_PRO", "")
+    STRIPE_PRICE_BUSINESS: str = os.getenv("STRIPE_PRICE_BUSINESS", "")
+    BILLING_GRACE_DAYS: int = int(os.getenv("BILLING_GRACE_DAYS", "3"))
+
     # Geoapify. Separe a chave de servidor (Places/Autocomplete) da chave
     # pública usada somente para tiles do mapa no navegador.
     GEOAPIFY_SERVER_API_KEY: str | None = os.getenv("GEOAPIFY_SERVER_API_KEY")
