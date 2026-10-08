@@ -302,7 +302,8 @@ def test_mysql_importacao_csv_idempotente_concorrente():
     try:
         u = db.query(Usuario).filter_by(email="saas-legado-migracao@example.invalid").one()
         loja = db.query(Estabelecimento).filter_by(slug="saas-loja-legada-ci").one()
-        produto = db.query(Produto).filter_by(slug="saas-produto-legado-ci").one()
+        # SKU genérico compartilhado evita interferir com preço legado cujo teste exige unicidade.
+        produto = db.query(Produto).filter_by(slug="agua", tipo_produto="generico").one()
         org_id, uid, loja_id, produto_id = loja.organizacao_id, u.id, loja.id, produto.id
         antes = db.query(Preco).filter_by(estabelecimento_id=loja_id, produto_id=produto_id).count()
     finally:
