@@ -22,7 +22,7 @@ import models  # noqa: F401  (garante que todos os models sejam registrados no B
 
 validar_configuracao_producao()
 
-from routers import calculadora, churrascos, produtos, estabelecimentos, precos, lista_compras, auth, convites, parceiros, equipe, onde_comprar, planos, privacidade, admin, operacao_b2b
+from routers import calculadora, churrascos, produtos, estabelecimentos, precos, lista_compras, auth, convites, parceiros, equipe, onde_comprar, planos, privacidade, admin, operacao_b2b, comercial_b2b
 
 # Conveniência estritamente local. A fonte de verdade do schema é Alembic;
 # em produção AUTO_CREATE_SCHEMA é ignorado mesmo que alguém o habilite por engano.
@@ -33,7 +33,7 @@ app = FastAPI(
     title=settings.APP_NAME,
     description="API do ChurrasPlan: planejamento, orçamento, convidados/RSVP, lista de compras, "
                  "preços reais, parceiros e otimização de onde comprar.",
-    version="6.7.0",
+    version="6.8.0",
 )
 
 
@@ -63,6 +63,7 @@ app.include_router(convites.router)
 app.include_router(parceiros.router)
 app.include_router(equipe.router)
 app.include_router(operacao_b2b.router)
+app.include_router(comercial_b2b.router)
 app.include_router(onde_comprar.router)
 app.include_router(planos.router)
 app.include_router(privacidade.router)
