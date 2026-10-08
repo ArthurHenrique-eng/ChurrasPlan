@@ -65,9 +65,20 @@ jobs:
           cache: pip
           cache-dependency-path: BackEnd/Python/requirements-dev.txt
       - run: pip install -r requirements-dev.txt
-      - run: alembic upgrade head
+      - name: Prepare database at pre-SaaS schema
+        run: alembic upgrade 20260925_0008
+      - name: Seed one legacy partner, store and offer (ephemeral CI only)
+        run: python scripts/seed_tenant_legacy_ci.py
+      - name: Migrate legacy partner data to SaaS head
+        run: alembic upgrade head
       - run: alembic check
       - run: pytest -q tests_mysql
+      - name: Verify reversible migration and preserved legacy data
+        run: |
+          alembic downgrade -1
+          alembic upgrade head
+          alembic check
+          pytest -q tests_mysql -k tenant_migration_backfill
 
   frontend-static:
     name: Frontend static checks
