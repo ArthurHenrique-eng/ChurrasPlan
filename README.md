@@ -79,8 +79,9 @@ ChurrasPlan/
 ├── docs/
 ├── scripts/
 ├── .github/workflows/ci.yml
-├── docker-compose.yml
-└── docker-compose.production.yml
+├── docker-compose.dev.yml
+├── docker-compose.prod.yml  # override sobre dev; não é a stack independente
+└── docker-compose.production.yml  # stack HTTPS/Caddy independente
 ```
 
 ## Banco e Alembic
@@ -114,7 +115,7 @@ Pré-requisito: Docker + Docker Compose.
 
 ```bash
 cp .env.docker.example .env
-docker compose up --build
+docker compose -f docker-compose.dev.yml up --build
 ```
 
 Abra:
@@ -134,7 +135,7 @@ A stack sobe MySQL 8.4, aplica migrations, garante o catálogo genérico e carre
 Os preços de desenvolvimento existem somente para exercitar orçamento, custo por pessoa e divisão. Para desabilitá-los:
 
 ```bash
-LOAD_DEMO_DATA=false docker compose up --build
+LOAD_DEMO_DATA=false docker compose -f docker-compose.dev.yml up --build
 ```
 
 Os valores de referência servem para estimativa de orçamento. Eles não são ofertas comerciais nem preços garantidos; ofertas reais cadastradas e verificadas sempre têm prioridade no cálculo.
@@ -307,6 +308,8 @@ node --check FrontEnd/sw.js
 5. build das imagens Docker e validação de compose;
 6. E2E Chromium contra MySQL real.
 
+Na trilha SaaS, a branch `Saas-ChurrasPlan` também executa os seis jobs em pushes, além de PRs. A configuração de `CodeQL` faz análise estática de Python e JavaScript; o `Dependabot` propõe atualizações de dependências via PRs direcionados à branch SaaS. As regras de proteção e aprovações obrigatórias ainda devem ser configuradas no GitHub conforme `docs/SAAS_FASE_1C_SEGURANCA_INFRA.md`.
+
 A etapa de **deploy** não está ligada a um provedor específico. Isso é intencional: primeiro deve ser definido onde staging/produção serão hospedados e como os segredos serão gerenciados.
 
 ## Produção com Docker + HTTPS
@@ -315,9 +318,11 @@ A composição recomendada é a independente:
 
 ```bash
 cp .env.production.example .env.production
-# preencha domínio e segredos
-# carregue as variáveis conforme seu ambiente
-docker compose -f docker-compose.production.yml up -d --build
+# preencha domínio, SMTP e segredos reais em .env.production (não comite este arquivo)
+chmod 600 .env.production
+# --env-file é obrigatório: Compose NÃO carrega .env.production por padrão
+docker compose --env-file .env.production -f docker-compose.production.yml config --quiet
+docker compose --env-file .env.production -f docker-compose.production.yml up -d --build
 ```
 
 Ela usa:
