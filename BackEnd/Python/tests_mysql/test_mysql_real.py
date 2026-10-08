@@ -232,3 +232,57 @@ def test_mysql_cota_concorrente_mesma_organizacao(monkeypatch):
         assert db.query(Estabelecimento).filter_by(organizacao_id=org_id).count() == existentes + 1
     finally:
         db.close()
+
+
+
+def test_mysql_convites_concorrentes_respeitam_lotacao(monkeypatch):
+    """Com a última vaga, duas transações concorrentes não geram dois convites."""
+    from concurrent.futures import ThreadPoolExecutor
+    from datetime import timedelta
+    from threading import Barrier
+
+    from fastapi import HTTPException
+    from database.connection import SessionLocal
+    from models import ConviteOrganizacao, Organizacao, OrganizacaoMembro, Usuario
+    from services.auth import agora
+    from services.equipe_organizacao import LIMITES_MEMBROS, bloquear_organizacao, garantir_vaga
+
+    db = SessionLocal()
+    try:
+        u = db.query(Usuario).filter_by(email="saas-legado-migracao@example.invalid").one()
+        org = db.query(Organizacao).filter_by(slug=f"legado-parceiro-{u.id}").one()
+        org_id, uid = org.id, u.id
+        ativos = db.query(OrganizacaoMembro).filter_by(organizacao_id=org_id, ativo=True).count()
+    finally:
+        db.close()
+
+    monkeypatch.setitem(LIMITES_MEMBROS, "free", ativos + 1)
+    inicio = Barrier(2)
+
+    def criar(i):
+        db = SessionLocal()
+        try:
+            inicio.wait(timeout=25)
+            org = bloquear_organizacao(db, org_id)
+            garantir_vaga(db, org)
+            db.add(ConviteOrganizacao(
+                organizacao_id=org_id, email=f"convite-ci-{uuid.uuid4().hex}@example.invalid",
+                papel="leitor", token_hash=uuid.uuid4().hex + uuid.uuid4().hex,
+                criado_por_usuario_id=uid, expira_em=agora() + timedelta(days=7),
+            ))
+            db.commit()
+            return 201
+        except HTTPException as err:
+            db.rollback()
+            return err.status_code
+        finally:
+            db.close()
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        resultados = list(executor.map(criar, (1, 2)))
+    assert sorted(resultados) == [201, 409]
+    db = SessionLocal()
+    try:
+        assert db.query(ConviteOrganizacao).filter_by(organizacao_id=org_id).count() == 1
+    finally:
+        db.close()
