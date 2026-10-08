@@ -16,6 +16,7 @@ class Organizacao(Base):
 
     membros = relationship("OrganizacaoMembro", back_populates="organizacao")
     estabelecimentos = relationship("Estabelecimento", back_populates="organizacao")
+    produtos = relationship("Produto", back_populates="organizacao")
 
 
 class OrganizacaoMembro(Base):
