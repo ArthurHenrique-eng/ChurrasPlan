@@ -12,6 +12,8 @@ class EstabelecimentoOut(BaseModel):
     slug: str
     nome: str
     tipo: str
+    codigo_filial: Optional[str] = None
+    unidade_matriz: bool = False
     endereco: Optional[str] = None
     logradouro: Optional[str] = None
     numero: Optional[str] = None
