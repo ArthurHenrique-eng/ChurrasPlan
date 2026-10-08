@@ -386,8 +386,7 @@ def test_mysql_checkout_idempotente_com_duas_transacoes_concorrentes(monkeypatch
     from threading import Barrier
     from database.connection import SessionLocal
     from models import OrganizacaoMembro, TentativaCheckout, Usuario
-    from schemas.billing import CheckoutBody
-    from routers.billing import criar_checkout
+    from routers.billing import CheckoutBody, criar_checkout
     from config import settings
 
     db = SessionLocal()
