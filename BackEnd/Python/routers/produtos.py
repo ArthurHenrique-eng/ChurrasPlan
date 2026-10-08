@@ -24,6 +24,7 @@ def produto_out(db: Session, p: Produto) -> ProdutoOut:
     resumo = obter_resumo_preco(db, p.id)
     return ProdutoOut(
         id=p.id, produto_pai_id=p.produto_pai_id, tipo_produto=p.tipo_produto,
+        organizacao_id=p.organizacao_id,
         slug=p.slug, nome=p.nome, categoria_id=p.categoria_id,
         categoria_nome=p.categoria.nome if p.categoria else None,
         categoria_tipo=p.categoria.tipo if p.categoria else None,
