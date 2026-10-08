@@ -22,7 +22,7 @@ import models  # noqa: F401  (garante que todos os models sejam registrados no B
 
 validar_configuracao_producao()
 
-from routers import calculadora, churrascos, produtos, estabelecimentos, precos, lista_compras, auth, convites, parceiros, onde_comprar, planos, privacidade, admin
+from routers import calculadora, churrascos, produtos, estabelecimentos, precos, lista_compras, auth, convites, parceiros, equipe, onde_comprar, planos, privacidade, admin
 
 # Conveniência estritamente local. A fonte de verdade do schema é Alembic;
 # em produção AUTO_CREATE_SCHEMA é ignorado mesmo que alguém o habilite por engano.
@@ -33,7 +33,7 @@ app = FastAPI(
     title=settings.APP_NAME,
     description="API do ChurrasPlan: planejamento, orçamento, convidados/RSVP, lista de compras, "
                  "preços reais, parceiros e otimização de onde comprar.",
-    version="6.5.0",
+    version="6.6.0",
 )
 
 
@@ -61,6 +61,7 @@ app.include_router(lista_compras.router)
 app.include_router(auth.router)
 app.include_router(convites.router)
 app.include_router(parceiros.router)
+app.include_router(equipe.router)
 app.include_router(onde_comprar.router)
 app.include_router(planos.router)
 app.include_router(privacidade.router)
@@ -70,7 +71,7 @@ app.include_router(admin.router)
 @app.get("/api/health", tags=["health"])
 def health_check():
     """Liveness: confirma que o processo da API está respondendo."""
-    return {"status": "ok", "app": settings.APP_NAME, "version": "6.5.0"}
+    return {"status": "ok", "app": settings.APP_NAME, "version": "6.6.0"}
 
 
 @app.get("/api/health/ready", tags=["health"])
