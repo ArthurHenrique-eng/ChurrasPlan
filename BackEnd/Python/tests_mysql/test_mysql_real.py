@@ -146,7 +146,7 @@ def test_mysql_tenant_migration_backfill_preserva_dados():
     from models import Estabelecimento, Organizacao, OrganizacaoMembro, Preco, Produto, Usuario
 
     insp = inspect(engine)
-    assert {"organizacoes", "organizacao_membros"}.issubset(insp.get_table_names())
+    assert {"organizacoes", "organizacao_membros", "concessoes_organizacao"}.issubset(insp.get_table_names())
     assert "organizacao_id" in {c["name"] for c in insp.get_columns("estabelecimentos")}
     assert "organizacao_id" in {c["name"] for c in insp.get_columns("produtos")}
     fk_est = {fk["name"] for fk in insp.get_foreign_keys("estabelecimentos")}
@@ -178,5 +178,57 @@ def test_mysql_tenant_migration_backfill_preserva_dados():
         assert db.query(OrganizacaoMembro).filter_by(
             organizacao_id=org.id, usuario_id=usuario.id
         ).count() == 1
+    finally:
+        db.close()
+
+
+
+def test_mysql_cota_concorrente_mesma_organizacao(monkeypatch):
+    """Dois escritores simultâneos não ultrapassam o limite da organização."""
+    from concurrent.futures import ThreadPoolExecutor
+    from threading import Barrier
+
+    from fastapi import HTTPException
+    from database.connection import SessionLocal
+    from models import Estabelecimento, Organizacao, Usuario
+    from services.entitlements import LIMITES_PLANOS, exigir_cota_criacao
+
+    db = SessionLocal()
+    try:
+        usuario = db.query(Usuario).filter_by(email="saas-legado-migracao@example.invalid").one()
+        org = db.query(Organizacao).filter_by(slug=f"legado-parceiro-{usuario.id}").one()
+        org_id, uid = org.id, usuario.id
+        existentes = db.query(Estabelecimento).filter_by(organizacao_id=org_id).count()
+    finally:
+        db.close()
+    monkeypatch.setitem(LIMITES_PLANOS["free"], "estabelecimentos", existentes + 1)
+    inicio = Barrier(2)
+
+    def criar(i):
+        sessao = SessionLocal()
+        try:
+            u = sessao.get(Usuario, uid)
+            o = sessao.get(Organizacao, org_id)
+            inicio.wait(timeout=20)
+            exigir_cota_criacao(sessao, o, u, "estabelecimentos")
+            sessao.add(Estabelecimento(
+                usuario_responsavel_id=uid, organizacao_id=org_id,
+                nome=f"Loja quota concorrente {i}", slug=f"quota-ci-{uuid.uuid4().hex}",
+                tipo="mercado", parceiro_verificado=False, ativo=True,
+            ))
+            sessao.commit()
+            return 201
+        except HTTPException as exc:
+            sessao.rollback()
+            return exc.status_code
+        finally:
+            sessao.close()
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        resultados = list(executor.map(criar, (1, 2)))
+    assert sorted(resultados) == [201, 409]
+    db = SessionLocal()
+    try:
+        assert db.query(Estabelecimento).filter_by(organizacao_id=org_id).count() == existentes + 1
     finally:
         db.close()
