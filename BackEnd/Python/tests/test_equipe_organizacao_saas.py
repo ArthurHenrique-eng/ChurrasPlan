@@ -179,3 +179,40 @@ def test_multiorg_header_e_admin_sem_participacao(client):
         assert convite(client, ha, "qualquer@example.com", org_id=org_b).status_code == 404
         # O membro leitor não pode administrar o tenant alheio mesmo com header válido.
         assert outro.get("/api/parceiro/equipe/membros", headers={"X-Organizacao-ID": str(org_a)}).status_code == 403
+
+
+
+def test_admin_global_nao_pode_administrar_equipe_sem_membership(client):
+    from tests.test_entitlements_saas import _admin_logado
+    _, h = cadastro_login(client, "dono-admin-scope@example.com")
+    org = _ativar(client, h)
+    admin, ha = _admin_logado()
+    with admin:
+        contexto = {"X-Organizacao-ID": str(org)}
+        assert admin.get("/api/parceiro/dashboard", headers=contexto).status_code == 200
+        assert admin.get("/api/parceiro/equipe/membros", headers=contexto).status_code == 404
+        assert admin.get("/api/parceiro/equipe/convites", headers=contexto).status_code == 404
+        assert admin.post("/api/parceiro/equipe/convites",
+                          headers={**ha, **contexto},
+                          json={"email": "terceiro@example.com", "papel": "proprietario"}).status_code == 404
+
+
+def test_convite_expirado_nao_pode_ser_aceito(client):
+    _, h = cadastro_login(client, "dono-expire2c@example.com")
+    org = _ativar(client, h)
+    c = convite(client, h, "invite-expire2c@example.com")
+    assert c.status_code == 201
+    db = next(app.dependency_overrides[get_db]())
+    try:
+        registro = db.get(ConviteOrganizacao, c.json()["id"])
+        registro.expira_em = agora() - timedelta(minutes=1)
+        db.commit()
+    finally:
+        db.close()
+    with TestClient(app) as convidado:
+        _, hc = cadastro_login(convidado, "invite-expire2c@example.com")
+        usado = convidado.post("/api/parceiro/convites/aceitar", headers=hc,
+                               json={"token": c.json()["dev_token"]})
+        assert usado.status_code == 404
+        assert convidado.get("/api/auth/me").json()["papel"] == "usuario"
+    assert client.get("/api/parceiro/equipe/convites").json() == []
