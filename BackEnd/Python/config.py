@@ -70,6 +70,9 @@ class Settings:
     STRIPE_PRICE_PRO: str = os.getenv("STRIPE_PRICE_PRO", "")
     STRIPE_PRICE_BUSINESS: str = os.getenv("STRIPE_PRICE_BUSINESS", "")
     BILLING_GRACE_DAYS: int = int(os.getenv("BILLING_GRACE_DAYS", "3"))
+    # Produtos B2C test-only: ambos opcionais; configure os Price IDs do sandbox.
+    STRIPE_PRICE_USER_PREMIUM_MONTHLY: str = os.getenv("STRIPE_PRICE_USER_PREMIUM_MONTHLY", "")
+    STRIPE_PRICE_USER_PREMIUM_YEARLY: str = os.getenv("STRIPE_PRICE_USER_PREMIUM_YEARLY", "")
 
     # Geoapify. Separe a chave de servidor (Places/Autocomplete) da chave
     # pública usada somente para tiles do mapa no navegador.
