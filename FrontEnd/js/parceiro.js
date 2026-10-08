@@ -114,8 +114,10 @@ document.addEventListener("DOMContentLoaded", async()=>{
     }
     try {
         ChurrasPlanOperacao.iniciar();
+        ChurrasPlanComercial.iniciar();
         await ChurrasPlanEquipe.iniciar(parceiroUsuario, async () => {
             await carregarParceiro();
+            try { await ChurrasPlanComercial.carregar(); } catch (erro) { mensagemParceiro(erro.message, "erro"); }
             try { await ChurrasPlanOperacao.carregar(); }
             catch (erro) { mensagemParceiro(`Falha ao carregar a operação B2B: ${erro.message}`, "erro"); }
         });
