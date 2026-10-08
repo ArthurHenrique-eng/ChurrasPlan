@@ -167,9 +167,9 @@ def test_mysql_tenant_migration_backfill_preserva_dados():
         assert loja.usuario_responsavel_id == usuario.id
         assert loja.organizacao_id == org.id
         assert sku.organizacao_id == org.id
-        assert db.query(Preco).filter_by(
+        assert float(db.query(Preco).filter_by(
             produto_id=sku.id, estabelecimento_id=loja.id
-        ).one().preco == 3.79
+        ).one().preco) == pytest.approx(3.79)
         assert db.query(OrganizacaoMembro).filter_by(
             organizacao_id=org.id, usuario_id=usuario.id
         ).count() == 1
