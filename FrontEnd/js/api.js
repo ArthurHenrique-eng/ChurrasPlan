@@ -146,6 +146,16 @@ const ChurrasPlanAPI = {
     onboardingParceiro(opcoes = {}) { return requisitar("/api/parceiro/onboarding", opcoesOrganizacao(opcoes)); },
     relatorioComercialParceiro(dias = 30, opcoes = {}) { return requisitar(`/api/parceiro/relatorios/comercial?periodo_dias=${Number(dias)}`, opcoesOrganizacao(opcoes)); },
     importarOfertasCSV(payload, opcoes = {}) { return requisitar("/api/parceiro/importacoes/ofertas", { ...opcoesOrganizacao(opcoes), method: "POST", body: JSON.stringify(payload) }); },
+    importarCatalogoCSV(payload, opcoes = {}) { return requisitar("/api/parceiro/importacoes/catalogo", { ...opcoesOrganizacao(opcoes), method: "POST", body: JSON.stringify(payload) }); },
+    ofertasCampanhaParceiro(opcoes = {}) { return requisitar("/api/parceiro/ofertas/campanhas", opcoesOrganizacao(opcoes)); },
+    campanhasParceiro(opcoes = {}) { return requisitar("/api/parceiro/campanhas", opcoesOrganizacao(opcoes)); },
+    criarCampanhaParceiro(payload, opcoes = {}) { return requisitar("/api/parceiro/campanhas", { ...opcoesOrganizacao(opcoes), method: "POST", body: JSON.stringify(payload) }); },
+    atualizarCampanhaParceiro(id, payload, opcoes = {}) { return requisitar(`/api/parceiro/campanhas/${id}`, { ...opcoesOrganizacao(opcoes), method: "PUT", body: JSON.stringify(payload) }); },
+    enviarCampanhaParceiro(id, opcoes = {}) { return requisitar(`/api/parceiro/campanhas/${id}/enviar`, { ...opcoesOrganizacao(opcoes), method: "POST" }); },
+    cancelarCampanhaParceiro(id, opcoes = {}) { return requisitar(`/api/parceiro/campanhas/${id}/cancelar`, { ...opcoesOrganizacao(opcoes), method: "POST" }); },
+    adminCampanhasPendentes(opcoes = {}) { return requisitar("/api/admin/campanhas/pendentes", opcoes); },
+    adminRevisarCampanha(id, payload, opcoes = {}) { return requisitar(`/api/admin/campanhas/${id}/revisar`, { ...opcoes, method: "POST", body: JSON.stringify(payload) }); },
+    campanhasPublicas(opcoes = {}) { return requisitar("/api/campanhas/ativas", opcoes); },
 
     configOndeComprar(opcoes = {}) { return requisitar("/api/onde-comprar/config", opcoes); },
     autocompleteEndereco(texto, latitude = null, longitude = null, limite = 6, opcoes = {}) {
