@@ -134,12 +134,14 @@ def reconciliar_assinatura(db: Session, stripe_id: str, *, sessao: TentativaChec
         org_id = int(metadata.get("organizacao_id", "0"))
     except (ValueError, TypeError) as exc:
         raise HTTPException(status_code=409, detail="Metadata da assinatura não identificada.") from exc
-    plano = metadata.get("plano_slug")
-    if plano not in PRICE_FIELDS or org_id < 1:
-        raise HTTPException(status_code=409, detail="Plano Stripe não autorizado.")
-    codigo_esperado = preco_configurado(plano)
     itens = remoto.get("items", {}).get("data", [])
-    if len(itens) != 1 or itens[0].get("price", {}).get("id") != codigo_esperado:
+    if len(itens) != 1 or not isinstance(itens[0].get("price"), dict):
+        raise HTTPException(status_code=409, detail="Item de assinatura Stripe inválido.")
+    preco_real = itens[0]["price"].get("id")
+    # A lista de Price IDs configurados no servidor é a fonte do tier.
+    # Evita metadata antiga após troca pelo Customer Portal.
+    plano = next((slug for slug in PRICE_FIELDS if preco_real == preco_configurado(slug)), None)
+    if plano is None or org_id < 1:
         raise HTTPException(status_code=409, detail="Price ID da assinatura não autorizado.")
     cliente = remoto.get("customer")
     if isinstance(cliente, dict):
@@ -149,7 +151,7 @@ def reconciliar_assinatura(db: Session, stripe_id: str, *, sessao: TentativaChec
     org = db.query(Organizacao).filter_by(id=org_id, ativo=True).with_for_update().first()
     if not org:
         raise HTTPException(status_code=404, detail="Organização Stripe inexistente ou desativada.")
-    if sessao and (sessao.organizacao_id != org_id or sessao.plano_slug != plano
+    if sessao and (sessao.organizacao_id != org_id
                    or (sessao.stripe_subscription_id and sessao.stripe_subscription_id != stripe_id)):
         raise HTTPException(status_code=409, detail="Sessão e assinatura não correspondem.")
     # Only a locally-created Checkout attempt can bootstrap the first subscription.
