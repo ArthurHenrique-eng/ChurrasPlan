@@ -82,6 +82,8 @@ jobs:
         run: node --check FrontEnd/sw.js
       - name: Basic local references
         run: python scripts/validate_frontend.py
+      - name: Partner catalogue selections and partial failures
+        run: node scripts/test_partner_catalog.mjs
 
 
   security-static:
