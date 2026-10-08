@@ -151,3 +151,49 @@ def test_organizacao_inexistente_falha_fechado(client):
                        json={"produto_pai_id": 1, "nome": "Item", "marca": "X",
                              "unidade_venda": "un", "quantidade_embalagem": 1,
                              "unidade_embalagem": "un"}).status_code == 404
+
+
+
+def test_promocao_admin_cria_organizacao_e_desbloqueia_painel(client):
+    from database.connection import get_db
+    from main import app
+    from models import OrganizacaoMembro, Usuario
+    from services.auth import hash_senha
+
+    _, _ = cadastro_login(client, "parceiro-promovido@example.com")
+    db = next(app.dependency_overrides[get_db]())
+    try:
+        parceiro = db.query(Usuario).filter_by(email="parceiro-promovido@example.com").one()
+        uid = parceiro.id
+        db.add(Usuario(
+            nome="Administrador", email="admin-promocao@example.com",
+            senha_hash=hash_senha("SenhaPromocao123"), papel="admin", ativo=True,
+        ))
+        db.commit()
+    finally:
+        db.close()
+
+    with TestClient(app) as admin_client:
+        login = admin_client.post("/api/auth/login", json={
+            "email": "admin-promocao@example.com", "senha": "SenhaPromocao123"
+        })
+        assert login.status_code == 200, login.text
+        csrf = admin_client.cookies.get("churrasplan_csrf")
+        promovido = admin_client.patch(
+            f"/api/admin/usuarios/{uid}",
+            headers={"X-CSRF-Token": csrf},
+            json={"papel": "parceiro"},
+        )
+        assert promovido.status_code == 200, promovido.text
+
+    # Usuário já logado foi promovido; o painel deve funcionar sem reativar.
+    assert client.get("/api/auth/me").json()["papel"] == "parceiro"
+    orgs = client.get("/api/parceiro/organizacoes")
+    assert orgs.status_code == 200 and len(orgs.json()) == 1
+    assert orgs.json()[0]["papel"] == "proprietario"
+    assert client.get("/api/parceiro/estabelecimentos").status_code == 200
+    db = next(app.dependency_overrides[get_db]())
+    try:
+        assert db.query(OrganizacaoMembro).filter_by(usuario_id=uid).count() == 1
+    finally:
+        db.close()
