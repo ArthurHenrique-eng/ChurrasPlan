@@ -1,13 +1,17 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime, timedelta
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
 from database.connection import get_db
-from models import AuditoriaAdmin, Churrasco, Estabelecimento, Preco, Produto, Usuario
+from models import AuditoriaAdmin, Churrasco, ConcessaoOrganizacao, Estabelecimento, Organizacao, Preco, Produto, Usuario
 from schemas.admin import AdminEstabelecimentoUpdate, AdminUsuarioUpdate
+from schemas.entitlements import ConcessaoPlanoAdminUpdate
 from services.auth import exigir_papeis
+from services.entitlements import resumo_entitlements
 from services.organizacoes import garantir_organizacao_inicial
 from services.seguranca import limpar_eventos_antigos, registrar_auditoria
 
@@ -81,6 +85,60 @@ def atualizar_usuario(
     registrar_auditoria(db, admin, acao="usuario_atualizado", entidade="usuario", entidade_id=alvo.id, detalhes={"antes": antes, "depois": {"papel": alvo.papel, "ativo": alvo.ativo}})
     db.commit()
     return {"id": alvo.id, "nome": alvo.nome, "email": alvo.email, "papel": alvo.papel, "ativo": alvo.ativo}
+
+
+@router.put("/organizacoes/{organizacao_id}/concessao")
+def alterar_concessao_organizacao(
+    organizacao_id: int,
+    payload: ConcessaoPlanoAdminUpdate,
+    admin: Usuario = Depends(exigir_papeis("admin", mutacao=True)),
+    db: Session = Depends(get_db),
+):
+    """Concessão administrativa temporária: nunca cria assinatura ou pagamento."""
+    org = db.query(Organizacao).filter(
+        Organizacao.id == organizacao_id, Organizacao.ativo.is_(True)
+    ).with_for_update().first()
+    if not org:
+        raise HTTPException(status_code=404, detail="Organização não encontrada.")
+    atual = db.query(ConcessaoOrganizacao).filter_by(
+        organizacao_id=org.id
+    ).with_for_update().first()
+    antes = {"plano": atual.plano_slug, "expira_em": atual.expira_em.isoformat()} if atual else None
+
+    if payload.plano == "free":
+        if payload.expira_em is not None:
+            raise HTTPException(status_code=422, detail="Free não possui validade de concessão.")
+        if atual is not None:
+            db.delete(atual)
+    else:
+        expira = payload.expira_em
+        if expira is None or expira.tzinfo is None or expira.utcoffset() is None:
+            raise HTTPException(
+                status_code=422, detail="Pro/Business exige validade com fuso horário."
+            )
+        agora = datetime.now(UTC)
+        if expira <= agora or expira > agora + timedelta(days=366):
+            raise HTTPException(status_code=422, detail="Validade deve ser futura e de até 366 dias.")
+        expira_utc = expira.astimezone(UTC).replace(tzinfo=None)
+        if atual is None:
+            atual = ConcessaoOrganizacao(organizacao_id=org.id)
+            db.add(atual)
+        atual.plano_slug = payload.plano
+        atual.origem = "cortesia_admin"
+        atual.expira_em = expira_utc
+        atual.alterado_por_usuario_id = admin.id
+
+    registrar_auditoria(
+        db, admin, acao="concessao_plano_b2b",
+        entidade="organizacao", entidade_id=org.id,
+        detalhes={"antes": antes, "depois": {
+            "plano": payload.plano,
+            "expira_em": payload.expira_em.isoformat() if payload.expira_em else None,
+            "cobranca": False, "origem": "cortesia_admin" if payload.plano != "free" else "padrao",
+        }},
+    )
+    db.commit()
+    return resumo_entitlements(db, org)
 
 
 @router.get("/estabelecimentos")
