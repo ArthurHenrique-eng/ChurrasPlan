@@ -67,7 +67,7 @@ Estados: `rascunho` → `em_revisao` → `aprovada` ou `rejeitada`. Rejeitada po
 
 Aprovação recusa campanha expirada, produto inativo, oferta indisponível, filial não verificada/inativa ou preço cuja vigência não cubra a campanha. Após aprovada, a consulta pública **reavalia** status da loja/produto, estoque e vigência, inclusive se uma filial perder a verificação. A simples aprovação não força exposição de uma loja que deixou de atender requisitos. Todas as decisões administrativas são auditadas com ator e justificativa de rejeição, e eventos dos gestores entram em `auditoria_organizacao`.
 
-O painel de parceiros permite envio de CSV, criação/envio/cancelamento de campanhas e leitura do estado. O painel administrativo traz a fila de revisão com aprovação/rejeição e justificativa. O formulário de **edição de campanha rejeitada** está disponível pela API; a UI inicial mostra a instrução, ainda não um editor visual completo.
+O painel de parceiros permite envio de CSV, criação/envio/cancelamento de campanhas e leitura do estado. O painel administrativo traz a fila de revisão com aprovação/rejeição e justificativa. A interface também permite **editar campanhas em rascunho ou rejeitadas** diretamente no formulário existente e reenviá-las à revisão. O backend continua validando todas as alterações.
 
 ## Migração, rollback e testes
 
