@@ -19,6 +19,7 @@ from services.billing import (billing_habilitado, exigir_billing, preco_configur
     reconciliar_assinatura, resumo_billing, stripe_request, preco_mensal_validado, validar_destino,
     verificar_assinatura_webhook, assinatura_efetiva)
 from services.equipe_organizacao import bloquear_organizacao, membro_ativo
+from services.billing_usuario import processar_webhook_usuario
 from services.organizacoes import selecionar_organizacao
 
 router = APIRouter(prefix="/api/billing", tags=["billing"])
@@ -249,6 +250,11 @@ async def webhook_stripe(request: Request, db: Session = Depends(get_db)):
     raw = await request.body()
     evento = verificar_assinatura_webhook(raw, request.headers.get("Stripe-Signature", ""))
     eid = evento["id"]
+    # Checkout Premium e assinatura pessoal usam o mesmo endpoint de webhook
+    # assinado que o B2B; mantém separação de clientes e titularidade.
+    resultado_usuario = processar_webhook_usuario(db, evento)
+    if resultado_usuario is not None:
+        return resultado_usuario
     anterior = db.get(EventoBilling, eid)
     if anterior:
         return {"status": "duplicado"}
