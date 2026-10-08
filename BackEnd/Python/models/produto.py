@@ -11,6 +11,7 @@ class Produto(Base):
     categoria_id = Column(Integer, ForeignKey("categorias.id", ondelete="RESTRICT"), nullable=False, index=True)
     produto_pai_id = Column(Integer, ForeignKey("produtos.id", ondelete="SET NULL"), nullable=True, index=True)
     tipo_produto = Column(String(20), nullable=False, default="generico", server_default="generico", index=True)  # generico | comercial
+    organizacao_id = Column(Integer, ForeignKey("organizacoes.id", ondelete="SET NULL", name="fk_produtos_organizacao_id"), nullable=True, index=True)
     slug = Column(String(140), nullable=False, unique=True, index=True)
     nome = Column(String(120), nullable=False)
     marca = Column(String(100), nullable=True, index=True)
@@ -31,6 +32,7 @@ class Produto(Base):
     descricao = Column(Text, nullable=True)
 
     categoria = relationship("Categoria")
+    organizacao = relationship("Organizacao", back_populates="produtos")
     produto_pai = relationship("Produto", remote_side=[id], back_populates="variantes")
     variantes = relationship("Produto", back_populates="produto_pai")
     precos = relationship("Preco", back_populates="produto", cascade="all, delete-orphan")
