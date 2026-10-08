@@ -17,10 +17,10 @@ const ChurrasPlanBilling = (() => {
     function renderizarPlanos() {
         const alterar = !!estado?.beneficios_ativos;
         el("billing-planos").innerHTML = catalogo.map(plano => {
-            const atual = alterar && estado.plano === plano.plano;
-            return `<article class="basket-row"><strong>${esc(plano.plano.toUpperCase())} — ${formatar(plano.centavos)} / mês</strong>
+            const atual = alterar && estado.plano === plano.plano && estado.periodicidade === plano.periodicidade;
+            return `<article class="basket-row"><strong>${esc(plano.plano.toUpperCase())} — ${formatar(plano.centavos)} / ${plano.periodicidade === "anual" ? "ano" : "mês"}</strong>
                 <small>Preço real configurado no Stripe Test, sem cobrança em produção.</small>
-                <button type="button" data-billing-plano="${esc(plano.plano)}" ${atual || estado?.cancelamento_agendado ? "disabled" : ""}>
+                <button type="button" data-billing-plano="${esc(plano.plano)}" data-billing-periodicidade="${esc(plano.periodicidade)}" ${atual || estado?.cancelamento_agendado ? "disabled" : ""}>
                   ${atual ? "Plano atual" : alterar ? "Solicitar troca" : "Testar contratação"}
                 </button></article>`;
         }).join("") || '<p class="texto-suave">Nenhum plano configurado no Stripe Test.</p>';
@@ -30,7 +30,7 @@ const ChurrasPlanBilling = (() => {
         const fim = estado?.periodo_fim_em
             ? new Date(estado.periodo_fim_em + "Z").toLocaleString("pt-BR")
             : "—";
-        el("billing-resumo").textContent = `Plano: ${estado?.plano || "free"}. Status Stripe: ${estado?.status || "sem_assinatura"}. Benefícios: ${estado?.beneficios_ativos ? "ativos" : "inativos"}. Válido até: ${fim}.`
+        el("billing-resumo").textContent = `Plano: ${estado?.plano || "free"} (${estado?.periodicidade || "mensal"}). Status Stripe: ${estado?.status || "sem_assinatura"}. Benefícios: ${estado?.beneficios_ativos ? "ativos" : "inativos"}. Válido até: ${fim}.`
             + (estado?.tolerancia_ate ? " Pagamento pendente com tolerância limitada." : "")
             + (estado?.cancelamento_agendado ? " Cancelamento agendado para o fim do período." : "");
         el("billing-sincronizar").hidden = !estado?.checkout_habilitado || !estado?.status || estado.status === "sem_assinatura";
@@ -65,7 +65,8 @@ const ChurrasPlanBilling = (() => {
             const btn = event.target.closest("[data-billing-plano]");
             if (!btn) return;
             const plano = btn.dataset.billingPlano;
-            if (!["pro", "business"].includes(plano) || btn.disabled) return;
+            const periodo = btn.dataset.billingPeriodicidade;
+            if (!["pro", "business"].includes(plano) || !["mensal", "anual"].includes(periodo) || btn.disabled) return;
             if (!window.confirm(estado?.beneficios_ativos
                 ? "Solicitar troca de plano no Stripe Test? A mudança depende de confirmação do pagamento."
                 : "Abrir o checkout de teste Stripe? Nenhum cartão real será cobrado.")) return;
@@ -74,13 +75,13 @@ const ChurrasPlanBilling = (() => {
                 const chave = chaveNova();
                 if (estado?.beneficios_ativos) {
                     await ChurrasPlanAPI.billingTrocarPlano({
-                        plano, chave_idempotencia: chave,
+                        plano, periodicidade: periodo, chave_idempotencia: chave,
                     });
                     mensagemParceiro("Mudança solicitada no Stripe Test. O acesso só muda após confirmação do provedor.");
                     await carregar();
                 } else {
                     const pedido = await ChurrasPlanAPI.billingCheckout({
-                        plano, chave_idempotencia: chave,
+                        plano, periodicidade: periodo, chave_idempotencia: chave,
                     });
                     window.location.assign(pedido.checkout_url);
                 }
