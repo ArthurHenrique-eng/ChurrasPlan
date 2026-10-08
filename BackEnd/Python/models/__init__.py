@@ -3,6 +3,7 @@ from .auth import SessaoUsuario, TokenUsuario
 from .categoria import Categoria
 from .produto import Produto
 from .estabelecimento import Estabelecimento
+from .organizacao import Organizacao, OrganizacaoMembro
 from .preco import Preco
 from .churrasco import Churrasco
 from .churrasco_item import ChurrascoCarne, ChurrascoBebida, ChurrascoExtra
@@ -17,5 +18,5 @@ __all__ = [
     "Usuario", "SessaoUsuario", "TokenUsuario", "Categoria", "Produto", "Estabelecimento", "Preco",
     "Churrasco", "ChurrascoCarne", "ChurrascoBebida", "ChurrascoExtra", "ListaCompras", "ListaComprasItem",
     "ConviteChurrasco", "RespostaConvite", "PlanoAssinatura", "AssinaturaUsuario", "MetricaEstabelecimento",
-    "ConsentimentoUsuario", "EventoSeguranca", "AuditoriaAdmin",
+    "ConsentimentoUsuario", "EventoSeguranca", "AuditoriaAdmin", "Organizacao", "OrganizacaoMembro",
 ]
