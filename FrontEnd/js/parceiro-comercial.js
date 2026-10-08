@@ -15,14 +15,15 @@ const ChurrasPlanComercial = (() => {
             const ofertadas = c.itens.map(i => `${seguro(i.produto)} — ${seguro(i.estabelecimento)} (R$ ${Number(i.preco).toFixed(2)})`).join("; ");
             const editar = podeGerir() && ["rascunho", "rejeitada"].includes(c.status);
             const cancelar = podeGerir() && c.status !== "cancelada";
-            const renovar = podeGerir() && c.status === "rejeitada";
             return `<div class="basket-row"><strong>${seguro(c.nome)}</strong>
               <small>${seguro(c.codigo)} · ${seguro(c.status)} · início: ${seguro(c.inicio_em)} · fim: ${seguro(c.fim_em)}</small>
               <p class="texto-suave">${ofertadas}</p>
               ${c.motivo_revisao ? `<small>Motivo: ${seguro(c.motivo_revisao)}</small>` : ""}
-              <div>${editar ? `<button type="button" data-campanha-enviar="${Number(c.id)}">Enviar para revisão</button>` : ""}
-                ${renovar ? `<small>Campanha rejeitada: edite os dados pela API antes do reenvio.</small>` : ""}
-                ${cancelar ? `<button type="button" data-campanha-cancelar="${Number(c.id)}">Cancelar campanha</button>` : ""}</div></div>`;
+              <div>
+                ${editar ? `<button type="button" data-campanha-editar="${Number(c.id)}">Editar</button>` : ""}
+                ${editar && c.status === "rascunho" ? `<button type="button" data-campanha-enviar="${Number(c.id)}">Enviar para revisão</button>` : ""}
+                ${cancelar ? `<button type="button" data-campanha-cancelar="${Number(c.id)}">Cancelar campanha</button>` : ""}
+              </div></div>`;
         }).join("") : '<p class="texto-suave">Nenhuma campanha cadastrada nesta organização.</p>';
     }
 
