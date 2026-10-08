@@ -45,8 +45,7 @@ def upgrade():
 
 def downgrade():
     # A operação descarta convites pendentes e auditoria. Backup antes de rollback real.
+    # MySQL impede DROP INDEX utilizado por foreign keys. DROP TABLE remove
+    # os índices e constraints automaticamente na ordem segura.
     op.drop_table("auditoria_organizacao")
-    op.drop_index("ix_convite_org_org_email", table_name="convites_organizacao")
-    op.drop_index("ix_convites_organizacao_token_hash", table_name="convites_organizacao")
-    op.drop_index("ix_convites_organizacao_organizacao_id", table_name="convites_organizacao")
     op.drop_table("convites_organizacao")
