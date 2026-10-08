@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from database.connection import get_db
 from models import AssinaturaUsuario, PlanoAssinatura, Usuario
 from services.auth import usuario_atual
+from services.entitlements import LIMITES_PLANOS, RECURSOS_PLANOS
 
 router = APIRouter(prefix="/api/planos", tags=["planos"])
 
@@ -15,6 +16,22 @@ def listar_planos(db: Session = Depends(get_db)):
         "id": p.id, "slug": p.slug, "nome": p.nome, "publico_alvo": p.publico_alvo,
         "preco_mensal": float(p.preco_mensal), "recursos": p.recursos or {},
     } for p in planos]
+
+
+@router.get("/parceiros")
+def planos_parceiros():
+    """Catálogo técnico de tiers: SEM preço inventado, checkout ou acesso pago."""
+    nomes = {"free": "Free", "pro": "Pro", "business": "Business"}
+    return [
+        {
+            "slug": slug, "nome": nomes[slug],
+            "limites": limites.copy(), "recursos": RECURSOS_PLANOS[slug].copy(),
+            "preco_mensal": None, "moeda": "BRL",
+            "checkout_habilitado": False, "pagamentos_habilitados": False,
+            "disponibilidade": "cortesia_administrativa" if slug != "free" else "gratuito",
+        }
+        for slug, limites in LIMITES_PLANOS.items()
+    ]
 
 
 @router.get("/minha-assinatura")
