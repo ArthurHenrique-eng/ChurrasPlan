@@ -28,6 +28,25 @@ class ProdutoOut(BaseModel):
     descricao: Optional[str] = None
     preco_medio_historico: Optional[float] = None
     preco_minimo_atual: Optional[float] = None
+    preco_referencia: Optional[float] = None
+    preco_referencia_data_base: Optional[str] = None
+    preco_referencia_unidade: Optional[str] = None
+
+
+class ProdutoGenericoOut(BaseModel):
+    """Opção leve do catálogo B2B, sem consultar histórico de ofertas."""
+    id: int
+    slug: str
+    nome: str
+    categoria_id: int
+    categoria_nome: str
+    categoria_tipo: str
+    venda_fracionada: bool
+    quantidade_embalagem: Optional[float] = None
+    unidade_embalagem: Optional[str] = None
+    preco_referencia: Optional[float] = None
+    preco_referencia_data_base: Optional[str] = None
+    preco_referencia_unidade: Optional[str] = None
 
 
 class ProdutoComercialCreate(BaseModel):

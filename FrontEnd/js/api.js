@@ -107,6 +107,7 @@ const ChurrasPlanAPI = {
     responderConvite(codigo, payload, opcoes = {}) { return requisitar(`/api/convites/publico/${encodeURIComponent(codigo)}/responder`, { ...opcoes, method: "POST", body: JSON.stringify(payload) }); },
 
     listarProdutos(parametros = {}, opcoes = {}) { return requisitar(`/api/produtos${queryString(parametros)}`, opcoes); },
+    listarGenericos(opcoes = {}) { return requisitar("/api/produtos/genericos", opcoes); },
 
     ativarParceiro(opcoes = {}) { return requisitar("/api/parceiro/ativar", { ...opcoes, method: "POST" }); },
     dashboardParceiro(opcoes = {}) { return requisitar("/api/parceiro/dashboard", opcoes); },

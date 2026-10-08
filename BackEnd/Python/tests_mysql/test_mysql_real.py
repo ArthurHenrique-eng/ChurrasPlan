@@ -107,3 +107,32 @@ def test_mysql_todas_as_tabelas_usam_innodb():
     assert rows
     incorretas = [dict(r) for r in rows if str(r["ENGINE"]).lower() != "innodb"]
     assert incorretas == []
+
+def test_mysql_catalogo_generico_aplicado_por_migrations_sem_seed_demo():
+    _setup_url()
+    from config import CATALOGO_PRODUTOS_PADRAO
+    from database.connection import SessionLocal
+    from models import Categoria, Produto
+
+    db = SessionLocal()
+    try:
+        categorias = {
+            c.nome for c in db.query(Categoria).all()
+        }
+        esperadas = {
+            "Carnes", "Bebidas", "Mercearia e alimentos", "Laticínios e frios",
+            "Padaria", "Hortifruti", "Congelados", "Limpeza",
+            "Higiene pessoal", "Descartáveis e utilidades",
+        }
+        assert esperadas.issubset(categorias)
+        slugs = {
+            p.slug for p in db.query(Produto)
+            .filter(Produto.tipo_produto == "generico", Produto.ativo.is_(True)).all()
+        }
+        assert set(CATALOGO_PRODUTOS_PADRAO).issubset(slugs)
+        assert {"detergente", "outro-produto-limpeza", "papel-higienico", "arroz", "agua"}.issubset(slugs)
+        assert db.query(Produto).filter(
+            Produto.slug == "detergente", Produto.tipo_produto == "generico"
+        ).count() == 1
+    finally:
+        db.close()

@@ -2,8 +2,9 @@ name: ChurrasPlan CI
 
 on:
   push:
-    branches: ["main", "master", "develop"]
+    branches: ["main", "master", "develop", "Saas-ChurrasPlan"]
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -84,6 +85,8 @@ jobs:
         run: python scripts/validate_frontend.py
       - name: Coordinate forms (Brazilian decimal format)
         run: node scripts/test_coordinates_ui.mjs
+      - name: Partner catalogue selections and partial failures
+        run: node scripts/test_partner_catalog.mjs
 
 
   security-static:
