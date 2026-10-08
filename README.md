@@ -35,7 +35,7 @@ A v6.5.0 preserva a base production-ready da v6.4 e substitui a integração Goo
 
 ### Produtos, parceiros e compras
 
-A trilha SaaS introduz organizações com papéis locais e isolamento B2B inicial. Consultas do painel usam a organização do membro; para usuários em mais de uma organização, o cabeçalho `X-Organizacao-ID` é obrigatório. **Entitlements, cobranças, convites multi-org e seletor visual ainda não estão completos.** Veja `docs/SAAS_FASE_2A_ORGANIZACOES.md`.
+A trilha SaaS introduz organizações com papéis locais e isolamento B2B inicial. Consultas do painel usam a organização do membro; para usuários em mais de uma organização, o cabeçalho `X-Organizacao-ID` é obrigatório. **Entitlements, convites e seletor multi-org estão implementados; cobrança real continua desativada.** Veja `docs/SAAS_FASE_2A_ORGANIZACOES.md` e `docs/SAAS_FASE_2D_OPERACAO_B2B.md` para a operação atual.
 
 - produto genérico + SKU comercial;
 - catálogo genérico amplo por categoria para parceiros: carnes, bebidas, mercearia, laticínios, padaria, hortifruti, congelados, limpeza, higiene e descartáveis;
@@ -94,7 +94,7 @@ O Alembic é a fonte de verdade da evolução do banco.
 Head atual:
 
 ```text
-20261008_0011
+20261008_0012
 ```
 
 Cadeia:
@@ -111,6 +111,7 @@ Cadeia:
 20261008_0009  organizações B2B, membros e backfill conservador de parceiros
 20261008_0010  concessões administrativas temporárias e limites B2B (sem billing)
 20261008_0011  convites B2B, equipes, auditoria e gestão de membros
+20261008_0012  filiais com código/matriz e lotes de ofertas CSV idempotentes
 
 A Fase 2C permite convidar equipes, revogar membros, aplicar papéis por organização e alternar entre contas no painel. Segurança, fluxos, migração/rollback e cotas: `docs/SAAS_FASE_2C_MEMBROS_CONVITES.md`. **Não há checkout nem assinatura paga funcional.**
 
