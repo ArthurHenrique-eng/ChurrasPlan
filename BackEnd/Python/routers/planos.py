@@ -5,6 +5,7 @@ from database.connection import get_db
 from models import AssinaturaUsuario, PlanoAssinatura, Usuario
 from services.auth import usuario_atual
 from services.entitlements import LIMITES_PLANOS, RECURSOS_PLANOS
+from services.equipe_organizacao import LIMITES_MEMBROS
 
 router = APIRouter(prefix="/api/planos", tags=["planos"])
 
@@ -25,7 +26,7 @@ def planos_parceiros():
     return [
         {
             "slug": slug, "nome": nomes[slug],
-            "limites": limites.copy(), "recursos": RECURSOS_PLANOS[slug].copy(),
+            "limites": {**limites, "membros": LIMITES_MEMBROS[slug]}, "recursos": RECURSOS_PLANOS[slug].copy(),
             "preco_mensal": None, "moeda": "BRL",
             "checkout_habilitado": False, "pagamentos_habilitados": False,
             "disponibilidade": "cortesia_administrativa" if slug != "free" else "gratuito",
