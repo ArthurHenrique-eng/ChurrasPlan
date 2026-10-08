@@ -34,6 +34,9 @@ A v6.5.0 preserva a base production-ready da v6.4 e substitui a integração Goo
 - área “Onde comprar”.
 
 ### Produtos, parceiros e compras
+
+A trilha SaaS introduz organizações com papéis locais e isolamento B2B inicial. Consultas do painel usam a organização do membro; para usuários em mais de uma organização, o cabeçalho `X-Organizacao-ID` é obrigatório. **Entitlements, cobranças, convites multi-org e seletor visual ainda não estão completos.** Veja `docs/SAAS_FASE_2A_ORGANIZACOES.md`.
+
 - produto genérico + SKU comercial;
 - catálogo genérico amplo por categoria para parceiros: carnes, bebidas, mercearia, laticínios, padaria, hortifruti, congelados, limpeza, higiene e descartáveis;
 - marca, variante, fabricante, EAN e embalagem;
@@ -91,7 +94,7 @@ O Alembic é a fonte de verdade da evolução do banco.
 Head atual:
 
 ```text
-20260925_0008
+20261008_0009
 ```
 
 Cadeia:
@@ -105,6 +108,7 @@ Cadeia:
 20260922_0006  restaura defaults de timestamps em usuarios
 20260925_0007  amplia catálogo genérico para cadastro de produtos de parceiros
 20260925_0008  garante catálogo base do planejador em toda instalação
+20261008_0009  organizações B2B, membros e backfill conservador de parceiros
 ```
 
 `BackEnd/Python/sql/schema.sql` representa uma **instalação nova** no head atual. Para banco existente, use migrations.
