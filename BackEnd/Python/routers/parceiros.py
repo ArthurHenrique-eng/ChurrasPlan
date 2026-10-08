@@ -1,17 +1,18 @@
 from datetime import UTC, datetime
 import secrets
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from database.connection import get_db
-from models import Estabelecimento, MetricaEstabelecimento, Preco, Produto, Usuario
+from models import Estabelecimento, MetricaEstabelecimento, Organizacao, OrganizacaoMembro, Preco, Produto, Usuario
 from schemas.auth import UsuarioOut
 from schemas.estabelecimento import EstabelecimentoOut, EstabelecimentoParceiroCreate, PrecoComparacaoItem, PrecoParceiroCreate
 from schemas.produto import ProdutoComercialCreate, ProdutoOut
 from services.auth import exigir_papeis, usuario_atual_com_csrf
 from services.catalogo_produtos import slugificar
+from services.organizacoes import garantir_organizacao_inicial, selecionar_organizacao
 from routers.produtos import produto_out
 
 router = APIRouter(prefix="/api/parceiro", tags=["parceiros"])
@@ -21,9 +22,13 @@ def _estab_out(e: Estabelecimento) -> EstabelecimentoOut:
     return EstabelecimentoOut.model_validate(e)
 
 
-def _estabelecimento_do_parceiro(db: Session, estabelecimento_id: int, usuario: Usuario) -> Estabelecimento:
+def _estabelecimento_do_parceiro(
+    db: Session, estabelecimento_id: int, usuario: Usuario, organizacao_id: int | None = None
+) -> Estabelecimento:
+    org = selecionar_organizacao(db, usuario, organizacao_id, editar=True)
     e = db.get(Estabelecimento, estabelecimento_id)
-    if not e or (usuario.papel != "admin" and e.usuario_responsavel_id != usuario.id):
+    # Validação pelo tenant; usuario_responsavel_id é legado e não concede acesso.
+    if not e or (org is not None and e.organizacao_id != org.id):
         raise HTTPException(status_code=404, detail="Estabelecimento não encontrado para esta conta.")
     return e
 
@@ -32,25 +37,62 @@ def _estabelecimento_do_parceiro(db: Session, estabelecimento_id: int, usuario: 
 def ativar_perfil_parceiro(usuario: Usuario = Depends(usuario_atual_com_csrf), db: Session = Depends(get_db)):
     if usuario.papel == "usuario":
         usuario.papel = "parceiro"
-        db.commit(); db.refresh(usuario)
+    if usuario.papel == "parceiro":
+        garantir_organizacao_inicial(db, usuario)
+        db.commit()
+        db.refresh(usuario)
     return usuario
 
 
+@router.get("/organizacoes")
+def minhas_organizacoes(
+    usuario: Usuario = Depends(exigir_papeis("parceiro", "admin")),
+    db: Session = Depends(get_db),
+):
+    """Lista somente organizações que o usuário integra; admins veem as suas."""
+    membros = (
+        db.query(OrganizacaoMembro)
+        .join(Organizacao)
+        .filter(OrganizacaoMembro.usuario_id == usuario.id,
+                OrganizacaoMembro.ativo.is_(True), Organizacao.ativo.is_(True))
+        .order_by(Organizacao.nome, Organizacao.id)
+        .all()
+    )
+    return [
+        {"id": m.organizacao.id, "nome": m.organizacao.nome, "slug": m.organizacao.slug,
+         "papel": m.papel, "ativo": m.organizacao.ativo}
+        for m in membros
+    ]
+
+
 @router.get("/estabelecimentos", response_model=list[EstabelecimentoOut])
-def meus_estabelecimentos(usuario: Usuario = Depends(exigir_papeis("parceiro", "admin")), db: Session = Depends(get_db)):
+def meus_estabelecimentos(
+    usuario: Usuario = Depends(exigir_papeis("parceiro", "admin")),
+    db: Session = Depends(get_db),
+    organizacao_id: int | None = Header(default=None, alias="X-Organizacao-ID"),
+):
+    org = selecionar_organizacao(db, usuario, organizacao_id)
     q = db.query(Estabelecimento)
-    if usuario.papel != "admin": q = q.filter(Estabelecimento.usuario_responsavel_id == usuario.id)
+    if org is not None:
+        q = q.filter(Estabelecimento.organizacao_id == org.id)
     return [_estab_out(e) for e in q.order_by(Estabelecimento.nome).all()]
 
 
 @router.post("/estabelecimentos", response_model=EstabelecimentoOut, status_code=201)
-def criar_estabelecimento(payload: EstabelecimentoParceiroCreate, usuario: Usuario = Depends(exigir_papeis("parceiro", "admin", mutacao=True)), db: Session = Depends(get_db)):
+def criar_estabelecimento(
+    payload: EstabelecimentoParceiroCreate,
+    usuario: Usuario = Depends(exigir_papeis("parceiro", "admin", mutacao=True)),
+    db: Session = Depends(get_db),
+    organizacao_id: int | None = Header(default=None, alias="X-Organizacao-ID"),
+):
+    org = selecionar_organizacao(db, usuario, organizacao_id, editar=True)
     base = slugificar(payload.nome) or "estabelecimento"
     slug = base
     while db.query(Estabelecimento).filter(Estabelecimento.slug == slug).first():
         slug = f"{base}-{secrets.token_hex(3)}"
     e = Estabelecimento(
-        usuario_responsavel_id=usuario.id, slug=slug, parceiro_verificado=(usuario.papel == "admin"), ativo=True,
+        usuario_responsavel_id=usuario.id, organizacao_id=org.id if org else None,
+        slug=slug, parceiro_verificado=(usuario.papel == "admin"), ativo=True,
         **payload.model_dump(),
     )
     db.add(e); db.commit(); db.refresh(e)
@@ -58,15 +100,26 @@ def criar_estabelecimento(payload: EstabelecimentoParceiroCreate, usuario: Usuar
 
 
 @router.put("/estabelecimentos/{estabelecimento_id}", response_model=EstabelecimentoOut)
-def atualizar_estabelecimento(estabelecimento_id: int, payload: EstabelecimentoParceiroCreate, usuario: Usuario = Depends(exigir_papeis("parceiro", "admin", mutacao=True)), db: Session = Depends(get_db)):
-    e = _estabelecimento_do_parceiro(db, estabelecimento_id, usuario)
+def atualizar_estabelecimento(
+    estabelecimento_id: int, payload: EstabelecimentoParceiroCreate,
+    usuario: Usuario = Depends(exigir_papeis("parceiro", "admin", mutacao=True)),
+    db: Session = Depends(get_db),
+    organizacao_id: int | None = Header(default=None, alias="X-Organizacao-ID"),
+):
+    e = _estabelecimento_do_parceiro(db, estabelecimento_id, usuario, organizacao_id)
     for k, v in payload.model_dump().items(): setattr(e, k, v)
     db.commit(); db.refresh(e)
     return _estab_out(e)
 
 
 @router.post("/produtos", response_model=ProdutoOut, status_code=201)
-def criar_produto_comercial(payload: ProdutoComercialCreate, usuario: Usuario = Depends(exigir_papeis("parceiro", "admin", mutacao=True)), db: Session = Depends(get_db)):
+def criar_produto_comercial(
+    payload: ProdutoComercialCreate,
+    usuario: Usuario = Depends(exigir_papeis("parceiro", "admin", mutacao=True)),
+    db: Session = Depends(get_db),
+    organizacao_id: int | None = Header(default=None, alias="X-Organizacao-ID"),
+):
+    org = selecionar_organizacao(db, usuario, organizacao_id, editar=True)
     pai = db.get(Produto, payload.produto_pai_id)
     if not pai or pai.tipo_produto != "generico":
         raise HTTPException(status_code=422, detail="Selecione um produto genérico válido como categoria comercial.")
@@ -76,7 +129,8 @@ def criar_produto_comercial(payload: ProdutoComercialCreate, usuario: Usuario = 
     slug = base or f"produto-{secrets.token_hex(4)}"
     while db.query(Produto).filter(Produto.slug == slug).first(): slug = f"{base}-{secrets.token_hex(3)}"
     p = Produto(
-        categoria_id=pai.categoria_id, produto_pai_id=pai.id, tipo_produto="comercial", slug=slug,
+        categoria_id=pai.categoria_id, produto_pai_id=pai.id, tipo_produto="comercial",
+        organizacao_id=org.id if org else None, slug=slug,
         nome=payload.nome, marca=payload.marca, variante=payload.variante, fabricante=payload.fabricante,
         ean=payload.ean, sku=payload.sku, unidade_consumo=pai.unidade_consumo,
         unidade_venda=payload.unidade_venda, venda_fracionada=False, incremento_venda=None,
@@ -92,15 +146,32 @@ def criar_produto_comercial(payload: ProdutoComercialCreate, usuario: Usuario = 
 
 
 @router.get("/produtos", response_model=list[ProdutoOut])
-def listar_produtos_comerciais(usuario: Usuario = Depends(exigir_papeis("parceiro", "admin")), db: Session = Depends(get_db)):
-    return [produto_out(db, p) for p in db.query(Produto).filter(Produto.tipo_produto == "comercial").order_by(Produto.nome).all()]
+def listar_produtos_comerciais(
+    usuario: Usuario = Depends(exigir_papeis("parceiro", "admin")),
+    db: Session = Depends(get_db),
+    organizacao_id: int | None = Header(default=None, alias="X-Organizacao-ID"),
+):
+    org = selecionar_organizacao(db, usuario, organizacao_id)
+    q = db.query(Produto).filter(Produto.tipo_produto == "comercial")
+    if org is not None:
+        q = q.filter(Produto.organizacao_id == org.id)
+    return [produto_out(db, p) for p in q.order_by(Produto.nome).all()]
 
 
 @router.post("/precos", response_model=PrecoComparacaoItem, status_code=201)
-def cadastrar_preco(payload: PrecoParceiroCreate, usuario: Usuario = Depends(exigir_papeis("parceiro", "admin", mutacao=True)), db: Session = Depends(get_db)):
-    e = _estabelecimento_do_parceiro(db, payload.estabelecimento_id, usuario)
+def cadastrar_preco(
+    payload: PrecoParceiroCreate,
+    usuario: Usuario = Depends(exigir_papeis("parceiro", "admin", mutacao=True)),
+    db: Session = Depends(get_db),
+    organizacao_id: int | None = Header(default=None, alias="X-Organizacao-ID"),
+):
+    e = _estabelecimento_do_parceiro(db, payload.estabelecimento_id, usuario, organizacao_id)
     p = db.get(Produto, payload.produto_id)
     if not p or not p.ativo:
+        raise HTTPException(status_code=404, detail="Produto não encontrado.")
+    # Genéricos e SKUs legados sem dono são catálogo compartilhado.
+    # SKUs com proprietário B2B nunca podem ser ofertados por outro tenant.
+    if p.organizacao_id is not None and p.organizacao_id != e.organizacao_id:
         raise HTTPException(status_code=404, detail="Produto não encontrado.")
     preco = Preco(
         produto_id=p.id, estabelecimento_id=e.id, criado_por_usuario_id=usuario.id,
@@ -122,9 +193,15 @@ def cadastrar_preco(payload: PrecoParceiroCreate, usuario: Usuario = Depends(exi
 
 
 @router.get("/dashboard")
-def dashboard(usuario: Usuario = Depends(exigir_papeis("parceiro", "admin")), db: Session = Depends(get_db)):
+def dashboard(
+    usuario: Usuario = Depends(exigir_papeis("parceiro", "admin")),
+    db: Session = Depends(get_db),
+    organizacao_id: int | None = Header(default=None, alias="X-Organizacao-ID"),
+):
+    org = selecionar_organizacao(db, usuario, organizacao_id)
     q = db.query(Estabelecimento)
-    if usuario.papel != "admin": q = q.filter(Estabelecimento.usuario_responsavel_id == usuario.id)
+    if org is not None:
+        q = q.filter(Estabelecimento.organizacao_id == org.id)
     estabelecimentos = q.all(); ids = [e.id for e in estabelecimentos]
     precos = db.query(Preco).filter(Preco.estabelecimento_id.in_(ids)).count() if ids else 0
     visualizacoes = db.query(MetricaEstabelecimento).filter(

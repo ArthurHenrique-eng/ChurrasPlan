@@ -8,6 +8,7 @@ from database.connection import get_db
 from models import AuditoriaAdmin, Churrasco, Estabelecimento, Preco, Produto, Usuario
 from schemas.admin import AdminEstabelecimentoUpdate, AdminUsuarioUpdate
 from services.auth import exigir_papeis
+from services.organizacoes import garantir_organizacao_inicial
 from services.seguranca import limpar_eventos_antigos, registrar_auditoria
 
 router = APIRouter(prefix="/api/admin", tags=["administracao"])
@@ -72,6 +73,9 @@ def atualizar_usuario(
     antes = {"papel": alvo.papel, "ativo": alvo.ativo}
     if payload.papel is not None:
         alvo.papel = payload.papel
+        if payload.papel == "parceiro":
+            # Promover pelo admin não passa pela rota /parceiro/ativar.
+            garantir_organizacao_inicial(db, alvo)
     if payload.ativo is not None:
         alvo.ativo = payload.ativo
     registrar_auditoria(db, admin, acao="usuario_atualizado", entidade="usuario", entidade_id=alvo.id, detalhes={"antes": antes, "depois": {"papel": alvo.papel, "ativo": alvo.ativo}})

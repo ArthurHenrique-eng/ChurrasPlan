@@ -6,6 +6,7 @@ class ProdutoOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
     produto_pai_id: Optional[int] = None
+    organizacao_id: Optional[int] = None
     tipo_produto: str = "generico"
     slug: str
     nome: str

@@ -1,6 +1,6 @@
--- ChurrasPlan v6.4 - schema MySQL de referência (Alembic head 20260918_0005).
+-- ChurrasPlan SaaS - schema MySQL de referência (Alembic head 20261008_0009).
 -- Fonte de verdade para evolução: Alembic (`alembic upgrade head`).
--- Este arquivo representa uma instalação NOVA no head 20260918_0005.
+-- Este arquivo representa uma instalação NOVA no head 20261008_0009.
 -- Para bancos existentes, NÃO recrie tabelas: aplique as migrations.
 CREATE DATABASE IF NOT EXISTS churrasplan CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE churrasplan;
@@ -57,6 +57,31 @@ CREATE TABLE usuarios (
 CREATE UNIQUE INDEX ix_usuarios_email ON usuarios (email);
 CREATE INDEX ix_usuarios_id ON usuarios (id);
 CREATE INDEX ix_usuarios_papel ON usuarios (papel);
+
+CREATE TABLE organizacoes (
+	id INTEGER NOT NULL AUTO_INCREMENT,
+	slug VARCHAR(150) NOT NULL,
+	nome VARCHAR(150) NOT NULL,
+	ativo BOOL NOT NULL DEFAULT '1',
+	criado_em DATETIME NOT NULL DEFAULT now(),
+	PRIMARY KEY (id)
+) ENGINE=InnoDB;
+CREATE UNIQUE INDEX ix_organizacoes_slug ON organizacoes (slug);
+
+CREATE TABLE organizacao_membros (
+	id INTEGER NOT NULL AUTO_INCREMENT,
+	organizacao_id INTEGER NOT NULL,
+	usuario_id INTEGER NOT NULL,
+	papel VARCHAR(20) NOT NULL DEFAULT 'leitor',
+	ativo BOOL NOT NULL DEFAULT '1',
+	criado_em DATETIME NOT NULL DEFAULT now(),
+	PRIMARY KEY (id),
+	CONSTRAINT uq_organizacao_membro UNIQUE (organizacao_id, usuario_id),
+	FOREIGN KEY(organizacao_id) REFERENCES organizacoes (id) ON DELETE CASCADE,
+	FOREIGN KEY(usuario_id) REFERENCES usuarios (id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+CREATE INDEX ix_organizacao_membros_organizacao_id ON organizacao_membros (organizacao_id);
+CREATE INDEX ix_organizacao_membros_usuario_id ON organizacao_membros (usuario_id);
 
 CREATE TABLE assinaturas_usuario (
 	id INTEGER NOT NULL AUTO_INCREMENT, 
@@ -155,6 +180,7 @@ CREATE INDEX ix_consentimentos_usuario_usuario_id ON consentimentos_usuario (usu
 CREATE TABLE estabelecimentos (
 	id INTEGER NOT NULL AUTO_INCREMENT, 
 	usuario_responsavel_id INTEGER, 
+	organizacao_id INTEGER, 
 	slug VARCHAR(170) NOT NULL, 
 	nome VARCHAR(150) NOT NULL, 
 	tipo VARCHAR(60) NOT NULL, 
@@ -176,7 +202,8 @@ CREATE TABLE estabelecimentos (
 	parceiro_verificado BOOL NOT NULL DEFAULT '0', 
 	ativo BOOL NOT NULL DEFAULT '1', 
 	PRIMARY KEY (id), 
-	FOREIGN KEY(usuario_responsavel_id) REFERENCES usuarios (id) ON DELETE SET NULL
+	FOREIGN KEY(usuario_responsavel_id) REFERENCES usuarios (id) ON DELETE SET NULL,
+	CONSTRAINT fk_estabelecimentos_organizacao_id FOREIGN KEY(organizacao_id) REFERENCES organizacoes (id) ON DELETE SET NULL
 ) ENGINE=InnoDB;
 CREATE INDEX ix_estabelecimentos_cidade ON estabelecimentos (cidade);
 CREATE INDEX ix_estabelecimentos_estado ON estabelecimentos (estado);
@@ -186,10 +213,12 @@ CREATE INDEX ix_estabelecimentos_latitude ON estabelecimentos (latitude);
 CREATE INDEX ix_estabelecimentos_longitude ON estabelecimentos (longitude);
 CREATE UNIQUE INDEX ix_estabelecimentos_slug ON estabelecimentos (slug);
 CREATE INDEX ix_estabelecimentos_usuario_responsavel_id ON estabelecimentos (usuario_responsavel_id);
+CREATE INDEX ix_estabelecimentos_organizacao_id ON estabelecimentos (organizacao_id);
 
 CREATE TABLE produtos (
 	id INTEGER NOT NULL AUTO_INCREMENT, 
 	categoria_id INTEGER NOT NULL, 
+	organizacao_id INTEGER, 
 	produto_pai_id INTEGER, 
 	tipo_produto VARCHAR(20) NOT NULL DEFAULT 'generico', 
 	slug VARCHAR(140) NOT NULL, 
@@ -210,7 +239,8 @@ CREATE TABLE produtos (
 	descricao TEXT, 
 	PRIMARY KEY (id), 
 	FOREIGN KEY(categoria_id) REFERENCES categorias (id) ON DELETE RESTRICT, 
-	FOREIGN KEY(produto_pai_id) REFERENCES produtos (id) ON DELETE SET NULL
+	FOREIGN KEY(produto_pai_id) REFERENCES produtos (id) ON DELETE SET NULL,
+	CONSTRAINT fk_produtos_organizacao_id FOREIGN KEY(organizacao_id) REFERENCES organizacoes (id) ON DELETE SET NULL
 ) ENGINE=InnoDB;
 CREATE INDEX ix_produtos_categoria_id ON produtos (categoria_id);
 CREATE UNIQUE INDEX ix_produtos_ean ON produtos (ean);
@@ -220,6 +250,7 @@ CREATE INDEX ix_produtos_produto_pai_id ON produtos (produto_pai_id);
 CREATE INDEX ix_produtos_sku ON produtos (sku);
 CREATE UNIQUE INDEX ix_produtos_slug ON produtos (slug);
 CREATE INDEX ix_produtos_tipo_produto ON produtos (tipo_produto);
+CREATE INDEX ix_produtos_organizacao_id ON produtos (organizacao_id);
 
 CREATE TABLE sessoes_usuario (
 	id INTEGER NOT NULL AUTO_INCREMENT, 
