@@ -83,6 +83,50 @@
           <h3>Convites pendentes</h3>
           <div class="basket-table" id="equipe-convites" aria-live="polite"></div>
         </section>
+        <section class="account-section" id="operacao-b2b" aria-labelledby="operacao-b2b-titulo">
+          <h2 id="operacao-b2b-titulo">Operação de filiais</h2>
+          <p class="texto-suave">Identifique a matriz e as unidades. Apenas proprietários e gestores alteram metadados e disponibilidade das filiais.</p>
+          <div class="basket-table" id="filiais-lista" aria-live="polite"></div>
+          <form id="form-filial-meta" class="account-form" hidden>
+            <label>Unidade
+              <select id="filial-editar-id" required></select>
+            </label>
+            <label>Código interno da filial
+              <input id="filial-codigo" maxlength="40" placeholder="CENTRO-01" pattern="[A-Za-z0-9][A-Za-z0-9_-]*">
+            </label>
+            <label><input id="filial-matriz" type="checkbox"> Esta unidade é a matriz</label>
+            <label><input id="filial-ativa" type="checkbox" checked> Unidade ativa</label>
+            <button class="botao botao--secundario full" type="submit">Salvar informações da filial</button>
+          </form>
+          <h3>Ativação da parceria</h3>
+          <div id="onboarding-parceiro" aria-live="polite"></div>
+        </section>
+        <section class="account-section" id="operacao-importacoes">
+          <h2>Importar ofertas CSV</h2>
+          <p class="texto-suave">Use cabeçalho <code>estabelecimento_id;produto_id;preco;preco_original;estoque_status</code>. Valores são ofertas informadas pelo parceiro, não preços de referência. Máximo de 200 linhas por envio.</p>
+          <form id="form-importar-ofertas" class="account-form">
+            <label class="full">Arquivo CSV (opcional)
+              <input type="file" id="importar-csv-arquivo" accept=".csv,text/csv">
+            </label>
+            <label class="full">Conteúdo do CSV
+              <textarea id="importar-csv-texto" rows="5" maxlength="100000" required placeholder="estabelecimento_id;produto_id;preco;preco_original;estoque_status"></textarea>
+            </label>
+            <button class="botao botao--primario full" type="submit">Importar ofertas</button>
+          </form>
+          <p id="importar-csv-resultado" class="texto-suave" role="status" aria-live="polite"></p>
+        </section>
+        <section class="account-section" id="operacao-relatorios">
+          <h2>Indicadores por filial</h2>
+          <p class="texto-suave">Interações de descoberta. Visualizações e cliques não são vendas confirmadas.</p>
+          <label>Período das interações
+            <select id="relatorio-dias">
+              <option value="7">7 dias</option>
+              <option value="30" selected>30 dias</option>
+              <option value="90">90 dias</option>
+            </select>
+          </label>
+          <div id="relatorio-comercial" aria-live="polite"></div>
+        </section>
         <section class="account-section">
           <div class="partner-stats" id="parceiro-stats">
           </div>
@@ -283,6 +327,7 @@
     <script src="js/auth-ui.js">
     </script>
     <script src="js/parceiro-equipe.js"></script>
+    <script src="js/parceiro-operacao.js"></script>
     <script src="js/parceiro.js">
     </script>
   <script src="js/pwa.js"></script>
