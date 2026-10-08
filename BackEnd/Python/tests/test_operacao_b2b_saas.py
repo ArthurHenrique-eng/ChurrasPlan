@@ -34,7 +34,8 @@ def test_filiais_codigo_unico_matriz_e_isolamento(client):
     assert r.json()["unidade_matriz"] is True and r.json()["codigo_filial"] == "CENTRO"
     assert client.patch(url2, headers=h, json={"codigo_filial": "CENTRO"}).status_code == 409
     assert client.patch(url2, headers=h, json={"codigo_filial": "bairro", "unidade_matriz": True}).status_code == 200
-    assert client.get("/api/parceiro/filiais").json()[0]["unidade_matriz"] is False
+    assert next(f for f in client.get("/api/parceiro/filiais").json()
+                if f["id"] == loja1["id"])["unidade_matriz"] is False
     filiais = client.get("/api/parceiro/filiais").json()
     assert len(filiais) == 2
     assert [f for f in filiais if f["unidade_matriz"]][0]["codigo_filial"] == "BAIRRO"
