@@ -7,6 +7,8 @@ from services.auth import usuario_atual
 from services.entitlements import LIMITES_PLANOS, RECURSOS_PLANOS
 from services.equipe_organizacao import LIMITES_MEMBROS
 from services.billing import billing_habilitado
+from models import AssinaturaStripeUsuario
+from services.billing_usuario import resumo_usuario
 
 router = APIRouter(prefix="/api/planos", tags=["planos"])
 
@@ -39,6 +41,9 @@ def planos_parceiros():
 
 @router.get("/minha-assinatura")
 def minha_assinatura(usuario: Usuario = Depends(usuario_atual), db: Session = Depends(get_db)):
+    stripe_pessoal = db.get(AssinaturaStripeUsuario, usuario.id)
+    if stripe_pessoal:
+        return resumo_usuario(stripe_pessoal)
     assinatura = db.query(AssinaturaUsuario).filter(AssinaturaUsuario.usuario_id == usuario.id, AssinaturaUsuario.status == "ativa").first()
     if not assinatura:
         return {"plano": usuario.plano, "status": "sem_assinatura_paga", "pagamentos_habilitados": False}
