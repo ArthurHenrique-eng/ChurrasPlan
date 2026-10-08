@@ -1,6 +1,6 @@
--- ChurrasPlan SaaS - schema MySQL de referência (Alembic head 20261008_0009).
+-- ChurrasPlan SaaS - schema MySQL de referência (Alembic head 20261008_0010).
 -- Fonte de verdade para evolução: Alembic (`alembic upgrade head`).
--- Este arquivo representa uma instalação NOVA no head 20261008_0009.
+-- Este arquivo representa uma instalação NOVA no head 20261008_0010.
 -- Para bancos existentes, NÃO recrie tabelas: aplique as migrations.
 CREATE DATABASE IF NOT EXISTS churrasplan CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE churrasplan;
@@ -82,6 +82,20 @@ CREATE TABLE organizacao_membros (
 ) ENGINE=InnoDB;
 CREATE INDEX ix_organizacao_membros_organizacao_id ON organizacao_membros (organizacao_id);
 CREATE INDEX ix_organizacao_membros_usuario_id ON organizacao_membros (usuario_id);
+
+CREATE TABLE concessoes_organizacao (
+	organizacao_id INTEGER NOT NULL,
+	plano_slug VARCHAR(20) NOT NULL,
+	origem VARCHAR(30) NOT NULL DEFAULT 'cortesia_admin',
+	expira_em DATETIME NOT NULL,
+	alterado_por_usuario_id INTEGER,
+	atualizado_em DATETIME NOT NULL DEFAULT now(),
+	PRIMARY KEY (organizacao_id),
+	CONSTRAINT ck_concessao_plano_permitido CHECK (plano_slug IN ('pro', 'business')),
+	CONSTRAINT ck_concessao_origem_administrativa CHECK (origem = 'cortesia_admin'),
+	FOREIGN KEY(organizacao_id) REFERENCES organizacoes (id) ON DELETE CASCADE,
+	FOREIGN KEY(alterado_por_usuario_id) REFERENCES usuarios (id) ON DELETE SET NULL
+) ENGINE=InnoDB;
 
 CREATE TABLE assinaturas_usuario (
 	id INTEGER NOT NULL AUTO_INCREMENT, 
