@@ -18,6 +18,7 @@ class Organizacao(Base):
     estabelecimentos = relationship("Estabelecimento", back_populates="organizacao")
     produtos = relationship("Produto", back_populates="organizacao")
     concessao = relationship("ConcessaoOrganizacao", back_populates="organizacao", uselist=False)
+    convites = relationship("ConviteOrganizacao", back_populates="organizacao")
 
 
 class OrganizacaoMembro(Base):
