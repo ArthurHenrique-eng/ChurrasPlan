@@ -94,7 +94,7 @@ O Alembic é a fonte de verdade da evolução do banco.
 Head atual:
 
 ```text
-20261008_0013
+20261008_0014
 ```
 
 Cadeia:
@@ -113,10 +113,11 @@ Cadeia:
 20261008_0011  convites B2B, equipes, auditoria e gestão de membros
 20261008_0012  filiais com código/matriz e lotes de ofertas CSV idempotentes
 20261008_0013  importação em massa de SKUs e campanhas comerciais moderadas
+20261008_0014  assinaturas B2B, checkout Stripe Test, webhooks e histórico de cobrança
 
-A Fase 2C permite convidar equipes, revogar membros, aplicar papéis por organização e alternar entre contas no painel. Segurança, fluxos, migração/rollback e cotas: `docs/SAAS_FASE_2C_MEMBROS_CONVITES.md`. **Não há checkout nem assinatura paga funcional.**
+A Fase 2C permite convidar equipes, revogar membros, aplicar papéis por organização e alternar entre contas no painel. Segurança, fluxos, migração/rollback e cotas: `docs/SAAS_FASE_2C_MEMBROS_CONVITES.md`. **Checkout e assinaturas estão implementados somente para Stripe Test, desligados por padrão.**
 
-O painel de parceiros aplica cotas B2B transacionais. Organizações começam sempre no tier Free; concessões temporárias Pro/Business dependem de administrador global, CSRF e registro de auditoria. **Pagamento e checkout não estão habilitados**. Contratos, limites e rollback: `docs/SAAS_FASE_2B_ENTITLEMENTS.md`.
+O painel de parceiros aplica cotas B2B transacionais. Organizações começam sempre no tier Free; concessões temporárias Pro/Business dependem de administrador global, CSRF e registro de auditoria. **Checkout Stripe Test só fica disponível após configuração explícita; pagamentos reais continuam desativados.** Contratos, limites e rollback: `docs/SAAS_FASE_2B_ENTITLEMENTS.md`.
 ```
 
 `BackEnd/Python/sql/schema.sql` representa uma **instalação nova** no head atual. Para banco existente, use migrations.
@@ -387,4 +388,8 @@ Os documentos antigos permanecem no repositório como histórico das versões an
 
 ### Fase 4A — Catálogo e campanhas B2B
 
-Importação CSV de produtos comerciais com criação/atualização por SKU, verificação de EAN, cotas e repetição idempotente; campanhas associadas a ofertas existentes, submetidas à revisão de administrador e exibidas publicamente só após aprovação e dentro da vigência. Consulte `docs/SAAS_FASE_4A_CATALOGO_CAMPANHAS.md`. **Pagamentos, checkout e assinaturas pagas continuam desativados.**
+Importação CSV de produtos comerciais com criação/atualização por SKU, verificação de EAN, cotas e repetição idempotente; campanhas associadas a ofertas existentes, submetidas à revisão de administrador e exibidas publicamente só após aprovação e dentro da vigência. Consulte `docs/SAAS_FASE_4A_CATALOGO_CAMPANHAS.md`. **Pagamentos reais permanecem desativados; o sandbox Stripe Test é configurável pela Fase 3.**
+
+### Fase 3 — Billing B2B (somente sandbox)
+
+Assinaturas por organização com tiers Free/Pro/Business, checkout Stripe Test, webhook HMAC, controle de assinatura, renovação, inadimplência/tolerância, cancelamento, conciliação, troca de plano e histórico de faturas de teste. Consulte `docs/SAAS_FASE_3_BILLING_STRIPE_TEST.md` e configure Prices e credenciais Stripe Test **fora do repositório**. O sistema recusa chaves `sk_live_` e não disponibiliza cobrança em produção.
