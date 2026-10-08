@@ -1,4 +1,5 @@
 from datetime import datetime
+from math import isfinite
 from typing import Optional
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -30,22 +31,30 @@ class EstabelecimentoOut(BaseModel):
 
 
 def _normalizar_coordenada(valor, limite: float):
-    if valor is None or valor == "":
+    """Aceita graus decimais; nunca infere micrograus de inteiros ambíguos."""
+    if valor is None:
         return None
+    if isinstance(valor, bool):
+        raise ValueError("Coordenada inválida. Informe graus decimais.")
     if isinstance(valor, str):
-        valor = valor.strip().replace(",", ".")
-    numero = float(valor)
+        texto = valor.strip()
+        if not texto:
+            return None
+        if ("," in texto and "." in texto) or texto.count(",") > 1:
+            raise ValueError("Formato de coordenada inválido. Use graus decimais, como -19,959383.")
+        valor = texto.replace(",", ".")
 
-    # Alguns serviços/copias de coordenadas entregam micrograus sem o ponto
-    # decimal (ex.: -19959383 -> -19.959383). Normalizamos somente valores
-    # inteiros grandes para não transformar coordenadas simplesmente inválidas.
-    if (
-        abs(numero) >= 1_000_000
-        and abs(numero) <= limite * 1_000_000
-        and numero.is_integer()
-    ):
-        numero /= 1_000_000
-
+    try:
+        numero = float(valor)
+    except (TypeError, ValueError, OverflowError) as erro:
+        raise ValueError("Coordenada inválida. Informe graus decimais.") from erro
+    if not isfinite(numero):
+        raise ValueError("Coordenada inválida. Informe um número finito em graus decimais.")
+    if abs(numero) > limite:
+        raise ValueError(
+            f"Coordenada fora do intervalo de -{limite:g} a {limite:g}. "
+            "Informe graus decimais (ex.: -19,959383)."
+        )
     return numero
 
 
