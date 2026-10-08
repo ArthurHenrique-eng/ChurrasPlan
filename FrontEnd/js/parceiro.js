@@ -40,8 +40,11 @@ function renderProdutosGenericos() {
     select.disabled = itens.length === 0;
     select.innerHTML = itens.length ? '<option value="">Selecione...</option>'
         + itens.map((p) => {
+            const embalagem = !p.venda_fracionada && p.quantidade_embalagem != null && p.unidade_embalagem
+                ? ` de ${Number(p.quantidade_embalagem).toLocaleString("pt-BR")} ${escaparHTML(p.unidade_embalagem)}`
+                : "";
             const referencia = p.preco_referencia != null && p.preco_referencia_unidade
-                ? ` — ref. estimada R$ ${Number(p.preco_referencia).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/${escaparHTML(p.preco_referencia_unidade)}`
+                ? ` — ref. estimada R$ ${Number(p.preco_referencia).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/${escaparHTML(p.preco_referencia_unidade)}${embalagem}`
                 : "";
             return `<option value="${p.id}">${escaparHTML(p.nome)}${referencia}</option>`;
         }).join("")
