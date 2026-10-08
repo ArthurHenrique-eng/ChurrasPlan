@@ -73,10 +73,16 @@ function queryString(parametros = {}) {
 }
 
 
-/** Contexto de organização mantido por aba. O servidor revalida a participação. */
+/** Contexto de organização por aba; fallback em memória se storage estiver bloqueado. */
+let organizacaoAtivaMemoria = null;
+function definirOrganizacaoAtiva(id) {
+    organizacaoAtivaMemoria = id ? String(id) : null;
+}
 function opcoesOrganizacao(opcoes = {}) {
-    let id = null;
-    try { id = sessionStorage.getItem("churrasplan_organizacao_id"); } catch { /* armazenamento indisponível */ }
+    let id = organizacaoAtivaMemoria;
+    if (!id) {
+        try { id = sessionStorage.getItem("churrasplan_organizacao_id"); } catch { /* fallback */ }
+    }
     if (!id || !/^[1-9][0-9]*$/.test(id)) return opcoes;
     return { ...opcoes, headers: { ...(opcoes.headers || {}), "X-Organizacao-ID": id } };
 }
@@ -118,6 +124,7 @@ const ChurrasPlanAPI = {
     listarProdutos(parametros = {}, opcoes = {}) { return requisitar(`/api/produtos${queryString(parametros)}`, opcoes); },
     listarGenericos(opcoes = {}) { return requisitar("/api/produtos/genericos", opcoes); },
 
+    definirOrganizacaoAtiva,
     ativarParceiro(opcoes = {}) { return requisitar("/api/parceiro/ativar", { ...opcoes, method: "POST" }); },
     organizacoesParceiro(opcoes = {}) { return requisitar("/api/parceiro/organizacoes", opcoes); },
     entitlementsParceiro(opcoes = {}) { return requisitar("/api/parceiro/entitlements", opcoesOrganizacao(opcoes)); },
