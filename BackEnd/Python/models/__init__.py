@@ -7,6 +7,7 @@ from .organizacao import Organizacao, OrganizacaoMembro
 from .convite_organizacao import ConviteOrganizacao, AuditoriaOrganizacao
 from .concessao_organizacao import ConcessaoOrganizacao
 from .importacao_ofertas import ImportacaoOfertas
+from .comercial_b2b import ImportacaoCatalogo, CampanhaComercial, CampanhaComercialItem
 from .preco import Preco
 from .churrasco import Churrasco
 from .churrasco_item import ChurrascoCarne, ChurrascoBebida, ChurrascoExtra
@@ -21,5 +22,5 @@ __all__ = [
     "Usuario", "SessaoUsuario", "TokenUsuario", "Categoria", "Produto", "Estabelecimento", "Preco",
     "Churrasco", "ChurrascoCarne", "ChurrascoBebida", "ChurrascoExtra", "ListaCompras", "ListaComprasItem",
     "ConviteChurrasco", "RespostaConvite", "PlanoAssinatura", "AssinaturaUsuario", "MetricaEstabelecimento",
-    "ConsentimentoUsuario", "EventoSeguranca", "AuditoriaAdmin", "ConviteOrganizacao", "AuditoriaOrganizacao", "Organizacao", "OrganizacaoMembro", "ConcessaoOrganizacao", "ImportacaoOfertas",
+    "ConsentimentoUsuario", "EventoSeguranca", "AuditoriaAdmin", "ConviteOrganizacao", "AuditoriaOrganizacao", "Organizacao", "OrganizacaoMembro", "ConcessaoOrganizacao", "ImportacaoOfertas", "ImportacaoCatalogo", "CampanhaComercial", "CampanhaComercialItem",
 ]
