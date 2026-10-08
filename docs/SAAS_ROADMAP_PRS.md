@@ -34,8 +34,12 @@ Dependências humanas explícitas: configurar conta real de cobrança, chaves/co
 - **Fases 0, 1A–1C e 2A–2C:** implementadas e comprovadas por CI; ver histórico PR #3 a #8 e documentação de cada etapa.
 - **Fase 2D (operação essencial B2B):** filiais via estabelecimentos com código/matriz, CSV de ofertas idempotente, onboarding e métricas agregadas, documentados em `docs/SAAS_FASE_2D_OPERACAO_B2B.md`. Os gates de CI/CodeQL devem corresponder ao commit de entrega.
 - **Pendente na operação comercial da Fase 4:** catálogo comercial por CSV, atualização em massa, campanhas com vigência e governança, integrações ERP e análises transacionais com dados reais.
-- **Pendente nas Fases 1/3/7:** MFA, observabilidade operacional, backups/restore externo, gateway de cobrança real com sandbox/webhooks, infraestrutura de staging e homologação para piloto. Não declarar disponibilidade comercial antes dessas validações.
+- **Pendente nas Fases 1/3/7:** MFA, observabilidade operacional, backups/restore externo, credenciais e homologação do sandbox Stripe Test, operação de cobranças reais, infraestrutura de staging e homologação para piloto. Não declarar disponibilidade comercial antes dessas validações.
 
 ## Fase 4A — Catálogo e campanhas
 
-Incremento realizado diretamente em `Saas-ChurrasPlan`: importação CSV de SKU por organização com upsert e idempotência, campanhas de ofertas próprias com submissão, moderação administrativa, data de início/fim e cancelamento, listagem pública exclusivamente de campanhas elegíveis. Runbook e contratos: `docs/SAAS_FASE_4A_CATALOGO_CAMPANHAS.md`. Ainda faltam campanhas de mídia paga, integração ERP, prova de vendas transacionais, integração de compras reais e billing da Fase 3.
+Incremento realizado diretamente em `Saas-ChurrasPlan`: importação CSV de SKU por organização com upsert e idempotência, campanhas de ofertas próprias com submissão, moderação administrativa, data de início/fim e cancelamento, listagem pública exclusivamente de campanhas elegíveis. Runbook e contratos: `docs/SAAS_FASE_4A_CATALOGO_CAMPANHAS.md`. Ainda faltam campanhas de mídia paga, integração ERP, prova de vendas transacionais, integração de compras reais e homologação externa e configuração operacional do Billing da Fase 3.
+
+## Fase 3 — Billing Stripe Test
+
+Estrutura e fluxos B2B implementados diretamente na branch `Saas-ChurrasPlan`: checkout de assinaturas mensais com Price BRL verificado no Stripe Test, webhook HMAC SHA-256, idempotência, reconciliação com snapshot remoto, proteção de tenant, downgrade, cancelamento, troca de planos e histórico de faturas. Migration `20261008_0014`. Manual: `docs/SAAS_FASE_3_BILLING_STRIPE_TEST.md`. **Gates externos ainda necessários:** configurar conta Stripe Test, Prices e webhook reais no ambiente, homologar transações end-to-end no sandbox. Pagamento em produção e emissões fiscais não foram ativados.
