@@ -64,8 +64,13 @@ def main():
         """)).lastrowid
         for loja_id in [eid, nao_associada]:
             conn.execute(text("""
-                INSERT INTO precos (produto_id, estabelecimento_id, preco, origem)
-                VALUES (:pid, :eid, 5.19, 'ci-legado')
+                INSERT INTO precos (
+                    produto_id, estabelecimento_id, preco, origem, moeda,
+                    estoque_status, disponivel, fonte
+                ) VALUES (
+                    :pid, :eid, 5.19, 'ci-legado', 'BRL', 'disponivel', 1,
+                    'ci-teste-ambiguidade'
+                )
             """), {"pid": compartilhado, "eid": loja_id})
 
 
