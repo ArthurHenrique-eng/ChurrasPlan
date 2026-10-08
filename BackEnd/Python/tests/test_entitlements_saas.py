@@ -126,7 +126,7 @@ def test_concessao_admin_exige_auth_csrf_validades_e_nao_cobra(client, monkeypat
         assert admin.put(url, json=payload).status_code == 403
         assert admin.put(url, headers=ah, json={"plano": "business"}).status_code == 422
         assert admin.put(url, headers=ah, json={
-            "plano": "pro", "expira_em": (datetime.utcnow()+timedelta(days=2)).isoformat()
+            "plano": "pro", "expira_em": (datetime.now(UTC).replace(tzinfo=None)+timedelta(days=2)).isoformat()
         }).status_code == 422
         assert admin.put(url, headers=ah, json={
             "plano": "pro", "expira_em": (datetime.now(UTC)+timedelta(days=367)).isoformat()
