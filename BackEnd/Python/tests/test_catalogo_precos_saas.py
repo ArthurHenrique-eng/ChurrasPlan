@@ -21,6 +21,11 @@ def test_catalogo_generico_oferece_categorias_e_nao_depende_de_ofertas(client):
     assert produtos["agua"]["preco_referencia"] == pytest.approx(3.99)
     assert produtos["agua"]["preco_referencia_data_base"] == "2026-09"
     assert produtos["agua"]["preco_referencia_unidade"] == "garrafa"
+    assert produtos["agua"]["venda_fracionada"] is False
+    assert produtos["agua"]["quantidade_embalagem"] == pytest.approx(1.5)
+    assert produtos["agua"]["unidade_embalagem"] == "litro"
+    assert produtos["cerveja"]["quantidade_embalagem"] == pytest.approx(0.35)
+    assert produtos["cerveja"]["unidade_embalagem"] == "litro"
 
 
 def test_preco_referencia_catalogo_nao_altera_preco_real(client):
