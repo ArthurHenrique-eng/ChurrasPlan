@@ -1,4 +1,5 @@
 let parceiroUsuario = null, parceiroEstabelecimentos = [], parceiroProdutos = [], genericos = [];
+let falhaCatalogoGenerico = false;
 function isoInput(id) { const v = document.getElementById(id).value; return v ? new Date(v).toISOString() : null; }
 function mensagemParceiro(t, tipo="sucesso") { mostrarMensagem(document.getElementById("parceiro-mensagem"), t, tipo); }
 function coordenadaFormulario(id, limite) {
@@ -36,9 +37,15 @@ function renderProdutosGenericos() {
     const itens = genericos
         .filter((p) => nomeCategoriaGenerico(p) === categoria)
         .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
-    select.disabled = false;
-    select.innerHTML = '<option value="">Selecione...</option>'
-        + itens.map((p) => `<option value="${p.id}">${escaparHTML(p.nome)}</option>`).join("");
+    select.disabled = itens.length === 0;
+    select.innerHTML = itens.length ? '<option value="">Selecione...</option>'
+        + itens.map((p) => {
+            const referencia = p.preco_referencia != null && p.preco_referencia_unidade
+                ? ` — ref. estimada R$ ${Number(p.preco_referencia).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/${escaparHTML(p.preco_referencia_unidade)}`
+                : "";
+            return `<option value="${p.id}">${escaparHTML(p.nome)}${referencia}</option>`;
+        }).join("")
+        : '<option value="">Nenhum produto disponível nesta categoria</option>';
 }
 function renderCatalogoGenerico() {
     const categorias = [...new Set(genericos.map(nomeCategoriaGenerico))]
@@ -49,19 +56,33 @@ function renderCatalogoGenerico() {
     renderProdutosGenericos();
 
     const ajuda = document.getElementById("prod-catalogo-ajuda");
-    if (!genericos.length) {
-        ajuda.textContent = "O catálogo genérico ainda não foi carregado no banco. Aplique as migrations do backend e recarregue esta página.";
+    if (falhaCatalogoGenerico) {
+        ajuda.textContent = "Falha ao consultar o catálogo. Confira a conexão e atualize a página; não é necessário recriar produtos.";
+    } else if (!genericos.length) {
+        ajuda.textContent = "Nenhum produto genérico ativo encontrado. Verifique as migrations do catálogo.";
     } else {
-        ajuda.textContent = `${genericos.length} tipos de produto disponíveis em ${categorias.length} categorias.`;
+        ajuda.textContent = `${genericos.length} tipos em ${categorias.length} categorias. Referências de set/2026 são estimativas de planejamento, não ofertas reais.`;
     }
 }
 async function carregarParceiro() {
-    const [dash, ests, prods, gens] = await Promise.all([ChurrasPlanAPI.dashboardParceiro(), ChurrasPlanAPI.estabelecimentosParceiro(), ChurrasPlanAPI.produtosParceiro(), ChurrasPlanAPI.listarProdutos({ tipo_produto:"generico" })]);
+    // Uma falha em métricas/ofertas não pode esvaziar o seletor de produtos.
+    const [dashResult, estsResult, prodsResult, gensResult] = await Promise.allSettled([
+        ChurrasPlanAPI.dashboardParceiro(), ChurrasPlanAPI.estabelecimentosParceiro(),
+        ChurrasPlanAPI.produtosParceiro(), ChurrasPlanAPI.listarGenericos(),
+    ]);
+    const dash = dashResult.status === "fulfilled" ? dashResult.value : null;
+    const ests = estsResult.status === "fulfilled" ? estsResult.value : [];
+    const prods = prodsResult.status === "fulfilled" ? prodsResult.value : [];
+    const gens = gensResult.status === "fulfilled" ? gensResult.value : [];
+    falhaCatalogoGenerico = gensResult.status === "rejected";
     parceiroEstabelecimentos=ests; parceiroProdutos=prods; genericos=gens;
-    document.getElementById("parceiro-stats").innerHTML = `<div class="partner-stat"><strong>${dash.estabelecimentos}</strong><span>estabelecimentos</span></div><div class="partner-stat"><strong>${dash.estabelecimentos_verificados}</strong><span>verificados</span></div><div class="partner-stat"><strong>${dash.ofertas_cadastradas}</strong><span>ofertas cadastradas</span></div><div class="partner-stat"><strong>${dash.visualizacoes || 0}</strong><span>visualizações</span></div><div class="partner-stat"><strong>${dash.cliques || 0}</strong><span>cliques em rota</span></div>`;
-    document.getElementById("parceiro-note").textContent = dash.mensagem_verificacao;
-    document.getElementById("lista-estabelecimentos").innerHTML = ests.length ? ests.map(e=>`<div class="basket-row"><strong>${escaparHTML(e.nome)}</strong><br><small>${escaparHTML(e.cidade||e.endereco||e.tipo)} · ${e.parceiro_verificado?'verificado':'aguardando verificação'}</small></div>`).join('') : '<div class="empty-state">Cadastre seu primeiro estabelecimento.</div>';
-    document.getElementById("lista-produtos").innerHTML = prods.length ? prods.map(p=>`<div class="basket-row"><strong>${escaparHTML([p.marca,p.nome].filter(Boolean).join(' — '))}</strong><br><small>${p.quantidade_embalagem||''} ${escaparHTML(p.unidade_embalagem||'')} · ${escaparHTML(p.ean||'sem EAN')}</small></div>`).join('') : '<div class="empty-state">Nenhum SKU comercial cadastrado.</div>';
+    const falhas = ["métricas", "estabelecimentos", "produtos comerciais", "catálogo genérico"]
+        .filter((_, i) => [dashResult, estsResult, prodsResult, gensResult][i].status === "rejected");
+    if (falhas.length) mensagemParceiro(`Falha ao carregar: ${falhas.join(", ")}. Atualize a página para tentar novamente.`, "erro");
+    document.getElementById("parceiro-stats").innerHTML = dash ? `<div class="partner-stat"><strong>${dash.estabelecimentos}</strong><span>estabelecimentos</span></div><div class="partner-stat"><strong>${dash.estabelecimentos_verificados}</strong><span>verificados</span></div><div class="partner-stat"><strong>${dash.ofertas_cadastradas}</strong><span>ofertas cadastradas</span></div><div class="partner-stat"><strong>${dash.visualizacoes || 0}</strong><span>visualizações</span></div><div class="partner-stat"><strong>${dash.cliques || 0}</strong><span>cliques em rota</span></div>` : '<div class="empty-state">Falha ao carregar métricas.</div>';
+    document.getElementById("parceiro-note").textContent = dash ? dash.mensagem_verificacao : "";
+    document.getElementById("lista-estabelecimentos").innerHTML = estsResult.status === "rejected" ? '<div class="empty-state">Falha ao carregar estabelecimentos.</div>' : ests.length ? ests.map(e=>`<div class="basket-row"><strong>${escaparHTML(e.nome)}</strong><br><small>${escaparHTML(e.cidade||e.endereco||e.tipo)} · ${e.parceiro_verificado?'verificado':'aguardando verificação'}</small></div>`).join('') : '<div class="empty-state">Cadastre seu primeiro estabelecimento.</div>';
+    document.getElementById("lista-produtos").innerHTML = prodsResult.status === "rejected" ? '<div class="empty-state">Falha ao carregar produtos comerciais.</div>' : prods.length ? prods.map(p=>`<div class="basket-row"><strong>${escaparHTML([p.marca,p.nome].filter(Boolean).join(' — '))}</strong><br><small>${p.quantidade_embalagem||''} ${escaparHTML(p.unidade_embalagem||'')} · ${escaparHTML(p.ean||'sem EAN')}</small></div>`).join('') : '<div class="empty-state">Nenhum SKU comercial cadastrado.</div>';
     const optionsEst = '<option value="">Selecione...</option>'+ests.map(e=>`<option value="${e.id}">${escaparHTML(e.nome)}</option>`).join(''); document.getElementById("preco-est").innerHTML=optionsEst;
     renderCatalogoGenerico();
     document.getElementById("preco-prod").innerHTML='<option value="">Selecione...</option>'+prods.map(p=>`<option value="${p.id}">${escaparHTML([p.marca,p.nome].filter(Boolean).join(' — '))}</option>`).join('');
