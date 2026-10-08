@@ -41,6 +41,9 @@ class ProdutoGenericoOut(BaseModel):
     categoria_id: int
     categoria_nome: str
     categoria_tipo: str
+    venda_fracionada: bool
+    quantidade_embalagem: Optional[float] = None
+    unidade_embalagem: Optional[str] = None
     preco_referencia: Optional[float] = None
     preco_referencia_data_base: Optional[str] = None
     preco_referencia_unidade: Optional[str] = None
