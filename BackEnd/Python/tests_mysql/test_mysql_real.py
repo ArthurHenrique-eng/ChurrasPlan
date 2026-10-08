@@ -307,8 +307,8 @@ def test_mysql_importacao_csv_idempotente_concorrente():
         antes = db.query(Preco).filter_by(estabelecimento_id=loja_id, produto_id=produto_id).count()
     finally:
         db.close()
-    csv_texto = ("estabelecimento_id;produto_id;preco;estoque_status\\n"
-                 f"{loja_id};{produto_id};5,50;disponivel\\n")
+    csv_texto = ("estabelecimento_id;produto_id;preco;estoque_status\n"
+                 f"{loja_id};{produto_id};5,50;disponivel\n")
     payload = ImportacaoOfertasCSV(chave_idempotencia="mysql-idempotencia-lote", csv_texto=csv_texto)
     barreira = Barrier(2)
 
