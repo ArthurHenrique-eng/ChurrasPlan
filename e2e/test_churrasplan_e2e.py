@@ -282,3 +282,26 @@ def test_mobile_sem_overflow_horizontal_e_com_alvos_de_toque(
 
     finally:
         context.close()
+
+def test_parceiro_seleciona_genericos_apos_ativacao(page: Page):
+    email = f"e2e-parceiro-catalogo-{uuid.uuid4().hex[:10]}@example.com"
+    page.goto(url("cadastro.html"), wait_until="domcontentloaded")
+    page.locator("#auth-nome").fill("Parceiro Catálogo E2E")
+    page.locator("#auth-email").fill(email)
+    page.locator("#auth-senha").fill("SenhaCatalogoE2E123")
+    page.locator("#aceite-termos").check()
+    page.locator("#aceite-privacidade").check()
+    page.locator("#auth-form button[type=submit]").click()
+    page.wait_for_url("**/minha-conta.html", timeout=15000)
+
+    page.goto(url("parceiro.html"), wait_until="domcontentloaded")
+    page.locator("#ativar-parceiro").click()
+    page.wait_for_function(
+        "() => document.querySelectorAll('#prod-categoria option').length > 1",
+        timeout=15000,
+    )
+    page.locator("#prod-categoria").select_option(label="Bebidas")
+    expect(page.locator("#prod-pai")).to_be_enabled()
+    assert any("Água" in texto for texto in page.locator("#prod-pai option").all_text_contents())
+    page.locator("#prod-categoria").select_option(label="Limpeza")
+    assert any("Detergente" in texto for texto in page.locator("#prod-pai option").all_text_contents())
