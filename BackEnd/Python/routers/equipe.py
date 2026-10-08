@@ -1,5 +1,5 @@
 """API de equipe B2B: RBAC local, convites one-time e auditoria."""
-import secrets
+import smtplib
 from datetime import timedelta
 from urllib.parse import quote
 
@@ -106,11 +106,11 @@ def convidar(
         try:
             enviado = enviar_email(
                 email, f"Convite para {org.nome} — ChurrasPlan",
-                f"Você recebeu um convite para a equipe {org.nome}.\\n"
-                f"Entre com a conta associada a {email} (ou crie sua conta).\\n"
-                f"O convite expira em {VALIDADE_CONVITE_DIAS} dias.\\n\\n{link}\\n",
+                f"Você recebeu um convite para a equipe {org.nome}.\n"
+                f"Entre com a conta associada a {email} (ou crie sua conta).\n"
+                f"O convite expira em {VALIDADE_CONVITE_DIAS} dias.\n\n{link}\n",
             )
-        except (OSError, RuntimeError) as exc:
+        except (OSError, smtplib.SMTPException) as exc:
             db.rollback()
             raise HTTPException(status_code=503, detail="Não foi possível enviar o convite.") from exc
         if not enviado:
