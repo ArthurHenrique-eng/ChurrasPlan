@@ -1,0 +1,35 @@
+version: 2
+updates:
+  - package-ecosystem: pip
+    directory: "/BackEnd/Python"
+    target-branch: Saas-ChurrasPlan
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: America/Sao_Paulo
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: github-actions
+    directory: "/"
+    target-branch: Saas-ChurrasPlan
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: America/Sao_Paulo
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: docker
+    directory: "/BackEnd/Python"
+    target-branch: Saas-ChurrasPlan
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 3
+
+  - package-ecosystem: docker
+    directory: "/FrontEnd"
+    target-branch: Saas-ChurrasPlan
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 3
