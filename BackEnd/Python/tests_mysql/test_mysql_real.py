@@ -332,3 +332,49 @@ def test_mysql_importacao_csv_idempotente_concorrente():
         assert db.query(ImportacaoOfertas).filter_by(organizacao_id=org_id).count() == 1
     finally:
         db.close()
+
+
+def test_mysql_catalogo_idempotente_com_duas_importacoes_concorrentes():
+    """Lotes paralelos com mesma chave não duplicam SKUs no MySQL/InnoDB."""
+    from concurrent.futures import ThreadPoolExecutor
+    from threading import Barrier
+
+    from database.connection import SessionLocal
+    from models import Estabelecimento, ImportacaoCatalogo, Produto, Usuario
+    from routers.comercial_b2b import importar_catalogo
+    from schemas.comercial_b2b import CatalogoCSV
+
+    db = SessionLocal()
+    try:
+        usuario = db.query(Usuario).filter_by(email="saas-legado-migracao@example.invalid").one()
+        loja = db.query(Estabelecimento).filter_by(slug="saas-loja-legada-ci").one()
+        pai = db.query(Produto).filter_by(slug="agua", tipo_produto="generico").one()
+        uid, org_id, pai_id = usuario.id, loja.organizacao_id, pai.id
+    finally:
+        db.close()
+    codigo = "SKU-FASE4A-" + uuid.uuid4().hex[:12]
+    chave = "catalogo-mysql-" + uuid.uuid4().hex[:16]
+    csv_texto = ("sku;produto_pai_id;nome;marca;unidade_venda;quantidade_embalagem;unidade_embalagem\n"
+                 f"{codigo};{pai_id};Água em Lote;Marca Real;garrafa;1,5;litro\n")
+    payload = CatalogoCSV(chave_idempotencia=chave, csv_texto=csv_texto)
+    inicio = Barrier(2)
+
+    def worker():
+        sessao = SessionLocal()
+        try:
+            usuario = sessao.get(Usuario, uid)
+            inicio.wait(timeout=25)
+            return importar_catalogo(payload, usuario, sessao, org_id)
+        finally:
+            sessao.close()
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        resultados = list(executor.map(lambda _: worker(), (1, 2)))
+    assert sorted(x["repetida"] for x in resultados) == [False, True]
+    assert all(x["criados"] == 1 for x in resultados)
+    db = SessionLocal()
+    try:
+        assert db.query(Produto).filter_by(organizacao_id=org_id, sku=codigo).count() == 1
+        assert db.query(ImportacaoCatalogo).filter_by(organizacao_id=org_id, chave_idempotencia=chave).count() == 1
+    finally:
+        db.close()
