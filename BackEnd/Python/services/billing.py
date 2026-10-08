@@ -88,7 +88,9 @@ def preco_mensal_validado(plano: str) -> dict:
 
 
 def verificar_assinatura_webhook(payload: bytes, assinatura: str) -> dict:
-    exigir_billing()
+    if not (settings.BILLING_ENABLED and settings.STRIPE_SECRET_KEY.startswith("sk_test_")
+            and settings.STRIPE_WEBHOOK_SECRET.startswith("whsec_")):
+        raise HTTPException(status_code=503, detail="Stripe Test webhook não configurado.")
     if len(payload) > 250000:
         raise HTTPException(status_code=413, detail="Evento acima do limite.")
     partes = {}
