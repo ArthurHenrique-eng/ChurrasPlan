@@ -90,10 +90,31 @@ async function carregarParceiro() {
     document.getElementById("preco-prod").innerHTML='<option value="">Selecione...</option>'+prods.map(p=>`<option value="${p.id}">${escaparHTML([p.marca,p.nome].filter(Boolean).join(' — '))}</option>`).join('');
 }
 document.addEventListener("DOMContentLoaded", async()=>{
-    parceiroUsuario=await ChurrasPlanAuth.usuarioAtual().catch(()=>null); if(!parceiroUsuario){irPara(ChurrasPlanAuth.urlLogin("parceiro.html"));return;}
+    parceiroUsuario=await ChurrasPlanAuth.usuarioAtual().catch(()=>null);
+    if(!parceiroUsuario){irPara(ChurrasPlanAuth.urlLogin("parceiro.html"+window.location.search));return;}
+    // O token somente existe no link enviado ao destinatário. Não salvar em storage.
+    const tokenConvite = new URLSearchParams(window.location.search).get("convite");
+    if(tokenConvite){
+        try {
+            const aceite = await ChurrasPlanAPI.aceitarConviteOrganizacao(tokenConvite);
+            ChurrasPlanAuth.limparCache();
+            parceiroUsuario = await ChurrasPlanAuth.usuarioAtual(true);
+            try { sessionStorage.setItem("churrasplan_organizacao_id", String(aceite.organizacao_id)); } catch { /* opcional */ }
+            mensagemParceiro("Convite aceito. Sua organização já está disponível.");
+        } catch(e) { mensagemParceiro(e.message,"erro"); }
+        // Remove o segredo do histórico e da barra de URL, mesmo após falha.
+        window.history.replaceState({}, "", window.location.pathname);
+    }
     const ativar=document.getElementById("ativar-parceiro"), conteudo=document.getElementById("parceiro-conteudo");
-    if(!["parceiro","admin"].includes(parceiroUsuario.papel)){ativar.hidden=false;ativar.onclick=async()=>{ativar.disabled=true;try{await ChurrasPlanAPI.ativarParceiro();ChurrasPlanAuth.limparCache();location.reload();}catch(e){mensagemParceiro(e.message,"erro");ativar.disabled=false;}};return;}
-    conteudo.hidden=false; try{await carregarParceiro();}catch(e){mensagemParceiro(e.message,"erro");}
+    if(!["parceiro","admin"].includes(parceiroUsuario.papel)){
+        ativar.hidden=false;
+        ativar.onclick=async()=>{ativar.disabled=true;try{await ChurrasPlanAPI.ativarParceiro();ChurrasPlanAuth.limparCache();location.reload();}catch(e){mensagemParceiro(e.message,"erro");ativar.disabled=false;}};
+        return;
+    }
+    try {
+        await ChurrasPlanEquipe.iniciar(parceiroUsuario, carregarParceiro);
+        conteudo.hidden=false;
+    } catch(e) { conteudo.hidden=true; mensagemParceiro(e.message,"erro"); return; }
     document.getElementById("prod-categoria").addEventListener("change", renderProdutosGenericos);
     document.getElementById("est-localizar-endereco").onclick=async()=>{const b=document.getElementById("est-localizar-endereco");b.disabled=true;try{await localizarEnderecoEstabelecimento();mensagemParceiro("Endereço localizado e coordenadas preenchidas.");}catch(er){mensagemParceiro(er.message,"erro");}finally{b.disabled=false;}};
     document.getElementById("form-estabelecimento").onsubmit=async(e)=>{e.preventDefault();try{
