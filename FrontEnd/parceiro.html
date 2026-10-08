@@ -83,6 +83,19 @@
           <h3>Convites pendentes</h3>
           <div class="basket-table" id="equipe-convites" aria-live="polite"></div>
         </section>
+        <section class="account-section" id="billing-painel" hidden aria-labelledby="billing-titulo">
+          <h2 id="billing-titulo">Assinatura comercial</h2>
+          <p class="texto-suave">Ambiente de testes Stripe. Os pagamentos reais estão desativados. Apenas o proprietário da organização pode controlar a assinatura.</p>
+          <div id="billing-resumo" aria-live="polite"></div>
+          <div id="billing-planos"></div>
+          <div class="row-actions">
+            <button class="botao botao--secundario" id="billing-sincronizar" type="button" hidden>Sincronizar com Stripe Test</button>
+            <button class="botao botao--secundario" id="billing-portal" type="button" hidden>Gerenciar forma de pagamento</button>
+            <button class="botao botao--secundario" id="billing-cancelar" type="button" hidden>Cancelar ao fim do período</button>
+          </div>
+          <h3>Histórico de faturas</h3>
+          <div id="billing-faturas" aria-live="polite"></div>
+        </section>
         <section class="account-section" id="operacao-b2b" aria-labelledby="operacao-b2b-titulo">
           <h2 id="operacao-b2b-titulo">Operação de filiais</h2>
           <p class="texto-suave">Identifique a matriz e as unidades. Apenas proprietários e gestores alteram metadados e disponibilidade das filiais.</p>
@@ -370,6 +383,7 @@
     <script src="js/parceiro-equipe.js"></script>
     <script src="js/parceiro-operacao.js"></script>
     <script src="js/parceiro-comercial.js"></script>
+    <script src="js/parceiro-billing.js"></script>
     <script src="js/parceiro.js">
     </script>
   <script src="js/pwa.js"></script>
