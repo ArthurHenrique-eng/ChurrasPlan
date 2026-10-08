@@ -3,15 +3,17 @@ const ChurrasPlanComercial = (() => {
     const el = (id) => document.getElementById(id);
     const seguro = (v) => escaparHTML(String(v ?? ""));
     let chave = null, ultimoCSV = null;
+    let campanhasEmCache = [], idEdicao = null;
 
     const podeEditar = () => ["proprietario", "gestor", "editor"].includes(ChurrasPlanEquipe.papel());
     const podeGerir = () => ["proprietario", "gestor"].includes(ChurrasPlanEquipe.papel());
     const chaveNova = () => window.crypto?.randomUUID?.() || `lote-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
     function renderCampanhas(campanhas) {
+        campanhasEmCache = campanhas;
         el("campanhas-lista").innerHTML = campanhas.length ? campanhas.map(c => {
             const ofertadas = c.itens.map(i => `${seguro(i.produto)} — ${seguro(i.estabelecimento)} (R$ ${Number(i.preco).toFixed(2)})`).join("; ");
-            const editar = podeGerir() && c.status === "rascunho";
+            const editar = podeGerir() && ["rascunho", "rejeitada"].includes(c.status);
             const cancelar = podeGerir() && c.status !== "cancelada";
             const renovar = podeGerir() && c.status === "rejeitada";
             return `<div class="basket-row"><strong>${seguro(c.nome)}</strong>
@@ -92,14 +94,38 @@ const ChurrasPlanComercial = (() => {
                     fim_em: new Date(el("campanha-fim").value).toISOString(),
                     preco_ids,
                 };
-                const c = await ChurrasPlanAPI.criarCampanhaParceiro(payload);
+                const c = idEdicao
+                    ? await ChurrasPlanAPI.atualizarCampanhaParceiro(idEdicao, payload)
+                    : await ChurrasPlanAPI.criarCampanhaParceiro(payload);
+                idEdicao = null;
+                botao.textContent = "Criar campanha em rascunho";
                 e.target.reset();
                 await carregar();
-                mensagemParceiro(`Campanha #${c.id} criada em rascunho. Envie para revisão para solicitar a aprovação.`);
+                mensagemParceiro(`Campanha #${c.id} salva em rascunho. Envie para revisão para solicitar a aprovação.`);
             } catch (err) { mensagemParceiro(err.message, "erro"); }
             finally { botao.disabled = false; }
         });
         el("campanhas-lista").addEventListener("click", async (e) => {
+            const editar = e.target.closest("[data-campanha-editar]");
+            if (editar) {
+                const c = campanhasEmCache.find(x => x.id === Number(editar.dataset.campanhaEditar));
+                if (!c || !["rascunho", "rejeitada"].includes(c.status) || !podeGerir()) return;
+                idEdicao = c.id;
+                const preencherData = v => {
+                    const d = new Date(v.endsWith("Z") ? v : v + "Z");
+                    return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+                };
+                el("campanha-codigo").value = c.codigo;
+                el("campanha-nome").value = c.nome;
+                el("campanha-descricao").value = c.descricao || "";
+                el("campanha-inicio").value = preencherData(c.inicio_em);
+                el("campanha-fim").value = preencherData(c.fim_em);
+                const ids = new Set(c.itens.map(i => i.preco_id));
+                for (const opt of el("campanha-ofertas").options) opt.selected = ids.has(Number(opt.value));
+                el("form-campanha").querySelector('button[type="submit"]').textContent = "Salvar alterações do rascunho";
+                el("form-campanha").scrollIntoView?.({behavior: "smooth", block: "center"});
+                return;
+            }
             const enviar = e.target.closest("[data-campanha-enviar]");
             const cancelar = e.target.closest("[data-campanha-cancelar]");
             if (!enviar && !cancelar) return;
