@@ -9,6 +9,7 @@ class Estabelecimento(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     usuario_responsavel_id = Column(Integer, ForeignKey("usuarios.id", ondelete="SET NULL"), nullable=True, index=True)
+    organizacao_id = Column(Integer, ForeignKey("organizacoes.id", ondelete="SET NULL", name="fk_estabelecimentos_organizacao_id"), nullable=True, index=True)
     slug = Column(String(170), nullable=False, unique=True, index=True)
     nome = Column(String(150), nullable=False)
     tipo = Column(String(60), nullable=False)
@@ -31,4 +32,5 @@ class Estabelecimento(Base):
     ativo = Column(Boolean, nullable=False, default=True, server_default="1")
 
     usuario_responsavel = relationship("Usuario", back_populates="estabelecimentos")
+    organizacao = relationship("Organizacao", back_populates="estabelecimentos")
     precos = relationship("Preco", back_populates="estabelecimento", cascade="all, delete-orphan")
