@@ -53,6 +53,36 @@
       <div class="mensagem" id="parceiro-mensagem" style="display:none">
       </div>
       <div hidden="" id="parceiro-conteudo">
+        <section class="account-section" aria-labelledby="org-seletor-titulo">
+          <h2 id="org-seletor-titulo">Organização ativa</h2>
+          <label class="full" for="org-seletor">Selecione a conta comercial</label>
+          <select id="org-seletor" aria-label="Organização ativa"></select>
+          <p class="texto-suave" id="org-perfil"></p>
+          <p class="texto-suave" id="org-limites"></p>
+        </section>
+        <section class="account-section" id="equipe-painel" hidden aria-labelledby="equipe-titulo">
+          <h2 id="equipe-titulo">Equipe e convites</h2>
+          <p class="texto-suave">Proprietários e gestores administram membros. Cada convite expira em sete dias e só pode ser aceito pela conta do e-mail indicado.</p>
+          <div class="basket-table" id="equipe-membros" aria-live="polite"></div>
+          <h3>Convidar pessoa</h3>
+          <form id="form-convite-equipe" class="account-form">
+            <label>E-mail da pessoa
+              <input id="equipe-email" type="email" required maxlength="160" autocomplete="email">
+            </label>
+            <label>Papel de acesso
+              <select id="equipe-papel">
+                <option value="leitor">Leitor — apenas consulta</option>
+                <option value="editor">Editor — cadastra e altera</option>
+                <option value="gestor">Gestor — também administra equipe</option>
+                <option value="proprietario">Proprietário — controle total</option>
+              </select>
+            </label>
+            <button class="botao botao--primario full" type="submit">Enviar convite</button>
+          </form>
+          <p id="equipe-token-dev" class="texto-suave" role="status"></p>
+          <h3>Convites pendentes</h3>
+          <div class="basket-table" id="equipe-convites" aria-live="polite"></div>
+        </section>
         <section class="account-section">
           <div class="partner-stats" id="parceiro-stats">
           </div>
@@ -252,6 +282,7 @@
     </script>
     <script src="js/auth-ui.js">
     </script>
+    <script src="js/parceiro-equipe.js"></script>
     <script src="js/parceiro.js">
     </script>
   <script src="js/pwa.js"></script>
