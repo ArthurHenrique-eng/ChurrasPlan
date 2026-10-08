@@ -17,7 +17,7 @@ from models import (AssinaturaOrganizacao, EventoBilling, OrganizacaoMembro,
 from services.auth import exigir_papeis
 from services.billing import (billing_habilitado, exigir_billing, preco_configurado,
     reconciliar_assinatura, resumo_billing, stripe_request, preco_mensal_validado, validar_destino,
-    verificar_assinatura_webhook, assinatura_efetiva)
+    verificar_assinatura_webhook, assinatura_efetiva, PRICE_FIELDS_YEARLY)
 from services.equipe_organizacao import bloquear_organizacao, membro_ativo
 from services.billing_usuario import processar_webhook_usuario
 from services.organizacoes import selecionar_organizacao
@@ -27,6 +27,7 @@ router = APIRouter(prefix="/api/billing", tags=["billing"])
 
 class CheckoutBody(BaseModel):
     plano: Literal["pro", "business"]
+    periodicidade: Literal["mensal", "anual"] = "mensal"
     chave_idempotencia: str
 
 
@@ -54,7 +55,20 @@ def catalogo_stripe_test(
     _proprietario(db, usuario, organizacao_id)
     exigir_billing()
     return {"sandbox": True, "pagamentos_reais_habilitados": False,
-            "planos": [preco_mensal_validado(p) for p in ("pro", "business")]}
+            "planos": [preco_mensal_validado(p) for p in ("pro", "business")]
+            + [preco_mensal_validado(p, "anual") for p, field in PRICE_FIELDS_YEARLY.items()
+               if getattr(settings, field, "").startswith("price_")]}
+
+
+@router.get("/planos-publicos")
+def catalogo_publico():
+    """Somente dados públicos de Prices TEST, sem dados de clientes."""
+    if not billing_habilitado():
+        return {"sandbox": True, "checkout_habilitado": False, "planos": []}
+    return {"sandbox": True, "checkout_habilitado": True,
+            "planos": [preco_mensal_validado(p) for p in ("pro", "business")]
+            + [preco_mensal_validado(p, "anual") for p, field in PRICE_FIELDS_YEARLY.items()
+               if getattr(settings, field, "").startswith("price_")]}
 
 
 @router.get("/assinatura")
@@ -86,7 +100,7 @@ def criar_checkout(
     tentativa = db.query(TentativaCheckout).filter_by(
         organizacao_id=org.id, chave_idempotencia=chave).with_for_update().first()
     if tentativa:
-        if tentativa.plano_slug != payload.plano:
+        if tentativa.plano_slug != payload.plano or tentativa.periodicidade != payload.periodicidade:
             raise HTTPException(status_code=409, detail="Chave já usada com outro plano.")
         sessao = stripe_request("GET", "/v1/checkout/sessions/" + quote(tentativa.stripe_session_id))
         if sessao.get("id") != tentativa.stripe_session_id or sessao.get("status") != "open":
@@ -96,17 +110,19 @@ def criar_checkout(
     atual = _assinatura(db, org.id)
     if assinatura_efetiva(atual) or (atual and atual.status in ("incomplete", "trialing")):
         raise HTTPException(status_code=409, detail="Organização já possui assinatura; utilize gestão da assinatura.")
-    preco_mensal_validado(payload.plano)
+    preco_mensal_validado(payload.plano, payload.periodicidade)
     campos = {
         "mode": "subscription",
-        "line_items[0][price]": preco_configurado(payload.plano),
+        "line_items[0][price]": preco_configurado(payload.plano, payload.periodicidade),
         "line_items[0][quantity]": "1",
         "customer_email": usuario.email,
         "client_reference_id": str(org.id),
         "metadata[organizacao_id]": str(org.id),
         "metadata[plano_slug]": payload.plano,
+        "metadata[periodicidade]": payload.periodicidade,
         "subscription_data[metadata][organizacao_id]": str(org.id),
         "subscription_data[metadata][plano_slug]": payload.plano,
+        "subscription_data[metadata][periodicidade]": payload.periodicidade,
         "success_url": settings.PUBLIC_APP_URL.rstrip("/") + "/parceiro.html?cobranca=retorno",
         "cancel_url": settings.PUBLIC_APP_URL.rstrip("/") + "/parceiro.html?cobranca=cancelada",
     }
@@ -120,7 +136,8 @@ def criar_checkout(
         raise HTTPException(status_code=502, detail="Sessão Stripe Test inválida.")
     url = validar_destino(sessao.get("url", ""), "checkout.stripe.com")
     db.add(TentativaCheckout(organizacao_id=org.id, usuario_id=usuario.id,
-        chave_idempotencia=chave, plano_slug=payload.plano, stripe_session_id=sid))
+        chave_idempotencia=chave, plano_slug=payload.plano,
+        periodicidade=payload.periodicidade, stripe_session_id=sid))
     db.commit()
     return {"checkout_url": url, "plano": payload.plano, "repetida": False}
 
@@ -162,23 +179,23 @@ def trocar_plano(
     atual = _assinatura(db, org.id)
     if not atual or not atual.stripe_subscription_id or not assinatura_efetiva(atual):
         raise HTTPException(status_code=409, detail="Não há assinatura vigente para alterar.")
-    if atual.cancelamento_agendado or atual.plano_slug == payload.plano:
+    if atual.cancelamento_agendado or (atual.plano_slug == payload.plano and atual.periodicidade == payload.periodicidade):
         raise HTTPException(status_code=409, detail="Plano já selecionado ou cancelamento agendado.")
-    preco_mensal_validado(payload.plano)
+    preco_mensal_validado(payload.plano, payload.periodicidade)
     remoto = stripe_request("GET", "/v1/subscriptions/" + quote(atual.stripe_subscription_id))
     itens = (remoto.get("items") or {}).get("data", [])
     if len(itens) != 1 or not isinstance(itens[0].get("id"), str):
         raise HTTPException(status_code=409, detail="Itens da assinatura inválidos.")
-    if itens[0].get("price", {}).get("id") != preco_configurado(atual.plano_slug):
+    if itens[0].get("price", {}).get("id") != preco_configurado(atual.plano_slug, atual.periodicidade):
         raise HTTPException(status_code=409, detail="Plano Stripe divergente; sincronize antes de trocar.")
     # Stripe pending_if_incomplete: upgrades só passam a valer após pagamento.
     resposta = stripe_request("POST", "/v1/subscriptions/" + quote(atual.stripe_subscription_id), {
         "items[0][id]": itens[0]["id"],
-        "items[0][price]": preco_configurado(payload.plano),
+        "items[0][price]": preco_configurado(payload.plano, payload.periodicidade),
         "payment_behavior": "pending_if_incomplete",
         "proration_behavior": "always_invoice",
     }, idempotency=hashlib.sha256(
-        f"churrasplan-change|{org.id}|{payload.chave_idempotencia}|{payload.plano}".encode()).hexdigest())
+        f"churrasplan-change|{org.id}|{payload.chave_idempotencia}|{payload.plano}|{payload.periodicidade}".encode()).hexdigest())
     if resposta.get("id") != atual.stripe_subscription_id:
         raise HTTPException(status_code=502, detail="Troca não confirmada pelo Stripe Test.")
     reconciliar_assinatura(db, atual.stripe_subscription_id)
