@@ -87,6 +87,8 @@ jobs:
         run: node scripts/test_coordinates_ui.mjs
       - name: Partner catalogue selections and partial failures
         run: node scripts/test_partner_catalog.mjs
+      - name: Frontend CSP security contract
+        run: node scripts/test_frontend_csp.mjs
 
 
   security-static:
@@ -126,6 +128,8 @@ jobs:
         run: docker build -t churrasplan-backend-ci BackEnd/Python
       - name: Build frontend image
         run: docker build -t churrasplan-frontend-ci FrontEnd
+      - name: Validate Nginx configuration in built frontend image
+        run: docker run --rm --add-host backend:127.0.0.1 --entrypoint nginx churrasplan-frontend-ci -t
 
   e2e:
     name: E2E Chromium + MySQL
