@@ -101,7 +101,7 @@ def test_area_parceiro_produto_comercial_preco(client):
     assert a.status_code==200 and a.json()["papel"]=="parceiro"
     est=client.post("/api/parceiro/estabelecimentos",headers=h,json={
         "nome":"Mercado Teste","tipo":"supermercado",
-        "latitude":-19959383,"longitude":-44011870,
+        "latitude":"-19,959383","longitude":"-44,011870",
     })
     assert est.status_code==201, est.text
     assert est.json()["latitude"] == pytest.approx(-19.959383)
