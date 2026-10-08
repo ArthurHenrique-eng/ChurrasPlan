@@ -98,6 +98,8 @@ jobs:
         run: node scripts/test_coordinates_ui.mjs
       - name: Partner catalogue selections and partial failures
         run: node scripts/test_partner_catalog.mjs
+      - name: Partner multi-organization selection and RBAC UI
+        run: node scripts/test_partner_organizations.mjs
       - name: Frontend CSP security contract
         run: node scripts/test_frontend_csp.mjs
 
