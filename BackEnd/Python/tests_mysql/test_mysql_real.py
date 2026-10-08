@@ -378,3 +378,68 @@ def test_mysql_catalogo_idempotente_com_duas_importacoes_concorrentes():
         assert db.query(ImportacaoCatalogo).filter_by(organizacao_id=org_id, chave_idempotencia=chave).count() == 1
     finally:
         db.close()
+
+
+def test_mysql_checkout_idempotente_com_duas_transacoes_concorrentes(monkeypatch):
+    """Lock da organização + chave única impedem dois checkouts para a mesma ação."""
+    from concurrent.futures import ThreadPoolExecutor
+    from threading import Barrier
+    from database.connection import SessionLocal
+    from models import OrganizacaoMembro, TentativaCheckout, Usuario
+    from schemas.billing import CheckoutBody
+    from routers.billing import criar_checkout
+    from config import settings
+
+    db = SessionLocal()
+    try:
+        usuario = db.query(Usuario).filter_by(email="saas-legado-migracao@example.invalid").one()
+        membro = db.query(OrganizacaoMembro).filter_by(usuario_id=usuario.id, ativo=True).first()
+        assert membro is not None and membro.papel == "proprietario"
+        uid, oid = usuario.id, membro.organizacao_id
+    finally:
+        db.close()
+    monkeypatch.setattr(settings, "BILLING_ENABLED", True)
+    monkeypatch.setattr(settings, "STRIPE_SECRET_KEY", "sk_test_mysql_mock")
+    monkeypatch.setattr(settings, "STRIPE_WEBHOOK_SECRET", "whsec_mysql_mock")
+    monkeypatch.setattr(settings, "STRIPE_PRICE_PRO", "price_mysql_pro")
+    monkeypatch.setattr(settings, "STRIPE_PRICE_BUSINESS", "price_mysql_business")
+    requests = []
+    def provider(method, path, campos=None, *, idempotency=None):
+        requests.append((method, path, idempotency))
+        if path.startswith("/v1/prices/"):
+            price = path.rsplit("/", 1)[-1]
+            return {"id": price, "currency": "brl", "active": True,
+                    "unit_amount": 1000, "recurring": {"interval": "month", "interval_count": 1}}
+        if method == "POST" and path == "/v1/checkout/sessions":
+            return {"id": "cs_test_mysql_unique", "status": "open",
+                    "url": "https://checkout.stripe.com/c/pay/mysql"}
+        if method == "GET" and path.startswith("/v1/checkout/sessions/"):
+            return {"id": "cs_test_mysql_unique", "status": "open",
+                    "url": "https://checkout.stripe.com/c/pay/mysql"}
+        raise AssertionError(path)
+    monkeypatch.setattr("routers.billing.stripe_request", provider)
+    monkeypatch.setattr("routers.billing.preco_mensal_validado",
+                        lambda plano: {"plano": plano, "centavos": 1000})
+    barrier = Barrier(2)
+    chave = "checkout-mysql-2026-unique"
+
+    def executar():
+        db = SessionLocal()
+        try:
+            usuario = db.get(Usuario, uid)
+            barrier.wait(timeout=20)
+            return criar_checkout(CheckoutBody(plano="pro", chave_idempotencia=chave),
+                                 usuario, db, oid)
+        finally:
+            db.close()
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        resultados = list(pool.map(lambda _: executar(), [0, 1]))
+    assert sorted(r["repetida"] for r in resultados) == [False, True]
+    assert len([x for x in requests if x[0] == "POST" and x[1] == "/v1/checkout/sessions"]) == 1
+    db = SessionLocal()
+    try:
+        assert db.query(TentativaCheckout).filter_by(organizacao_id=oid,
+            chave_idempotencia=chave).count() == 1
+    finally:
+        db.close()
