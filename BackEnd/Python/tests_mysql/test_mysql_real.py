@@ -28,13 +28,13 @@ def test_mysql_schema_head_e_utf8mb4():
     esperadas = {
         "usuarios", "churrascos", "produtos", "precos", "estabelecimentos",
         "consentimentos_usuario", "eventos_seguranca", "auditoria_admin",
-        "organizacoes", "organizacao_membros", "importacoes_ofertas", "importacoes_catalogo", "campanhas_comerciais", "campanhas_comerciais_itens", "concessoes_organizacao", "convites_organizacao", "auditoria_organizacao",
+        "organizacoes", "organizacao_membros", "importacoes_ofertas", "importacoes_catalogo", "campanhas_comerciais", "campanhas_comerciais_itens", "assinaturas_organizacao", "tentativas_checkout", "eventos_billing", "concessoes_organizacao", "convites_organizacao", "auditoria_organizacao",
     }
     assert esperadas.issubset(set(insp.get_table_names()))
     with engine.connect() as conn:
         head = conn.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
         charset = conn.execute(text("SELECT @@character_set_database")).scalar_one()
-    assert head == "20261008_0013"
+    assert head == "20261008_0014"
     assert str(charset).lower() == "utf8mb4"
 
 
