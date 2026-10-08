@@ -147,6 +147,56 @@ CREATE TABLE importacoes_ofertas (
 ) ENGINE=InnoDB;
 CREATE INDEX ix_importacoes_ofertas_organizacao_id ON importacoes_ofertas (organizacao_id);
 
+CREATE TABLE importacoes_catalogo (
+    id INTEGER NOT NULL AUTO_INCREMENT,
+    organizacao_id INTEGER NOT NULL,
+    usuario_id INTEGER,
+    chave_idempotencia VARCHAR(80) NOT NULL,
+    payload_hash VARCHAR(64) NOT NULL,
+    resultado JSON NOT NULL,
+    criado_em DATETIME NOT NULL DEFAULT now(),
+    PRIMARY KEY (id),
+    CONSTRAINT uq_importacoes_catalogo_org_chave UNIQUE (organizacao_id, chave_idempotencia),
+    FOREIGN KEY(organizacao_id) REFERENCES organizacoes (id) ON DELETE CASCADE,
+    FOREIGN KEY(usuario_id) REFERENCES usuarios (id) ON DELETE SET NULL
+) ENGINE=InnoDB;
+CREATE INDEX ix_importacoes_catalogo_organizacao_id ON importacoes_catalogo (organizacao_id);
+
+CREATE TABLE campanhas_comerciais (
+    id INTEGER NOT NULL AUTO_INCREMENT,
+    organizacao_id INTEGER NOT NULL,
+    codigo VARCHAR(60) NOT NULL,
+    nome VARCHAR(150) NOT NULL,
+    descricao VARCHAR(500),
+    inicio_em DATETIME NOT NULL,
+    fim_em DATETIME NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'rascunho',
+    criado_por_usuario_id INTEGER,
+    revisado_por_usuario_id INTEGER,
+    revisado_em DATETIME,
+    motivo_revisao VARCHAR(400),
+    criado_em DATETIME NOT NULL DEFAULT now(),
+    PRIMARY KEY (id),
+    CONSTRAINT uq_campanha_org_codigo UNIQUE (organizacao_id, codigo),
+    CONSTRAINT ck_campanha_status CHECK (status IN ('rascunho','em_revisao','aprovada','rejeitada','cancelada')),
+    FOREIGN KEY(organizacao_id) REFERENCES organizacoes (id) ON DELETE CASCADE,
+    FOREIGN KEY(criado_por_usuario_id) REFERENCES usuarios (id) ON DELETE SET NULL,
+    FOREIGN KEY(revisado_por_usuario_id) REFERENCES usuarios (id) ON DELETE SET NULL
+) ENGINE=InnoDB;
+CREATE INDEX ix_campanhas_comerciais_organizacao_id ON campanhas_comerciais (organizacao_id);
+
+CREATE TABLE campanhas_comerciais_itens (
+    id INTEGER NOT NULL AUTO_INCREMENT,
+    campanha_id INTEGER NOT NULL,
+    preco_id INTEGER NOT NULL,
+    PRIMARY KEY (id),
+    CONSTRAINT uq_campanha_preco UNIQUE (campanha_id, preco_id),
+    FOREIGN KEY(campanha_id) REFERENCES campanhas_comerciais (id) ON DELETE CASCADE,
+    FOREIGN KEY(preco_id) REFERENCES precos (id) ON DELETE RESTRICT
+) ENGINE=InnoDB;
+CREATE INDEX ix_campanhas_comerciais_itens_campanha_id ON campanhas_comerciais_itens (campanha_id);
+CREATE INDEX ix_campanhas_comerciais_itens_preco_id ON campanhas_comerciais_itens (preco_id);
+
 CREATE TABLE assinaturas_usuario (
 	id INTEGER NOT NULL AUTO_INCREMENT, 
 	usuario_id INTEGER NOT NULL, 
