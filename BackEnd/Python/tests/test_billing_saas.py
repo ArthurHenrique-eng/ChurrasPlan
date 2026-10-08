@@ -55,9 +55,18 @@ def stripe_fake(monkeypatch):
             return state["sessions"][path.rsplit("/", 1)[-1]]
         if method == "GET" and path.startswith("/v1/subscriptions/"):
             return state["subs"][path.rsplit("/", 1)[-1]]
+        if method == "GET" and path.startswith("/v1/invoices?"):
+            from urllib.parse import parse_qs, urlsplit
+            customer = parse_qs(urlsplit(path).query).get("customer", [""])[0]
+            return {"data": [{"id": "in_fake_1", "customer": customer, "currency": "brl",
+                              "total": 1990, "amount_paid": 1990, "status": "paid", "created": int(time.time())}]}
         if method == "POST" and path.startswith("/v1/subscriptions/"):
             item = state["subs"][path.rsplit("/", 1)[-1]]
-            item["cancel_at_period_end"] = campos.get("cancel_at_period_end") == "true"
+            if "cancel_at_period_end" in campos:
+                item["cancel_at_period_end"] = campos["cancel_at_period_end"] == "true"
+            if "items[0][price]" in campos:
+                # Simula a alteração confirmada pelo provedor, não pelo browser.
+                item["items"]["data"][0]["price"]["id"] = campos["items[0][price]"]
             return item
         if method == "POST" and path == "/v1/billing_portal/sessions":
             return {"url": "https://billing.stripe.com/p/session/test"}
@@ -204,3 +213,48 @@ def test_sem_membership_nao_pode_gerir_cobranca(client, stripe_fake):
                           headers={"X-Organizacao-ID": str(org)}).status_code == 404
         assert outro.post("/api/billing/checkout", headers={**ho, "X-Organizacao-ID": str(org)},
                           json={"plano": "pro", "chave_idempotencia": "tenant-errado"}).status_code == 404
+
+
+def test_fatura_e_troca_de_planos_dependem_da_confirmacao_stripe(client, stripe_fake):
+    _, h = cadastro_login(client, "billing-upgrade-owner@example.com")
+    org = _ativar(client, h)
+    assert client.get("/api/billing/catalogo").status_code == 200
+    r = client.post("/api/billing/checkout", headers=h,
+        json={"plano": "pro", "chave_idempotencia": "upgrade-primeira-compra"})
+    assert r.status_code == 201
+    assert signed_webhook(client, "checkout.session.completed",
+        {"id": "cs_test_session_1", "subscription": "sub_test_1"},
+        event_id="evt_checkout_upgrade").status_code == 200
+    assert client.get("/api/billing/faturas").json()[0]["status"] == "paid"
+    sem_csrf = client.post("/api/billing/trocar-plano",
+        json={"plano": "business", "chave_idempotencia": "upgrade-sem-csrf"})
+    assert sem_csrf.status_code == 403
+    pedido = client.post("/api/billing/trocar-plano", headers=h,
+        json={"plano": "business", "chave_idempotencia": "upgrade-2026-teste"})
+    assert pedido.status_code == 200, pedido.text
+    assert client.get("/api/parceiro/entitlements").json()["plano"] == "business"
+    assert client.post("/api/billing/trocar-plano", headers=h,
+        json={"plano": "business", "chave_idempotencia": "upgrade-repetido"}).status_code == 409
+    assert signed_webhook(client, "customer.subscription.updated",
+        {"id": "sub_test_1"}, event_id="evt_novo_plano").status_code == 200
+    assert client.get("/api/parceiro/entitlements").json()["plano"] == "business"
+    assert client.get("/api/billing/faturas").json()[0]["total_centavos"] == 1990
+    db = next(app.dependency_overrides[get_db]())
+    try:
+        assert db.get(AssinaturaOrganizacao, org).plano_slug == "business"
+    finally: db.close()
+
+
+def test_webhook_sem_vinculo_checkout_nunca_concede_tier(client, stripe_fake):
+    _, h = cadastro_login(client, "billing-sem-checkout@example.com")
+    org = _ativar(client, h)
+    stripe_fake["subs"]["sub_forged"] = {"id": "sub_forged", "status": "active",
+        "metadata": {"organizacao_id": str(org), "plano_slug": "pro"},
+        "customer": "cus_fake_unlinked", "cancel_at_period_end": False,
+        "items": {"data": [{"id": "si_unlinked",
+                           "price": {"id": "price_test_pro"},
+                           "current_period_end": int(time.time())+86400}]}}
+    res = signed_webhook(client, "customer.subscription.created", {"id": "sub_forged"},
+                         event_id="evt_unlinked_fake")
+    assert res.status_code == 409
+    assert client.get("/api/parceiro/entitlements").json()["plano"] == "free"
