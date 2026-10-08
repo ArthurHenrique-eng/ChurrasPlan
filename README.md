@@ -112,6 +112,8 @@ Cadeia:
 20261008_0010  concessões administrativas temporárias e limites B2B (sem billing)
 20261008_0011  convites B2B, equipes, auditoria e gestão de membros
 
+A Fase 2C permite convidar equipes, revogar membros, aplicar papéis por organização e alternar entre contas no painel. Segurança, fluxos, migração/rollback e cotas: `docs/SAAS_FASE_2C_MEMBROS_CONVITES.md`. **Não há checkout nem assinatura paga funcional.**
+
 O painel de parceiros aplica cotas B2B transacionais. Organizações começam sempre no tier Free; concessões temporárias Pro/Business dependem de administrador global, CSRF e registro de auditoria. **Pagamento e checkout não estão habilitados**. Contratos, limites e rollback: `docs/SAAS_FASE_2B_ENTITLEMENTS.md`.
 ```
 
