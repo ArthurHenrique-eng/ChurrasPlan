@@ -243,7 +243,6 @@ def importar_ofertas_csv(
             par = (loja_id, produto_id)
             if par in vistos:
                 raise ValueError("Produto/filial duplicados neste lote.")
-            vistos.add(par)
             preco = _preco_decimal(dados["preco"], obrigatorio=True)
             original = _preco_decimal(dados.get("preco_original"))
             estoque = dados.get("estoque_status") or "disponivel"
@@ -265,6 +264,7 @@ def importar_ofertas_csv(
                 raise ValueError("Produto indisponível para esta organização.")
             if len(aceitos) >= restantes:
                 raise ValueError("Limite de ofertas do plano atingido.")
+            vistos.add(par)
             aceitos.append(Preco(
                 estabelecimento_id=loja.id, produto_id=produto.id,
                 preco=preco, preco_original=original, moeda="BRL",
