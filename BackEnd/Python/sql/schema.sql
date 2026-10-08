@@ -197,6 +197,50 @@ CREATE TABLE campanhas_comerciais_itens (
 CREATE INDEX ix_campanhas_comerciais_itens_campanha_id ON campanhas_comerciais_itens (campanha_id);
 CREATE INDEX ix_campanhas_comerciais_itens_preco_id ON campanhas_comerciais_itens (preco_id);
 
+CREATE TABLE assinaturas_organizacao (
+    organizacao_id INTEGER NOT NULL,
+    stripe_customer_id VARCHAR(100),
+    stripe_subscription_id VARCHAR(100),
+    plano_slug VARCHAR(20) NOT NULL DEFAULT 'free',
+    status VARCHAR(30) NOT NULL DEFAULT 'sem_assinatura',
+    periodo_fim_em DATETIME,
+    tolerancia_ate DATETIME,
+    cancelamento_agendado BOOL NOT NULL DEFAULT '0',
+    sincronizado_em DATETIME,
+    atualizado_em DATETIME NOT NULL DEFAULT now(),
+    PRIMARY KEY (organizacao_id),
+    UNIQUE (stripe_customer_id),
+    UNIQUE (stripe_subscription_id),
+    FOREIGN KEY(organizacao_id) REFERENCES organizacoes (id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+CREATE TABLE tentativas_checkout (
+    id INTEGER NOT NULL AUTO_INCREMENT,
+    organizacao_id INTEGER NOT NULL,
+    usuario_id INTEGER,
+    chave_idempotencia VARCHAR(80) NOT NULL,
+    plano_slug VARCHAR(20) NOT NULL,
+    stripe_session_id VARCHAR(130) NOT NULL,
+    stripe_subscription_id VARCHAR(100),
+    criado_em DATETIME NOT NULL DEFAULT now(),
+    PRIMARY KEY (id),
+    CONSTRAINT uq_checkout_org_chave UNIQUE (organizacao_id, chave_idempotencia),
+    UNIQUE (stripe_session_id),
+    FOREIGN KEY(organizacao_id) REFERENCES organizacoes (id) ON DELETE CASCADE,
+    FOREIGN KEY(usuario_id) REFERENCES usuarios (id) ON DELETE SET NULL
+) ENGINE=InnoDB;
+CREATE INDEX ix_tentativas_checkout_organizacao_id ON tentativas_checkout (organizacao_id);
+
+CREATE TABLE eventos_billing (
+    event_id VARCHAR(130) NOT NULL,
+    event_type VARCHAR(100) NOT NULL,
+    organizacao_id INTEGER,
+    resultado VARCHAR(40) NOT NULL,
+    registrado_em DATETIME NOT NULL DEFAULT now(),
+    PRIMARY KEY (event_id),
+    FOREIGN KEY(organizacao_id) REFERENCES organizacoes (id) ON DELETE SET NULL
+) ENGINE=InnoDB;
+
 CREATE TABLE assinaturas_usuario (
 	id INTEGER NOT NULL AUTO_INCREMENT, 
 	usuario_id INTEGER NOT NULL, 
