@@ -124,6 +124,11 @@ document.addEventListener("DOMContentLoaded", async()=>{
             catch (erro) { mensagemParceiro(`Falha ao carregar a operação B2B: ${erro.message}`, "erro"); }
         });
         conteudo.hidden=false;
+        const desejado = new URLSearchParams(location.search).get("assinar");
+        if (["pro", "business"].includes(desejado)) {
+            mensagemParceiro("Escolha o plano " + desejado.toUpperCase() + " na seção Assinatura comercial para abrir o Stripe Test.");
+            document.getElementById("billing-painel").scrollIntoView({ behavior: "smooth", block: "start" });
+        }
     } catch(e) { conteudo.hidden=true; mensagemParceiro(e.message,"erro"); return; }
     document.getElementById("prod-categoria").addEventListener("change", renderProdutosGenericos);
     document.getElementById("est-localizar-endereco").onclick=async()=>{const b=document.getElementById("est-localizar-endereco");b.disabled=true;try{await localizarEnderecoEstabelecimento();mensagemParceiro("Endereço localizado e coordenadas preenchidas.");}catch(er){mensagemParceiro(er.message,"erro");}finally{b.disabled=false;}};

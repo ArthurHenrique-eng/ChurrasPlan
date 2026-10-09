@@ -34,7 +34,7 @@ def test_mysql_schema_head_e_utf8mb4():
     with engine.connect() as conn:
         head = conn.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
         charset = conn.execute(text("SELECT @@character_set_database")).scalar_one()
-    assert head == "20261008_0014"
+    assert head == "20261008_0016"
     assert str(charset).lower() == "utf8mb4"
 
 
@@ -418,7 +418,7 @@ def test_mysql_checkout_idempotente_com_duas_transacoes_concorrentes(monkeypatch
         raise AssertionError(path)
     monkeypatch.setattr("routers.billing.stripe_request", provider)
     monkeypatch.setattr("routers.billing.preco_mensal_validado",
-                        lambda plano: {"plano": plano, "centavos": 1000})
+                        lambda plano, periodicidade="mensal": {"plano": plano, "centavos": 1000, "periodicidade": periodicidade})
     barrier = Barrier(2)
     chave = "checkout-mysql-2026-unique"
 

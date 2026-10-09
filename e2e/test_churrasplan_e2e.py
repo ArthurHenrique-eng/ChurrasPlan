@@ -233,6 +233,7 @@ def test_mobile_sem_overflow_horizontal_e_com_alvos_de_toque(
         # Apenas páginas públicas neste teste.
         paginas = [
             "index.html",
+            "planos.html",
             "planejamento.html",
             "privacidade.html",
             "convite.html",
@@ -305,3 +306,25 @@ def test_parceiro_seleciona_genericos_apos_ativacao(page: Page):
     assert any("Água" in texto for texto in page.locator("#prod-pai option").all_text_contents())
     page.locator("#prod-categoria").select_option(label="Limpeza")
     assert any("Detergente" in texto for texto in page.locator("#prod-pai option").all_text_contents())
+
+
+def test_planos_publicos_visiveis_e_checkout_bloqueado_sem_sandbox(page: Page):
+    """Plano deve ser descoberto diretamente na home, sem pagamentos reais."""
+    page.goto(url("index.html"), wait_until="domcontentloaded")
+    home_link = page.get_by_role("link", name="Planos", exact=True)
+    expect(home_link).to_be_visible()
+    home_link.click()
+    page.wait_for_url("**/planos.html", timeout=10000)
+
+    expect(page.get_by_role("heading", name="Escolha seu plano.")).to_be_visible()
+    expect(page.get_by_role("heading", name="Premium")).to_be_visible()
+    expect(page.get_by_role("heading", name="Pro")).to_be_visible()
+    expect(page.get_by_role("heading", name="Business")).to_be_visible()
+    expect(page.get_by_text("Ambiente de testes Stripe.", exact=False)).to_be_visible()
+    # O CI não fornece nenhuma chave Stripe; nunca oferecer Checkout fictício.
+    for slug in ("premium", "pro", "business"):
+        expect(page.locator(f'[data-plano="{slug}"]')).to_be_disabled(timeout=15000)
+        expect(page.locator("#preco-" + slug)).to_contain_text("Indisponível no teste")
+    page.locator("#planos-periodo").select_option("anual")
+    for slug in ("premium", "pro", "business"):
+        expect(page.locator(f'[data-plano="{slug}"]')).to_be_disabled()

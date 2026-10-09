@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#9e3b25">
+<meta name="description" content="Assinaturas ChurrasPlan Premium para usuários e planos para mercados parceiros.">
+<title>Planos e assinaturas — ChurrasPlan</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="css/unified-core.css">
+<link rel="stylesheet" href="css/integracao-v3.css">
+<link rel="stylesheet" href="css/production-v63.css">
+<link rel="stylesheet" href="css/planos.css">
+</head>
+<body class="pagina-planos">
+<a class="skip-link" href="#principal">Ir para os planos</a>
+<header class="planos-topbar">
+  <a class="home-brand" href="index.html" aria-label="ChurrasPlan início">
+    <img class="home-logo-icon" src="assets/logo-icon.png" alt="">
+    <img class="home-wordmark" src="assets/logo-wordmark.png" alt="ChurrasPlan">
+  </a>
+  <nav aria-label="Navegação"><a href="index.html">Início</a><a href="planejamento.html">Planejar</a><span id="auth-nav-slot"></span></nav>
+</header>
+<main id="principal">
+  <section class="planos-hero">
+    <span class="planos-eyebrow">CHURRASPLAN PARA TODOS</span>
+    <h1>Escolha seu plano.</h1>
+    <p>Planeje churrascos gratuitamente, experimente o Premium ou leve seu mercado para mais clientes.</p>
+    <div class="sandbox-warning" role="status">Ambiente de testes Stripe. Não utilize cartões reais; nenhum pagamento em produção está habilitado.</div>
+    <div class="period-switch">
+      <label for="planos-periodo">Periodicidade:</label>
+      <select id="planos-periodo"><option value="mensal">Mensal</option><option value="anual">Anual</option></select>
+    </div>
+  </section>
+  <div id="planos-mensagem" class="planos-feedback" role="status" aria-live="polite" hidden></div>
+  <section class="planos-secao" aria-labelledby="planos-pessoa">
+    <h2 id="planos-pessoa">Para quem organiza o churrasco</h2>
+    <div class="planos-grid planos-grid--pessoa">
+      <article class="plano-card">
+        <span class="plano-tag">Pessoal</span>
+        <h3>Gratuito</h3><p class="plano-preco">R$ 0</p>
+        <p>Planejamento de churrascos, lista de compras e estimativas.</p>
+        <a class="plano-cta plano-cta--outline" href="planejamento.html">Começar grátis</a>
+      </article>
+      <article class="plano-card plano-card--destaque">
+        <span class="plano-tag">Pessoal</span>
+        <h3>Premium</h3><p class="plano-preco" id="preco-premium">Carregando...</p>
+        <p>Plano pessoal para acesso a funcionalidades Premium do ChurrasPlan.</p>
+        <button class="plano-cta" type="button" data-publico="usuario" data-plano="premium" disabled>Assinar Premium</button>
+        <small class="plano-nota" id="aviso-premium">Consulta do sandbox em andamento.</small>
+      </article>
+    </div>
+  </section>
+  <section class="planos-secao" aria-labelledby="planos-mercados">
+    <h2 id="planos-mercados">Para mercados parceiros</h2>
+    <p>Os mercados assinam recursos da plataforma; compras dos consumidores não são cobradas aqui.</p>
+    <div class="planos-grid">
+      <article class="plano-card">
+        <span class="plano-tag">Mercado</span>
+        <h3>Pro</h3><p class="plano-preco" id="preco-pro">Carregando...</p>
+        <p>Catálogo comercial, ofertas e recursos ampliados de gestão.</p>
+        <button class="plano-cta" type="button" data-publico="parceiro" data-plano="pro" disabled>Assinar Mercado Pro</button>
+        <small class="plano-nota" id="aviso-pro">Consulta do sandbox em andamento.</small>
+      </article>
+      <article class="plano-card">
+        <span class="plano-tag">Mercado</span>
+        <h3>Business</h3><p class="plano-preco" id="preco-business">Carregando...</p>
+        <p>Limites comerciais maiores e recursos de operação para mercados.</p>
+        <button class="plano-cta" type="button" data-publico="parceiro" data-plano="business" disabled>Assinar Mercado Business</button>
+        <small class="plano-nota" id="aviso-business">Consulta do sandbox em andamento.</small>
+      </article>
+    </div>
+  </section>
+  <section class="planos-duvidas">
+    <h2>Como funciona?</h2>
+    <p>Escolha um plano, entre ou crie sua conta e finalize em uma página segura do Stripe Test. Mercados novos ganham uma área de parceiro antes da contratação. Benefícios pagos só são ativados após confirmação do webhook.</p>
+    <p><a href="minha-conta.html">Consultar minha assinatura</a> · <a href="parceiro.html">Área do parceiro</a></p>
+  </section>
+</main>
+<footer class="planos-footer"><a href="index.html">ChurrasPlan</a> · <a href="privacidade.html">Privacidade</a> · <a href="termos.html">Termos</a></footer>
+<script src="js/config.js"></script>
+<script src="js/state.js"></script>
+<script src="js/api.js"></script>
+<script src="js/script.js"></script>
+<script src="js/auth-ui.js"></script>
+<script src="js/planos.js"></script>
+</body>
+</html>

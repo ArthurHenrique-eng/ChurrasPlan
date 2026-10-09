@@ -75,7 +75,26 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (!usuario) { irPara(ChurrasPlanAuth.urlLogin("minha-conta.html")); return; }
     document.getElementById("conta-saudacao").textContent = `Olá, ${usuario.nome.split(" ")[0]}.`;
     document.getElementById("conta-perfil").innerHTML = `<strong>${escaparHTML(usuario.nome)}</strong><p class="texto-suave">${escaparHTML(usuario.email)}</p><div class="restriction-chips" style="margin-top:10px"><span>${escaparHTML(usuario.papel)}</span>${usuario.email_verificado_em ? '<span>e-mail verificado</span>' : '<span>verificação pendente</span>'}</div>`;
-    try { const assinatura = await ChurrasPlanAPI.minhaAssinatura(); document.getElementById("conta-plano").innerHTML = `<strong>Plano ${escaparHTML(assinatura.plano || usuario.plano)}</strong><p>${assinatura.pagamentos_habilitados ? "Assinatura ativa." : "Pagamentos ainda não estão habilitados nesta versão."}</p>`; } catch { document.getElementById("conta-plano").textContent = `Plano ${usuario.plano}`; }
+
+    try {
+        const assinatura = await ChurrasPlanAPI.minhaAssinatura();
+        const premiumAtivo = assinatura.beneficios_ativos === true;
+        const status = assinatura.status || "sem_assinatura";
+        document.getElementById("conta-plano").innerHTML =
+            `<strong>Plano pessoal: ${escaparHTML(premiumAtivo ? "Premium" : (assinatura.plano || usuario.plano))}</strong>
+            <p>${premiumAtivo ? "Premium de teste ativo, confirmado pela Stripe." : "Você pode conhecer o Premium e os planos comerciais."}</p>
+            <small>Status: ${escaparHTML(status)} · Pagamentos reais desativados.</small>
+            <div style="margin-top:12px"><a class="botao botao--secundario" href="planos.html">Ver planos</a>
+            ${premiumAtivo ? '<button type="button" id="conta-portal-stripe" class="botao botao--secundario">Gerenciar assinatura</button>' : ""}</div>`;
+        const portal = document.getElementById("conta-portal-stripe");
+        if (portal) portal.onclick = async () => {
+            portal.disabled = true;
+            try { const dados = await ChurrasPlanAPI.billingUsuarioPortal(); irPara(dados.portal_url); }
+            catch (erro) { mostrarMensagem(document.getElementById("conta-mensagem"), erro.message, "erro"); portal.disabled = false; }
+        };
+    } catch {
+        document.getElementById("conta-plano").innerHTML = '<a href="planos.html">Conhecer planos ChurrasPlan</a>';
+    }
     await configurarPrivacidadeConta(usuario);
     try {
         const historico = await ChurrasPlanAPI.meusChurrascos(); const lista = document.getElementById("historico-lista");
