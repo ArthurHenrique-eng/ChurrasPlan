@@ -93,6 +93,52 @@ def checkout_pessoal(
     return {"checkout_url": url, "repetida": False, "sandbox": True}
 
 
+@router.post("/sincronizar")
+def sincronizar_premium(
+    usuario: Usuario = Depends(usuario_atual_com_csrf),
+    db: Session = Depends(get_db),
+):
+    """Recupera Checkout concluído no Stripe Test caso o webhook tenha atrasado.
+
+    Nunca ativa Premium apenas pelo redirect: exige sessão existente criada
+    localmente, titularidade, pagamento confirmado e assinatura Stripe válida.
+    """
+    from services.billing_usuario import reconciliar_usuario
+
+    atual = db.get(AssinaturaStripeUsuario, usuario.id)
+    if assinatura_usuario_efetiva(atual):
+        return {**resumo_usuario(atual), "sincronizado": True}
+
+    tentativas = (db.query(TentativaCheckoutUsuario)
+                  .filter_by(usuario_id=usuario.id, plano_slug="premium")
+                  .order_by(TentativaCheckoutUsuario.id.desc())
+                  .limit(10).all())
+    for tentativa in tentativas:
+        sessao = stripe_request(
+            "GET", "/v1/checkout/sessions/" + quote(tentativa.stripe_session_id, safe="")
+        )
+        if sessao.get("id") != tentativa.stripe_session_id:
+            raise HTTPException(status_code=409, detail="Checkout Stripe divergente.")
+        if sessao.get("status") != "complete":
+            continue
+        if (sessao.get("client_reference_id") != str(usuario.id)
+                or (sessao.get("metadata") or {}).get("tipo_assinatura") != "usuario"
+                or (sessao.get("metadata") or {}).get("usuario_id") != str(usuario.id)):
+            raise HTTPException(status_code=409, detail="Titular do Checkout divergente.")
+        if sessao.get("payment_status") != "paid":
+            continue
+        sid = sessao.get("subscription")
+        if isinstance(sid, dict):
+            sid = sid.get("id")
+        if not isinstance(sid, str) or not sid.startswith("sub_"):
+            continue
+        row = reconciliar_usuario(db, sid, tentativa=tentativa)
+        db.commit()
+        return {**resumo_usuario(row), "sincronizado": True}
+
+    return {**resumo_usuario(atual), "sincronizado": False}
+
+
 @router.post("/portal")
 def portal_pessoal(usuario: Usuario = Depends(usuario_atual_com_csrf), db: Session = Depends(get_db)):
     if not billing_usuario_habilitado():
