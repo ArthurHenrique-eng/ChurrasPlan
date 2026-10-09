@@ -45,7 +45,7 @@ def stripe_pessoal_fake(monkeypatch):
             state["subscriptions"][sub_id] = {
                 "id": sub_id, "status": "active", "customer": f"cus_premium_{index}",
                 "metadata": {"tipo_assinatura": "usuario", "usuario_id": user_id},
-                "items": {"data": [{"price": {"id": campos["line_items[0][price]"]},
+                "items": {"data": [{"id": f"si_premium_{index}", "price": {"id": campos["line_items[0][price]"]},
                                    "current_period_end": int(time.time()) + (31536000 if yearly else 2592000)}]},
                 "cancel_at_period_end": False,
             }
@@ -54,6 +54,22 @@ def stripe_pessoal_fake(monkeypatch):
             return state["sessions"][path.rsplit("/", 1)[-1]]
         if method == "GET" and path.startswith("/v1/subscriptions/"):
             return state["subscriptions"][path.rsplit("/", 1)[-1]]
+        if method == "GET" and path.startswith("/v1/invoices?"):
+            from urllib.parse import parse_qs, urlsplit
+            customer = parse_qs(urlsplit(path).query).get("customer", [""])[0]
+            return {"data": [
+                {"id": "in_premium_test", "customer": customer, "currency": "brl",
+                 "total": 990, "amount_paid": 990, "status": "paid", "created": int(time.time())},
+                {"id": "in_outro_cliente", "customer": "cus_incorreto", "currency": "brl",
+                 "total": 9999, "amount_paid": 9999, "status": "paid", "created": int(time.time())},
+            ]}
+        if method == "POST" and path.startswith("/v1/subscriptions/"):
+            sub = state["subscriptions"][path.rsplit("/", 1)[-1]]
+            if "cancel_at_period_end" in campos:
+                sub["cancel_at_period_end"] = campos["cancel_at_period_end"] == "true"
+            if "items[0][price]" in campos:
+                sub["items"]["data"][0]["price"]["id"] = campos["items[0][price]"]
+            return sub
         if method == "POST" and path == "/v1/billing_portal/sessions":
             return {"url": "https://billing.stripe.com/p/session/test",
                     "customer": campos["customer"]}
