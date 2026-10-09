@@ -393,3 +393,7 @@ Importação CSV de produtos comerciais com criação/atualização por SKU, ver
 ### Fase 3 — Billing B2B (somente sandbox)
 
 Assinaturas por organização com tiers Free/Pro/Business, checkout Stripe Test, webhook HMAC, controle de assinatura, renovação, inadimplência/tolerância, cancelamento, conciliação, troca de plano e histórico de faturas de teste. Consulte `docs/SAAS_FASE_3_BILLING_STRIPE_TEST.md` e configure Prices e credenciais Stripe Test **fora do repositório**. O sistema recusa chaves `sk_live_` e não disponibiliza cobrança em produção.
+
+## Assinaturas Stripe Test para usuários e mercados
+
+Nova página pública: [planos.html](FrontEnd/planos.html), com Premium pessoal e Pro/Business para mercados, mensal/anual quando o Price ID correspondente existe no Stripe Test. O Checkout não recebe cobranças reais nem libera benefícios por redirecionamento. Configuração, endpoints, webhook e migrations: [docs/STRIPE_TEST_B2B2C_SETUP.md](docs/STRIPE_TEST_B2B2C_SETUP.md). Tudo permanece desativado sem variáveis de sandbox.
