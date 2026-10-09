@@ -10,7 +10,14 @@ const API_BASE_URL = (() => {
     // API em 8000. Em produção, usa caminho relativo /api no mesmo domínio,
     // permitindo reverse proxy sem editar o JavaScript.
     const hostLocal = hostname === "localhost" || hostname === "127.0.0.1";
-    if (hostLocal || ["5500", "5501"].includes(port)) {
+    // Docker publica frontend e API na mesma origem (porta 8080),
+    // encaminhando /api/ ao backend via Nginx.
+    if (hostLocal && (port === "8080" || port === "" || port === "80" || port === "443")) {
+        return "";
+    }
+
+    // Desenvolvimento com frontend separado (Live Server nas portas 5500/5501).
+    if (hostLocal && ["5500", "5501"].includes(port)) {
         return `${protocol}//${hostname || "127.0.0.1"}:8000`;
     }
     return "";
