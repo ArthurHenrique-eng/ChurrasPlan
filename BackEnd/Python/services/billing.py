@@ -46,6 +46,11 @@ def preco_configurado(plano: str, periodicidade: str = "mensal") -> str:
         raise HTTPException(status_code=422, detail="Plano ou periodicidade B2B inválidos.")
     campo = (PRICE_FIELDS if periodicidade == "mensal" else PRICE_FIELDS_YEARLY)[plano]
     price_id = getattr(settings, campo)
+    if periodicidade == "anual":
+        cents = (settings.STRIPE_EXPECTED_PRO_YEARLY_CENTS
+                 if plano == "pro" else settings.STRIPE_EXPECTED_BUSINESS_YEARLY_CENTS)
+        if cents <= 0:
+            raise HTTPException(status_code=503, detail="Preço anual ainda não homologado: defina valor esperado no .env.")
     if not price_id.startswith("price_"):
         raise HTTPException(status_code=503, detail="Preço do período não configurado no Stripe Test.")
     return price_id
