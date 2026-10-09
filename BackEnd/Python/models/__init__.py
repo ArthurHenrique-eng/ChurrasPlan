@@ -9,6 +9,7 @@ from .concessao_organizacao import ConcessaoOrganizacao
 from .importacao_ofertas import ImportacaoOfertas
 from .billing import AssinaturaOrganizacao, TentativaCheckout, EventoBilling
 from .billing_usuario import AssinaturaStripeUsuario, TentativaCheckoutUsuario
+from .modelo_evento_usuario import ModeloEventoUsuario
 from .comercial_b2b import ImportacaoCatalogo, CampanhaComercial, CampanhaComercialItem
 from .preco import Preco
 from .churrasco import Churrasco
@@ -24,5 +25,5 @@ __all__ = [
     "Usuario", "SessaoUsuario", "TokenUsuario", "Categoria", "Produto", "Estabelecimento", "Preco",
     "Churrasco", "ChurrascoCarne", "ChurrascoBebida", "ChurrascoExtra", "ListaCompras", "ListaComprasItem",
     "ConviteChurrasco", "RespostaConvite", "PlanoAssinatura", "AssinaturaUsuario", "MetricaEstabelecimento",
-    "ConsentimentoUsuario", "EventoSeguranca", "AuditoriaAdmin", "ConviteOrganizacao", "AuditoriaOrganizacao", "Organizacao", "OrganizacaoMembro", "ConcessaoOrganizacao", "ImportacaoOfertas", "AssinaturaOrganizacao", "TentativaCheckout", "EventoBilling", "AssinaturaStripeUsuario", "TentativaCheckoutUsuario", "ImportacaoCatalogo", "CampanhaComercial", "CampanhaComercialItem",
+    "ConsentimentoUsuario", "EventoSeguranca", "AuditoriaAdmin", "ConviteOrganizacao", "AuditoriaOrganizacao", "Organizacao", "OrganizacaoMembro", "ConcessaoOrganizacao", "ImportacaoOfertas", "AssinaturaOrganizacao", "TentativaCheckout", "EventoBilling", "AssinaturaStripeUsuario", "TentativaCheckoutUsuario", "ModeloEventoUsuario", "ImportacaoCatalogo", "CampanhaComercial", "CampanhaComercialItem",
 ]
