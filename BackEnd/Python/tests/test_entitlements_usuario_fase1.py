@@ -132,7 +132,10 @@ def test_modelos_escopo_e_downgrade_preservam_dados(client, stripe_pessoal_fake)
 
     # Volta ao Premium com login anterior; simula assinatura expirada persistida.
     client.post("/api/auth/logout", headers=outro)
-    cadastro_login(client, "premium-escopo-fase1@example.com")
+    relogin = client.post("/api/auth/login", json={
+        "email": "premium-escopo-fase1@example.com", "senha": "SenhaForte123",
+    })
+    assert relogin.status_code == 200, relogin.text
     db = next(app.dependency_overrides[get_db]())
     try:
         usuario = db.query(Usuario).filter_by(email="premium-escopo-fase1@example.com").one()
