@@ -96,6 +96,27 @@ const ChurrasPlanAPI = {
     obterChurrasco(id, opcoes = {}) { return requisitar(`/api/churrascos/${id}`, opcoes); },
     atualizarChurrasco(id, payload, opcoes = {}) { return requisitar(`/api/churrascos/${id}`, { ...opcoes, method: "PUT", body: JSON.stringify(payload) }); },
     meusChurrascos(opcoes = {}) { return requisitar("/api/churrascos/meus", opcoes); },
+    meusBeneficios(opcoes = {}) { return requisitar("/api/planos/meus-beneficios", opcoes); },
+    analiseCustosPremium(id, opcoes = {}) { return requisitar(`/api/churrascos/${id}/analise-custos`, opcoes); },
+    comparacaoAvancadaPremium(id, opcoes = {}) {
+        return requisitar(`/api/onde-comprar/churrasco/${id}/comparacao-avancada`, {
+            ...opcoes, method: "POST", body: JSON.stringify({ modo: "equilibrio" }),
+        });
+    },
+    listarModelosEvento(opcoes = {}) { return requisitar("/api/modelos-evento", opcoes); },
+    criarModeloEvento(id, nome, opcoes = {}) {
+        return requisitar("/api/modelos-evento", {
+            ...opcoes, method: "POST", body: JSON.stringify({ churrasco_id: id, nome }),
+        });
+    },
+    usarModeloEvento(id, opcoes = {}) {
+        return requisitar(`/api/modelos-evento/${id}/usar`, {
+            ...opcoes, method: "POST", body: JSON.stringify({}),
+        });
+    },
+    excluirModeloEvento(id, opcoes = {}) {
+        return requisitar(`/api/modelos-evento/${id}`, { ...opcoes, method: "DELETE" });
+    },
     repetirChurrasco(id, payload = {}, opcoes = {}) { return requisitar(`/api/churrascos/${id}/repetir`, { ...opcoes, method: "POST", body: JSON.stringify(payload) }); },
     vincularChurrasco(id, chaveCliente, opcoes = {}) { return requisitar(`/api/churrascos/${id}/vincular`, { ...opcoes, method: "POST", body: JSON.stringify({ chave_cliente: chaveCliente }) }); },
     atualizarDivisao(id, dividirEntre, opcoes = {}) { return requisitar(`/api/churrascos/${id}/divisao`, { ...opcoes, method: "PATCH", body: JSON.stringify({ dividir_entre: dividirEntre }) }); },
