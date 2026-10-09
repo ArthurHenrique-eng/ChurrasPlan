@@ -36,6 +36,7 @@ const ChurrasPlanBilling = (() => {
         el("billing-sincronizar").hidden = !estado?.checkout_habilitado || !estado?.status || estado.status === "sem_assinatura";
         el("billing-portal").hidden = !estado?.checkout_habilitado || !estado?.beneficios_ativos;
         el("billing-cancelar").hidden = !estado?.checkout_habilitado || !estado?.beneficios_ativos || estado.cancelamento_agendado;
+        el("billing-reativar").hidden = !estado?.checkout_habilitado || !estado?.beneficios_ativos || !estado.cancelamento_agendado;
     }
 
     async function carregar() {
@@ -106,6 +107,16 @@ const ChurrasPlanBilling = (() => {
                 await ChurrasPlanAPI.billingCancelar();
                 await carregar();
                 mensagemParceiro("Cancelamento agendado junto ao Stripe Test.");
+            } catch (e) { mensagemParceiro(e.message, "erro"); }
+            finally { b.disabled = false; }
+        });
+        el("billing-reativar").addEventListener("click", async event => {
+            if (!window.confirm("Retomar a renovação automática do mercado no Stripe Test?")) return;
+            const b = event.currentTarget; b.disabled = true;
+            try {
+                await ChurrasPlanAPI.billingReativar();
+                await carregar();
+                mensagemParceiro("Renovação reativada no Stripe Test.");
             } catch (e) { mensagemParceiro(e.message, "erro"); }
             finally { b.disabled = false; }
         });
