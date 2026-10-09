@@ -80,6 +80,18 @@ head esperado de migration e rollback de índice sustentando FK MySQL;
 essas regressões foram corrigidas incrementalmente. **Somente marcar a Fase 1
 como aprovada depois que o CI final e CodeQL do commit final estiverem verdes.**
 
+**Gates confirmados (commit de código `6695c2a91a553c8087bc0b636070aa12538bcc32`):**
+[ChurrasPlan CI #38000556036](https://github.com/ArthurHenrique-eng/ChurrasPlan/actions/runs/38000556036)
+**success**, seis jobs aprovados, inclusive **161 pytest SQLite aprovados**,
+**12 testes MySQL aprovados** (incluindo duas criações simultâneas para uma
+vaga Free), `alembic check`, downgrade/upgrade MySQL, frontend static,
+auditoria de dependências, build Docker e E2E Chromium + MySQL.
+[CodeQL #38000556044](https://github.com/ArthurHenrique-eng/ChurrasPlan/actions/runs/38000556044)
+**success**. Esses checks provam regressões e contratos simulados, não homologam
+Stripe de produção nem medem carga real. **Gate da Fase 1 de código: aprovado.**
+A documentação foi registrada posteriormente; o CI desse commit de documentação
+deve ser consultado independentemente.
+
 **Manual de operação e riscos:** `docs/SAAS_FASE_1_B2C_PREMIUM.md`.
 Pendências de homologação externa: Stripe B2B end-to-end, teste de cargas
 PDF e concorrência de quota em alta demanda, monitoramento/observabilidade,
