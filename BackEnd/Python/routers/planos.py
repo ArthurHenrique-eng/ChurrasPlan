@@ -9,6 +9,7 @@ from services.equipe_organizacao import LIMITES_MEMBROS
 from services.billing import billing_habilitado
 from models import AssinaturaStripeUsuario
 from services.billing_usuario import resumo_usuario
+from services.entitlements_usuario import resumo_beneficios_usuario
 
 router = APIRouter(prefix="/api/planos", tags=["planos"])
 
@@ -37,6 +38,11 @@ def planos_parceiros():
         }
         for slug, limites in LIMITES_PLANOS.items()
     ]
+
+
+@router.get("/meus-beneficios")
+def meus_beneficios(usuario: Usuario = Depends(usuario_atual), db: Session = Depends(get_db)):
+    return resumo_beneficios_usuario(db, usuario)
 
 
 @router.get("/minha-assinatura")
