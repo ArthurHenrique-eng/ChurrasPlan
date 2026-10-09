@@ -42,11 +42,28 @@ def validar_preco_usuario(periodicidade: str) -> dict:
     price = stripe_request("GET", "/v1/prices/" + urllib.parse.quote(price_id, safe=""))
     periodo = "month" if periodicidade == "mensal" else "year"
     recurring = price.get("recurring") or {}
+    campo_esperado = ("STRIPE_EXPECTED_PREMIUM_MONTHLY_CENTS" if periodicidade == "mensal"
+                      else "STRIPE_EXPECTED_PREMIUM_YEARLY_CENTS")
+    valor_esperado = getattr(settings, campo_esperado)
+    if valor_esperado < 0:
+        raise HTTPException(status_code=503, detail="Expectativa comercial Premium inválida.")
+    from services.billing import PRICE_FIELDS, PRICE_FIELDS_YEARLY
+    campos = list(PRICE_FIELDS.values()) + list(PRICE_FIELDS_YEARLY.values()) + list(PRICE_FIELDS_USUARIO.values())
+    ids = [getattr(settings, campo, "") for campo in campos]
+    ativos = [pid for pid in ids if pid.startswith("price_")]
+    if len(set(ativos)) != len(ativos):
+        raise HTTPException(status_code=503, detail="Price IDs duplicados entre planos Stripe Test.")
     if (price.get("id") != price_id or price.get("currency") != "brl"
             or recurring.get("interval") != periodo or recurring.get("interval_count", 1) != 1
             or not price.get("active") or not isinstance(price.get("unit_amount"), int)
-            or price["unit_amount"] <= 0):
+            or price["unit_amount"] <= 0 or price.get("livemode") is True):
         raise HTTPException(status_code=503, detail="Preço Premium inválido no Stripe Test.")
+    if valor_esperado and price["unit_amount"] != valor_esperado:
+        raise HTTPException(status_code=503, detail=(
+            f"Preço Premium/{periodicidade} divergente: Stripe Test retorna "
+            f"{price['unit_amount']} centavos, esperado {valor_esperado}. "
+            "Corrija o Price ID no .env antes de contratar."
+        ))
     return {"plano": "premium", "publico": "usuario", "periodicidade": periodicidade,
             "moeda": "BRL", "centavos": price["unit_amount"]}
 
