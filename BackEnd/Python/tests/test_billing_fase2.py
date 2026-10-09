@@ -42,6 +42,38 @@ def test_fase2_precos_empresariais_e_live_bloqueados(client, stripe_fake, monkey
     assert client.get("/api/billing/planos-publicos").json()["checkout_habilitado"] is False
 
 
+def test_fase2_anual_empresa_somente_com_valor_aprovado(client, stripe_fake, monkeypatch):
+    monkeypatch.setattr(settings, "STRIPE_PRICE_PRO_YEARLY", "price_test_pro_year")
+    monkeypatch.setattr(settings, "STRIPE_PRICE_BUSINESS_YEARLY", "price_test_business_year")
+    # IDs anuais conhecidos, mas sem valores homologados: catálogo mensal continua utilizável.
+    base = client.get("/api/billing/planos-publicos")
+    assert base.status_code == 200
+    assert {x["periodicidade"] for x in base.json()["planos"]} == {"mensal"}
+
+    import services.billing as billing_service
+    original = billing_service.stripe_request
+
+    def fake_with_year(method, path, campos=None, *, idempotency=None):
+        if method == "GET" and path.endswith("_year"):
+            price_id = path.rsplit("/", 1)[-1]
+            return {"id": price_id, "currency": "brl", "livemode": False, "active": True,
+                    "recurring": {"interval": "year", "interval_count": 1},
+                    "unit_amount": 10000 if price_id == "price_test_pro_year" else 19000}
+        return original(method, path, campos, idempotency=idempotency)
+
+    monkeypatch.setattr("services.billing.stripe_request", fake_with_year)
+    monkeypatch.setattr("routers.billing.stripe_request", fake_with_year)
+    monkeypatch.setattr(settings, "STRIPE_EXPECTED_PRO_YEARLY_CENTS", 10000)
+    monkeypatch.setattr(settings, "STRIPE_EXPECTED_BUSINESS_YEARLY_CENTS", 19000)
+    atualizado = client.get("/api/billing/planos-publicos")
+    assert atualizado.status_code == 200, atualizado.text
+    assert len(atualizado.json()["planos"]) == 4
+    assert [x["centavos"] for x in atualizado.json()["planos"][2:]] == [10000, 19000]
+    # Checkout anual nunca pode ser montado para preço aprovado diferente do Stripe.
+    monkeypatch.setattr(settings, "STRIPE_EXPECTED_PRO_YEARLY_CENTS", 9999)
+    assert client.get("/api/billing/planos-publicos").status_code == 503
+
+
 def test_fase2_b2c_renovacao_inadimplencia_cancelamento_reativacao_troca_e_faturas(
     client, stripe_pessoal_fake,
 ):
