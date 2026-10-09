@@ -92,6 +92,8 @@ jobs:
         run: find FrontEnd/js -name '*.js' -print0 | xargs -0 -n1 node --check
       - name: Service worker syntax
         run: node --check FrontEnd/sw.js
+      - name: Browser API origin and Service Worker freshness
+        run: node scripts/test_frontend_api_origin.mjs
       - name: Basic local references
         run: python scripts/validate_frontend.py
       - name: Coordinate forms (Brazilian decimal format)
