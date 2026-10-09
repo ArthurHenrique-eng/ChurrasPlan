@@ -18,6 +18,7 @@
         business: { mensal: "STRIPE_PRICE_BUSINESS", anual: "STRIPE_PRICE_BUSINESS_YEARLY" }
     };
     const catalogoFalhou = { usuario: false, parceiro: false };
+    const erroCatalogo = { usuario: "", parceiro: "" };
     function mostrar() {
         for (const plano of ["premium", "pro", "business"]) {
             const publico = plano === "premium" ? "usuario" : "parceiro";
@@ -31,10 +32,11 @@
             if (achado) {
                 nota.textContent = "Preço validado no Stripe Test. Nenhuma cobrança real.";
             } else if (catalogoFalhou[publico]) {
-                nota.textContent = "Falha ao consultar o Stripe Test. Verifique chave sk_test_, Price ID e logs da API.";
+                nota.textContent = erroCatalogo[publico] || "Falha ao validar os preços Stripe Test. Consulte os logs da API.";
             } else {
-                nota.textContent = "Configuração pendente no backend: verifique BILLING_ENABLED=true, sk_test_, whsec_ e " +
-                    variaveisPreco[plano][periodicidade()] + " no .env.";
+                nota.textContent = periodicidade() === "anual"
+                    ? "Preço anual ainda não homologado. Configure a Price ID e STRIPE_EXPECTED_*_YEARLY_CENTS no backend."
+                    : "Configuração pendente no backend: confira " + variaveisPreco[plano][periodicidade()] + " no .env.";
             }
         }
     }
@@ -96,6 +98,8 @@
         precos.parceiro = m.status === "fulfilled" ? (m.value.planos || []) : [];
         catalogoFalhou.usuario = p.status === "rejected";
         catalogoFalhou.parceiro = m.status === "rejected";
+        erroCatalogo.usuario = p.status === "rejected" ? p.reason?.message || "" : "";
+        erroCatalogo.parceiro = m.status === "rejected" ? m.reason?.message || "" : "";
         mostrar();
         if (params.has("contratar") && usuario) aviso("Você já está conectado. Escolha o plano para abrir o Checkout Stripe Test.", false);
         if (p.status === "rejected" || m.status === "rejected")
