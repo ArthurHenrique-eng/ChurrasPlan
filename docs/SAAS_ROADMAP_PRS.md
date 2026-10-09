@@ -97,3 +97,57 @@ Pendências de homologação externa: Stripe B2B end-to-end, teste de cargas
 PDF e concorrência de quota em alta demanda, monitoramento/observabilidade,
 backup/restore, MFA, staging, legislação tributária e cobrança real.
 Nenhum dado de cartão nem chave secreta foi adicionado ao repositório.
+
+## Fase 2 (prompt mestre v2) — Homologação Billing B2C/B2B Stripe Sandbox (09/10/2026)
+
+**Escopo de código implementado diretamente na Saas-ChurrasPlan:** a tabela
+comercial mensal aprovada é Premium R$ 9,90, Mercado Pro (Básico) R$ 49,90
+e Mercado Business (Pro) R$ 99,90; novos campos STRIPE_EXPECTED_*_MONTHLY_CENTS
+validam o unit_amount real de Stripe Test, rejeitam Price ID duplicado ou de
+modo live e impedem Checkout divergente (HTTP 503). Periodicidade anual
+fica indisponível até aprovar STRIPE_EXPECTED_*_YEARLY_CENTS>0; o catálogo
+mensal permanece utilizável mesmo se houver Price ID anual ainda não homologado.
+
+**Autenticação e retorno Stripe Checkout:** Premium pessoal retorna à
+minha-conta.html?assinatura=retorno; mercados retornam à
+minha-conta.html?cobranca=retorno&organizacao_id=ID. O login preserva os
+parâmetros da URL; o backend B2B reconcilia Checkout local pago via Stripe Test
+somente após verificar sessão complete, payment_status paid, metadata de
+titularidade/plano/período, assinatura remota e proprietário da organização.
+O Customer Portal B2C/B2B também retorna a Minha conta.
+
+**Ciclo de vida:** em ambas as verticais, renovação e inadimplência por
+webhook seguem o snapshot Stripe; B2C exige status active e período vigente,
+B2B conserva a tolerância limitada original. Novas APIs B2C para faturas,
+cancelamento agendado, reativação e troca de mensal/anual aprovada; B2B
+mantém troca/cancelamento/faturas e ganha reativação e recuperação segura de
+Checkout com webhook atrasado. Frontend de Minha Conta/painel do parceiro
+permite consultar/gerir dados financeiros de Sandbox.
+Sem novas migrations; preservados banco, planejamentos e entitlements.
+
+**Cobertura e evidências:** tests/test_billing_fase2.py verifica erro de preço,
+colisão de IDs, bloqueio de live, aprovação anual, faturas, Checkout retornado
+sem pagamento e com pagamento confirmado, senha/sessão, RBAC multi-org, renovação,
+past_due, unpaid, cancelamento, reativação, troca de período, webhook e
+titularidade. Seguem suites test_billing_saas.py e
+test_billing_usuario_stripe.py. CI #38003892454, do commit de código
+1df5f0570d059e6904c65e5e03e051842f049fd7: pytest SQLite
+**167 passed**, MySQL real/Alembic **12 passed**, frontend static, segurança
+e Docker aprovados na consulta; E2E Chromium ainda precisava concluir
+naquele instante. CodeQL #38003892428 em execução na mesma verificação.
+Consultar estado final no GitHub antes de dar o gate como aprovado.
+
+**Runbook:** docs/SAAS_FASE_2_HOMOLOGACAO_BILLING.md. Como a conexão Stripe
+disponível nesta execução mostrou apenas conta em live mode, nenhum produto,
+Price ID, pagamento, customer ou assinatura real foi alterado; a homologação
+externa do Dashboard Sandbox (cartão de teste, webhooks, renovação com Test
+Clocks se aplicável, valores anuais aprovados) permanece pendente de execução
+no ambiente do mantenedor. Isso impede chamar a homologação externa de
+concluída, apesar dos testes automatizados.
+
+**Próximo passo do prompt mestre v2: Fase 3 — experiência empresarial B2B.**
+Revalidar onboarding de parceiro, multi-organizações e filiais, permissões
+da equipe, preços/referências, produtos genéricos, CSV de catálogo, ofertas,
+campanhas moderadas, limites por plano, indicadores de interação, integração
+gradual com mercados e testes de isolamento sem oferecer transações de venda
+não verificadas como métricas de receita.
