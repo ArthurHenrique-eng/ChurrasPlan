@@ -83,11 +83,35 @@ def preco_mensal_validado(plano: str, periodicidade: str = "mensal") -> dict:
     price_id = preco_configurado(plano, periodicidade)
     dado = stripe_request("GET", "/v1/prices/" + urllib.parse.quote(price_id, safe=""))
     intervalo = (dado.get("recurring") or {}).get("interval")
+    campo_esperado = {
+        ("pro", "mensal"): "STRIPE_EXPECTED_PRO_MONTHLY_CENTS",
+        ("business", "mensal"): "STRIPE_EXPECTED_BUSINESS_MONTHLY_CENTS",
+        ("pro", "anual"): "STRIPE_EXPECTED_PRO_YEARLY_CENTS",
+        ("business", "anual"): "STRIPE_EXPECTED_BUSINESS_YEARLY_CENTS",
+    }[(plano, periodicidade)]
+    valor_esperado = getattr(settings, campo_esperado)
+    if valor_esperado < 0:
+        raise HTTPException(status_code=503, detail="Expectativa comercial de preço inválida.")
+    # Rejeita Price IDs compartilhados entre tiers (inclusive usuário pessoal).
+    ids = [getattr(settings, campo, "") for campo in [
+        "STRIPE_PRICE_PRO", "STRIPE_PRICE_BUSINESS", "STRIPE_PRICE_PRO_YEARLY",
+        "STRIPE_PRICE_BUSINESS_YEARLY", "STRIPE_PRICE_USER_PREMIUM_MONTHLY",
+        "STRIPE_PRICE_USER_PREMIUM_YEARLY"]]
+    ativos = [pid for pid in ids if pid.startswith("price_")]
+    if len(ativos) != len(set(ativos)):
+        raise HTTPException(status_code=503, detail="Price IDs duplicados entre planos; confira o Stripe Test.")
     if (dado.get("id") != price_id or dado.get("currency") != "brl"
             or intervalo != ("month" if periodicidade == "mensal" else "year") or (dado.get("recurring") or {}).get("interval_count", 1) != 1
             or not isinstance(dado.get("unit_amount"), int)
-            or dado["unit_amount"] <= 0 or not dado.get("active")):
-        raise HTTPException(status_code=503, detail="Preço BRL mensal do plano não está configurado no Stripe Test.")
+            or dado["unit_amount"] <= 0 or not dado.get("active")
+            or dado.get("livemode") is True):
+        raise HTTPException(status_code=503, detail="Preço BRL recorrente do plano inválido no Stripe Test.")
+    if valor_esperado and dado["unit_amount"] != valor_esperado:
+        raise HTTPException(status_code=503, detail=(
+            f"Preço {plano}/{periodicidade} divergente: Stripe Test retorna "
+            f"{dado['unit_amount']} centavos, esperado {valor_esperado}. "
+            "Corrija o Price ID no .env antes de contratar."
+        ))
     return {"plano": plano, "moeda": "BRL", "centavos": dado["unit_amount"],
             "preco_id": price_id, "periodicidade": periodicidade}
 
