@@ -57,7 +57,8 @@ def catalogo_stripe_test(
     return {"sandbox": True, "pagamentos_reais_habilitados": False,
             "planos": [preco_mensal_validado(p) for p in ("pro", "business")]
             + [preco_mensal_validado(p, "anual") for p, field in PRICE_FIELDS_YEARLY.items()
-               if getattr(settings, field, "").startswith("price_")]}
+               if getattr(settings, field, "").startswith("price_")
+               and getattr(settings, "STRIPE_EXPECTED_" + p.upper() + "_YEARLY_CENTS") > 0]}
 
 
 @router.get("/planos-publicos")
@@ -68,7 +69,8 @@ def catalogo_publico():
     return {"sandbox": True, "checkout_habilitado": True,
             "planos": [preco_mensal_validado(p) for p in ("pro", "business")]
             + [preco_mensal_validado(p, "anual") for p, field in PRICE_FIELDS_YEARLY.items()
-               if getattr(settings, field, "").startswith("price_")]}
+               if getattr(settings, field, "").startswith("price_")
+               and getattr(settings, "STRIPE_EXPECTED_" + p.upper() + "_YEARLY_CENTS") > 0]}
 
 
 @router.get("/assinatura")
