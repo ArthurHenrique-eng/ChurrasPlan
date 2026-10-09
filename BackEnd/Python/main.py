@@ -22,7 +22,7 @@ import models  # noqa: F401  (garante que todos os models sejam registrados no B
 
 validar_configuracao_producao()
 
-from routers import calculadora, churrascos, produtos, estabelecimentos, precos, lista_compras, auth, convites, parceiros, equipe, onde_comprar, planos, privacidade, admin, operacao_b2b, comercial_b2b, billing, billing_usuario
+from routers import calculadora, churrascos, produtos, estabelecimentos, precos, lista_compras, auth, convites, parceiros, equipe, onde_comprar, planos, privacidade, admin, operacao_b2b, comercial_b2b, billing, billing_usuario, modelos_evento
 
 # Conveniência estritamente local. A fonte de verdade do schema é Alembic;
 # em produção AUTO_CREATE_SCHEMA é ignorado mesmo que alguém o habilite por engano.
@@ -68,6 +68,7 @@ app.include_router(comercial_b2b.admin_router)
 app.include_router(comercial_b2b.public_router)
 app.include_router(billing.router)
 app.include_router(billing_usuario.router)
+app.include_router(modelos_evento.router)
 app.include_router(onde_comprar.router)
 app.include_router(planos.router)
 app.include_router(privacidade.router)
