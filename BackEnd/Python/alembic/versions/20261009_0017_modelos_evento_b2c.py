@@ -26,5 +26,6 @@ def upgrade():
 
 def downgrade():
     # O rollback apaga SOMENTE os modelos, não os eventos ou assinaturas.
-    op.drop_index("ix_modelos_evento_usuario_usuario_id", table_name="modelos_evento_usuario")
+    # O índice de usuario_id sustenta a FK no MySQL: a tabela deve cair inteira,
+    # sem tentar remover antes o índice usado pela restrição referencial.
     op.drop_table("modelos_evento_usuario")
