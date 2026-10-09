@@ -43,3 +43,45 @@ Incremento realizado diretamente em `Saas-ChurrasPlan`: importação CSV de SKU 
 ## Fase 3 — Billing Stripe Test
 
 Estrutura e fluxos B2B implementados diretamente na branch `Saas-ChurrasPlan`: checkout de assinaturas mensais com Price BRL verificado no Stripe Test, webhook HMAC SHA-256, idempotência, reconciliação com snapshot remoto, proteção de tenant, downgrade, cancelamento, troca de planos e histórico de faturas. Migration `20261008_0014`. Manual: `docs/SAAS_FASE_3_BILLING_STRIPE_TEST.md`. **Gates externos ainda necessários:** configurar conta Stripe Test, Prices e webhook reais no ambiente, homologar transações end-to-end no sandbox. Pagamento em produção e emissões fiscais não foram ativados.
+
+## Fase 1 B2C — Matriz Free/Premium (09/10/2026)
+
+**Autorização do mantenedor:** Free com 5 planejamentos salvos; Premium com
+planejamentos ilimitados, comparação avançada, PDF/CSV de planejamento,
+modelos de eventos reutilizáveis e análise detalhada de custos.
+Incremento entregue **diretamente** em `Saas-ChurrasPlan`; não houve alterações em `main`
+ou habilitação de cobranças live.
+
+**Arquitetura de entitlements:** `services/entitlements_usuario.py` usa somente
+`assinaturas_stripe_usuario` reconciliada (ativa e no período) como fonte
+de direito individual; `usuarios.plano` e `assinaturas_usuario` não concedem
+benefícios. O GET `/api/planos/meus-beneficios` expõe quota efetiva, uso e
+recursos. Quota transacional Free em criação, repetição e reivindicação de
+churrasco; a atualização idempotente de um churrasco existente não consome
+uma nova vaga. Registros acima da quota após downgrade permanecem acessíveis.
+
+**Recursos e dados:** análise de custos com qualidade de estimativa e categorias,
+comparação de cestas verificadas sem simular vendas, exportações Premium PDF/CSV
+(com proteção contra fórmulas), snapshots de modelos pessoais e reaplicação
+pelo motor determinístico. Modelo SQL `modelos_evento_usuario`, migration
+reversível `20261009_0017`, esquema canônico `sql/schema.sql` atualizado.
+Rota LGPD de exportação inclui dados da assinatura Stripe TEST; exclusão
+local é bloqueada enquanto a assinatura remota não estiver encerrada.
+`minha-conta.html` e `planos.html` apresentam as condições aprovadas.
+
+**Testes/regressões:** suíte `tests/test_entitlements_usuario_fase1.py`
+(Free, Premium TEST, limites, histórico preservado, PDF/CSV, IDOR, CSRF,
+vencimento, modelos, bloqueio de exclusão com contrato financeiro pendente);
+CI existente executa SQLite, MySQL 8 + Alembic upgrade/check/downgrade/upgrade,
+estática frontend, auditoria de segurança, builds Docker e Chromium E2E.
+Os jobs históricos de alguns commits intermediários falharam em
+`requirements.txt` (separador de versão), parity `schema.sql`,
+head esperado de migration e rollback de índice sustentando FK MySQL;
+essas regressões foram corrigidas incrementalmente. **Somente marcar a Fase 1
+como aprovada depois que o CI final e CodeQL do commit final estiverem verdes.**
+
+**Manual de operação e riscos:** `docs/SAAS_FASE_1_B2C_PREMIUM.md`.
+Pendências de homologação externa: Stripe B2B end-to-end, teste de cargas
+PDF e concorrência de quota em alta demanda, monitoramento/observabilidade,
+backup/restore, MFA, staging, legislação tributária e cobrança real.
+Nenhum dado de cartão nem chave secreta foi adicionado ao repositório.
