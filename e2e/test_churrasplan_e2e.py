@@ -331,32 +331,36 @@ def test_planos_publicos_visiveis_e_checkout_bloqueado_sem_sandbox(page: Page):
 
 
 def test_planos_logo_mantem_tamanho_do_cabecalho(page: Page):
-    """Regressão: estilos da home não são importados na vitrine de planos."""
+    """O cabeçalho não pode ampliar os assets originais da marca."""
     page.set_viewport_size({"width": 1366, "height": 900})
-    page.goto(url("planos.html"), wait_until="domcontentloaded")
-    logo = page.locator(".planos-topbar .home-logo-icon").bounding_box()
-    wordmark = page.locator(".planos-topbar .home-wordmark").bounding_box()
-    header = page.locator(".planos-topbar").bounding_box()
-    nav = page.locator(".planos-topbar nav").bounding_box()
-    assert logo and wordmark and header and nav
-    assert logo["width"] <= 55 and logo["height"] <= 55
-    assert wordmark["width"] <= 180 and wordmark["height"] <= 60
-    assert header["height"] < 130
-    assert nav["x"] > logo["x"] + logo["width"]
+    page.goto(url("planos.html"), wait_until="networkidle")
 
-
-
-def test_planos_cabecalho_nao_amplia_logo(page: Page):
-    """A marca não pode usar as dimensões originais das imagens no cabeçalho."""
-    page.set_viewport_size({"width": 1366, "height": 768})
-    page.goto(url("planos.html"), wait_until="domcontentloaded")
-    icon = page.locator(".planos-topbar .home-logo-icon")
-    wordmark = page.locator(".planos-topbar .home-wordmark")
+    icon = page.locator(".planos-topbar .planos-brand-icon")
+    name = page.locator(".planos-topbar .planos-brand-name")
+    brand = page.locator(".planos-topbar .planos-brand")
     expect(icon).to_be_visible()
-    expect(wordmark).to_be_visible()
+    expect(name).to_have_text("ChurrasPlan")
+
     icon_box = icon.bounding_box()
-    wordmark_box = wordmark.bounding_box()
-    assert icon_box and wordmark_box
+    name_box = name.bounding_box()
+    brand_box = brand.bounding_box()
+    header_box = page.locator(".planos-topbar").bounding_box()
+    nav_box = page.locator(".planos-topbar nav").bounding_box()
+    assert icon_box and name_box and brand_box and header_box and nav_box
     assert icon_box["width"] <= 46 and icon_box["height"] <= 46
-    assert wordmark_box["width"] <= 168 and wordmark_box["height"] <= 54
-    assert page.locator(".planos-topbar").bounding_box()["height"] <= 150
+    assert name_box["width"] <= 215 and name_box["height"] <= 38
+    assert brand_box["width"] <= 260
+    assert header_box["height"] < 130
+    assert nav_box["x"] > brand_box["x"] + brand_box["width"]
+
+
+def test_planos_logo_compacta_em_tela_pequena(page: Page):
+    """A marca e navegação devem caber no layout mobile."""
+    page.set_viewport_size({"width": 390, "height": 844})
+    page.goto(url("planos.html"), wait_until="networkidle")
+    icon_box = page.locator(".planos-brand-icon").bounding_box()
+    name_box = page.locator(".planos-brand-name").bounding_box()
+    assert icon_box and name_box
+    assert icon_box["width"] <= 40 and icon_box["height"] <= 40
+    assert name_box["width"] <= 205
+    assert page.evaluate("document.documentElement.scrollWidth") <= 392
