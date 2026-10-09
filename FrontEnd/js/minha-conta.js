@@ -82,7 +82,14 @@ document.addEventListener("DOMContentLoaded", async () => {
         // backend e só mostra Premium após verificar pagamento e titularidade.
         if (new URLSearchParams(location.search).get("assinatura") === "retorno") {
             try {
-                assinatura = await ChurrasPlanAPI.billingUsuarioSincronizar();
+                // O webhook pode chegar segundos depois do redirecionamento.
+                // Consulte novamente por um período limitado, mas só exiba
+                // Premium quando o servidor confirmar pagamento e titularidade.
+                for (let tentativa = 0; tentativa < 5; tentativa++) {
+                    assinatura = await ChurrasPlanAPI.billingUsuarioSincronizar();
+                    if (assinatura.beneficios_ativos === true) break;
+                    if (tentativa < 4) await new Promise(resolve => setTimeout(resolve, 2000));
+                }
                 if (assinatura.beneficios_ativos) {
                     mostrarMensagem(document.getElementById("conta-mensagem"), "Sua assinatura Premium de teste foi confirmada.", "sucesso");
                     history.replaceState(null, "", "minha-conta.html");
