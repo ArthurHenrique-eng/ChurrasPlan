@@ -14,6 +14,7 @@ from services.auth import usuario_atual, usuario_atual_com_csrf, usuario_opciona
 from services.catalogo_produtos import ProdutoComercial, converter_produto, resolver_produto
 from services.calculo_precos import obter_melhor_oferta_atual
 from services.precos_referencia import obter_preco_referencia
+from services.entitlements_usuario import exigir_vaga_planejamento
 
 router = APIRouter(prefix="/api/churrascos", tags=["churrascos"])
 
@@ -391,6 +392,7 @@ def repetir_churrasco(churrasco_id: int, payload: RepetirChurrascoIn, usuario: U
         "acompanhamentos_ativos": [e.produto_slug for e in origem.itens_extra if e.tipo == "acompanhamento"],
     }
     novo_payload = ChurrascoCreate.model_validate(dados)
+    exigir_vaga_planejamento(db, usuario)
     novo = Churrasco(chave_cliente=novo_payload.chave_cliente, usuario_id=usuario.id)
     db.add(novo)
     resposta = _recalcular(db, novo, novo_payload); db.commit()
@@ -407,7 +409,9 @@ def vincular_churrasco(
         raise HTTPException(status_code=404, detail="Planejamento não encontrado para esta chave.")
     if churrasco.usuario_id not in {None, usuario.id}:
         raise HTTPException(status_code=409, detail="Este planejamento já pertence a outra conta.")
-    churrasco.usuario_id = usuario.id
+    if churrasco.usuario_id is None:
+        exigir_vaga_planejamento(db, usuario)
+        churrasco.usuario_id = usuario.id
     db.commit(); db.refresh(churrasco)
     return _montar_out(churrasco, _itens_persistidos(churrasco))
 
@@ -435,9 +439,13 @@ def criar_churrasco(payload: ChurrascoCreate, db: Session = Depends(get_db), usu
             _verificar_acesso(churrasco, usuario)
             _limpar_itens(db, churrasco)
         else:
+            if usuario:
+                exigir_vaga_planejamento(db, usuario)
             churrasco = Churrasco(chave_cliente=payload.chave_cliente, usuario_id=usuario.id if usuario else None)
             db.add(churrasco)
-        if usuario and churrasco.usuario_id is None: churrasco.usuario_id = usuario.id
+        if usuario and churrasco.usuario_id is None:
+            exigir_vaga_planejamento(db, usuario)
+            churrasco.usuario_id = usuario.id
         resposta = _recalcular(db, churrasco, payload); db.commit(); return resposta
     except IntegrityError:
         db.rollback()
@@ -445,6 +453,9 @@ def criar_churrasco(payload: ChurrascoCreate, db: Session = Depends(get_db), usu
         churrasco = db.query(Churrasco).filter(Churrasco.chave_cliente == payload.chave_cliente).first()
         if not churrasco: raise
         _verificar_acesso(churrasco, usuario)
+        if usuario and churrasco.usuario_id is None:
+            exigir_vaga_planejamento(db, usuario)
+            churrasco.usuario_id = usuario.id
         _limpar_itens(db, churrasco); resposta = _recalcular(db, churrasco, payload); db.commit(); return resposta
     except ValueError as exc:
         db.rollback(); raise HTTPException(status_code=422, detail=str(exc))
