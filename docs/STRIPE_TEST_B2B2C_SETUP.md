@@ -52,3 +52,59 @@ O backend valida os Price IDs na Stripe e usa metadados de titularidade apenas c
 - O fluxo Premium autoriza o pagamento e expõe status no perfil, mas os recursos Premium específicos ainda precisam ser definidos e aplicados por endpoint. Não considerar uma funcionalidade comercial liberada apenas pelo texto da UI.
 - **Não houve homologação com uma conta Stripe real/teste via rede externa nem deploy nesta mudança.** As credenciais privadas do sandbox não são lidas pelo GitHub.
 - Stripe Invoicing não equivale a documento fiscal brasileiro; Tax/NFS-e e cobrança live exigem implantação e validação à parte.
+
+## Diagnóstico da página de planos
+
+A criação dos produtos e preços no Dashboard Stripe **não** configura o backend
+automaticamente. O `docker-compose.dev.yml` só repassa as variáveis definidas
+no `.env` local. Sem `BILLING_ENABLED=true`, `sk_test_`, `whsec_`
+ou Price IDs ativos correspondentes, os botões permanecem bloqueados
+por segurança.
+
+Se o catálogo do Stripe tiver os produtos **ChurrasPlan Premium (R$ 9,90/mês)**,
+**Parceiro Básico (R$ 49,90/mês)** e **Parceiro Pro (R$ 99,90/mês)**,
+a associação esperada no site é:
+
+| Produto criado no Stripe Sandbox | Plano da vitrine | Variável |
+| --- | --- | --- |
+| ChurrasPlan Premium mensal | Premium | `STRIPE_PRICE_USER_PREMIUM_MONTHLY` |
+| Parceiro Básico mensal | Pro (mercado) | `STRIPE_PRICE_PRO` |
+| Parceiro Pro mensal | Business (mercado) | `STRIPE_PRICE_BUSINESS` |
+
+Os três valores acima são exemplos vistos no ambiente de desenvolvimento,
+não preços fixos no frontend. Os anuais permanecem opcionais: configure
+`STRIPE_PRICE_USER_PREMIUM_YEARLY`, `STRIPE_PRICE_PRO_YEARLY`
+e `STRIPE_PRICE_BUSINESS_YEARLY` somente quando existirem Prices anuais.
+
+Copie cada **ID do preço** (prefixo `price_`, não `prod_`) diretamente
+do sandbox correto em Catálogo de produtos → Produto → Preços. Use uma
+`STRIPE_SECRET_KEY` `sk_test_` da **mesma área restrita**. Não compartilhe
+segredos ou comite `.env`.
+
+Para verificar se os containers receberam a configuração sem revelar segredos,
+execute no PowerShell:
+
+```powershell
+docker compose -f docker-compose.dev.yml exec backend python -c "import os; names=['BILLING_ENABLED','STRIPE_SECRET_KEY','STRIPE_WEBHOOK_SECRET','STRIPE_PRICE_USER_PREMIUM_MONTHLY','STRIPE_PRICE_PRO','STRIPE_PRICE_BUSINESS']; [print(n, 'CONFIGURADO' if os.getenv(n) else 'AUSENTE') for n in names]"
+```
+
+Depois de salvar `.env`, recrie o serviço para reaplicar as variáveis
+de ambiente (sem apagar os volumes):
+
+```powershell
+docker compose -f docker-compose.dev.yml up -d --build --force-recreate
+curl.exe -i http://localhost:8080/api/billing/usuario/catalogo
+curl.exe -i http://localhost:8080/api/billing/planos-publicos
+```
+
+Os dois endpoints devem retornar `planos` com os preços configurados e
+validados. Se houver 502/503, confira os logs do backend e se a chave e
+os Prices pertencem à mesma área restrita:
+
+```powershell
+docker compose -f docker-compose.dev.yml logs --tail=80 backend
+```
+
+A logo da página `planos.html` agora tem tamanhos limitados localmente em
+`css/planos.css`, independentemente dos estilos da home. O PWA deve buscar
+o CSS atualizado; em caso de cache antigo, limpe o Service Worker e recarregue.
