@@ -23,6 +23,7 @@ def stripe_pessoal_fake(monkeypatch):
     monkeypatch.setattr(settings, "STRIPE_PRICE_BUSINESS", "")
     monkeypatch.setattr(settings, "STRIPE_PRICE_USER_PREMIUM_MONTHLY", "price_test_premium_month")
     monkeypatch.setattr(settings, "STRIPE_PRICE_USER_PREMIUM_YEARLY", "price_test_premium_year")
+    monkeypatch.setattr(settings, "STRIPE_EXPECTED_PREMIUM_YEARLY_CENTS", 9990)
     state = {"sessions": {}, "subscriptions": {}, "calls": []}
 
     def gateway(method, path, campos=None, *, idempotency=None):
