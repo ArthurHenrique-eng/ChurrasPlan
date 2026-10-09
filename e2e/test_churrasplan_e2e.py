@@ -328,3 +328,19 @@ def test_planos_publicos_visiveis_e_checkout_bloqueado_sem_sandbox(page: Page):
     page.locator("#planos-periodo").select_option("anual")
     for slug in ("premium", "pro", "business"):
         expect(page.locator(f'[data-plano="{slug}"]')).to_be_disabled()
+
+
+def test_planos_logo_mantem_tamanho_do_cabecalho(page: Page):
+    """Regressão: estilos da home não são importados na vitrine de planos."""
+    page.set_viewport_size({"width": 1366, "height": 900})
+    page.goto(url("planos.html"), wait_until="domcontentloaded")
+    logo = page.locator(".planos-topbar .home-logo-icon").bounding_box()
+    wordmark = page.locator(".planos-topbar .home-wordmark").bounding_box()
+    header = page.locator(".planos-topbar").bounding_box()
+    nav = page.locator(".planos-topbar nav").bounding_box()
+    assert logo and wordmark and header and nav
+    assert logo["width"] <= 55 and logo["height"] <= 55
+    assert wordmark["width"] <= 180 and wordmark["height"] <= 60
+    assert header["height"] < 130
+    assert nav["x"] > logo["x"] + logo["width"]
+
