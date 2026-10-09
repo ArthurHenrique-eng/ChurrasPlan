@@ -72,7 +72,7 @@ async function repetirHistorico(id, botao) {
 
 document.addEventListener("DOMContentLoaded", async () => {
     const usuario = await ChurrasPlanAuth.usuarioAtual().catch(() => null);
-    if (!usuario) { irPara(ChurrasPlanAuth.urlLogin("minha-conta.html")); return; }
+    if (!usuario) { irPara(ChurrasPlanAuth.urlLogin("minha-conta.html" + location.search)); return; }
     document.getElementById("conta-saudacao").textContent = `Olá, ${usuario.nome.split(" ")[0]}.`;
     document.getElementById("conta-perfil").innerHTML = `<strong>${escaparHTML(usuario.nome)}</strong><p class="texto-suave">${escaparHTML(usuario.email)}</p><div class="restriction-chips" style="margin-top:10px"><span>${escaparHTML(usuario.papel)}</span>${usuario.email_verificado_em ? '<span>e-mail verificado</span>' : '<span>verificação pendente</span>'}</div>`;
 
