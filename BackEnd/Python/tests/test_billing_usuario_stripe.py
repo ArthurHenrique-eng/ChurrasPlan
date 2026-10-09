@@ -38,6 +38,9 @@ def stripe_pessoal_fake(monkeypatch):
             user_id = campos["subscription_data[metadata][usuario_id]"]
             yearly = campos["line_items[0][price]"].endswith("_year")
             state["sessions"][sid] = {"id": sid, "status": "open",
+                "payment_status": "unpaid",
+                "client_reference_id": campos["client_reference_id"],
+                "metadata": {"tipo_assinatura": "usuario", "usuario_id": user_id},
                 "url": f"https://checkout.stripe.com/c/pay/test_premium_{index}", "subscription": sub_id}
             state["subscriptions"][sub_id] = {
                 "id": sub_id, "status": "active", "customer": f"cus_premium_{index}",
@@ -76,6 +79,32 @@ def test_catalogo_publico_premium_independe_dos_precos_b2b(client, stripe_pessoa
     assert [(i["periodicidade"], i["centavos"]) for i in resp.json()["planos"]] == [
         ("mensal", 990), ("anual", 9990)]
     assert client.get("/api/billing/planos-publicos").json()["planos"] == []
+
+
+def test_retorno_checkout_premium_reconcilia_apenas_pagamento_confirmado(client, stripe_pessoal_fake):
+    cadastro_login(client, "retorno-premium@example.com")
+    csrf = {"X-CSRF-Token": client.cookies.get("churrasplan_csrf")}
+    payload = {"plano": "premium", "periodicidade": "mensal",
+               "chave_idempotencia": "checkout-retorno-123"}
+    resp = client.post("/api/billing/usuario/checkout", json=payload, headers=csrf)
+    assert resp.status_code == 201
+    assert client.post("/api/billing/usuario/sincronizar").status_code == 403
+    sid = "cs_test_premium_1"
+    checkout = stripe_pessoal_fake["sessions"][sid]
+    # Redirecionamento ou sessão ainda aberta nunca concedem acesso.
+    assert client.post("/api/billing/usuario/sincronizar", headers=csrf).json()["beneficios_ativos"] is False
+    checkout["status"] = "complete"
+    assert client.post("/api/billing/usuario/sincronizar", headers=csrf).json()["beneficios_ativos"] is False
+    checkout["payment_status"] = "paid"
+    checkout["client_reference_id"] = "999999"
+    assert client.post("/api/billing/usuario/sincronizar", headers=csrf).status_code == 409
+    checkout["client_reference_id"] = checkout["metadata"]["usuario_id"]
+    retorno = client.post("/api/billing/usuario/sincronizar", headers=csrf)
+    assert retorno.status_code == 200, retorno.text
+    assert retorno.json()["plano"] == "premium" and retorno.json()["beneficios_ativos"]
+    assert client.get("/api/planos/minha-assinatura").json()["plano"] == "premium"
+    # Operação idempotente, sem criar segunda assinatura.
+    assert client.post("/api/billing/usuario/sincronizar", headers=csrf).json()["beneficios_ativos"]
 
 
 def test_premium_somente_apos_webhook_assinado_e_portal(client, stripe_pessoal_fake):
