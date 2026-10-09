@@ -150,6 +150,7 @@ const ChurrasPlanAPI = {
     billingUsuarioCatalogo(opcoes = {}) { return requisitar("/api/billing/usuario/catalogo", opcoes); },
     billingUsuarioAssinatura(opcoes = {}) { return requisitar("/api/billing/usuario/assinatura", opcoes); },
     billingUsuarioCheckout(payload, opcoes = {}) { return requisitar("/api/billing/usuario/checkout", { ...opcoes, method: "POST", body: JSON.stringify(payload) }); },
+    billingUsuarioSincronizar(opcoes = {}) { return requisitar("/api/billing/usuario/sincronizar", { ...opcoes, method: "POST" }); },
     billingUsuarioPortal(opcoes = {}) { return requisitar("/api/billing/usuario/portal", { ...opcoes, method: "POST" }); },
     billingPlanosPublicos(opcoes = {}) { return requisitar("/api/billing/planos-publicos", opcoes); },
     billingAssinatura(opcoes = {}) { return requisitar("/api/billing/assinatura", opcoesOrganizacao(opcoes)); },
