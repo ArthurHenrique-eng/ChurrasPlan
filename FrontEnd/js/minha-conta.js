@@ -102,7 +102,24 @@ document.addEventListener("DOMContentLoaded", async () => {
             <p>${premiumAtivo ? "Premium de teste ativo, confirmado pela Stripe." : "Você pode conhecer o Premium e os planos comerciais."}</p>
             <small>Status: ${escaparHTML(status)} · Pagamentos reais desativados.</small>
             <div style="margin-top:12px"><a class="botao botao--secundario" href="planos.html">Ver planos</a>
-            ${premiumAtivo ? '<button type="button" id="conta-portal-stripe" class="botao botao--secundario">Gerenciar assinatura</button>' : ""}</div>`;
+            ${premiumAtivo ? '<button type="button" id="conta-portal-stripe" class="botao botao--secundario">Gerenciar assinatura</button>' : '<button type="button" id="conta-sincronizar-stripe" class="botao botao--secundario">Verificar pagamento de teste</button>'}</div>`;
+        const sincronizar = document.getElementById("conta-sincronizar-stripe");
+        if (sincronizar) sincronizar.onclick = async () => {
+            sincronizar.disabled = true;
+            try {
+                const atualizado = await ChurrasPlanAPI.billingUsuarioSincronizar();
+                if (atualizado.beneficios_ativos) {
+                    location.reload();
+                } else {
+                    mostrarMensagem(document.getElementById("conta-mensagem"),
+                        "A Stripe ainda não confirmou uma assinatura Premium paga para esta conta.", "aviso");
+                }
+            } catch (erro) {
+                mostrarMensagem(document.getElementById("conta-mensagem"), erro.message, "erro");
+            } finally {
+                sincronizar.disabled = false;
+            }
+        };
         const portal = document.getElementById("conta-portal-stripe");
         if (portal) portal.onclick = async () => {
             portal.disabled = true;
