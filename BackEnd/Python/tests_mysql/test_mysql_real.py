@@ -442,3 +442,62 @@ def test_mysql_checkout_idempotente_com_duas_transacoes_concorrentes(monkeypatch
             chave_idempotencia=chave).count() == 1
     finally:
         db.close()
+
+
+def test_mysql_free_quota_concorrente_nao_passa_de_cinco():
+    """Simula duas novas criações concorrentes após quatro eventos Free."""
+    _setup_url()
+    from concurrent.futures import ThreadPoolExecutor
+    from threading import Barrier
+    from fastapi import HTTPException
+    from database.connection import SessionLocal
+    from models import Churrasco, Usuario
+    from services.auth import hash_senha
+    from services.entitlements_usuario import exigir_vaga_planejamento
+
+    email = f"quota-b2c-{uuid.uuid4().hex}@example.com"
+    db = SessionLocal()
+    try:
+        user = Usuario(nome="Cota Concorrente", email=email,
+                       senha_hash=hash_senha("SenhaForteTeste123"), papel="usuario", ativo=True)
+        db.add(user)
+        db.flush()
+        user_id = user.id
+        for n in range(4):
+            db.add(Churrasco(usuario_id=user_id, tipo_evento="almoco", duracao_horas=4,
+                             perfil_consumo="normal", chave_cliente=f"b2c-base-{uuid.uuid4().hex}-{n}"))
+        db.commit()
+    finally:
+        db.close()
+    barreira = Barrier(2)
+
+    def tentar_salvar():
+        sessao = SessionLocal()
+        try:
+            user = sessao.get(Usuario, user_id)
+            barreira.wait(timeout=20)
+            try:
+                exigir_vaga_planejamento(sessao, user)
+                sessao.add(Churrasco(usuario_id=user_id, tipo_evento="almoco", duracao_horas=4,
+                                     perfil_consumo="normal", chave_cliente=f"b2c-conc-{uuid.uuid4().hex}"))
+                sessao.commit()
+                return "criado"
+            except HTTPException as exc:
+                sessao.rollback()
+                assert exc.status_code == 409
+                assert exc.detail["codigo"] == "LIMITE_PLANEJAMENTOS_FREE"
+                return "negado"
+        finally:
+            sessao.close()
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        resultados = list(pool.map(lambda _: tentar_salvar(), range(2)))
+    assert sorted(resultados) == ["criado", "negado"]
+    db = SessionLocal()
+    try:
+        assert db.query(Churrasco).filter_by(usuario_id=user_id).count() == 5
+        db.query(Churrasco).filter_by(usuario_id=user_id).delete()
+        db.query(Usuario).filter_by(id=user_id).delete()
+        db.commit()
+    finally:
+        db.close()
