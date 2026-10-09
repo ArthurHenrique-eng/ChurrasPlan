@@ -153,6 +153,24 @@ def test_modelos_escopo_e_downgrade_preservam_dados(client, stripe_pessoal_fake)
     assert client.delete(f"/api/modelos-evento/{modelo}", headers=h).status_code == 204
 
 
+def test_exclusao_lgpd_nao_deixa_assinatura_stripe_aberta(client, stripe_pessoal_fake, monkeypatch):
+    headers = _premium(client, stripe_pessoal_fake, "lgpd-premium-fase1@example.com")
+    export = client.get("/api/privacidade/exportar")
+    assert export.status_code == 200
+    assert export.json()["assinatura_stripe_teste"]["plano_slug"] == "premium"
+    assinatura = next(iter(stripe_pessoal_fake["subscriptions"].values()))
+    monkeypatch.setattr("routers.privacidade.stripe_request",
+                        lambda method, path: assinatura)
+    req = {"senha": "SenhaForte123", "confirmacao": "EXCLUIR"}
+    bloqueio = client.request("DELETE", "/api/privacidade/minha-conta", headers=headers, json=req)
+    assert bloqueio.status_code == 409, bloqueio.text
+    assert bloqueio.json()["detail"]["codigo"] == "ASSINATURA_DEVE_SER_ENCERRADA"
+    assert client.get("/api/auth/me").status_code == 200
+    assinatura["status"] = "canceled"
+    excluiu = client.request("DELETE", "/api/privacidade/minha-conta", headers=headers, json=req)
+    assert excluiu.status_code == 200, excluiu.text
+
+
 def test_csv_protege_formulas_de_planilhas():
     x = {"nome": "=SUM(1,1)", "pessoas": 1, "estimativa_completa": False,
          "itens": [{"nome": "=HYPERLINK(x)", "categoria": "+123", "quantidade_compra": 1,
