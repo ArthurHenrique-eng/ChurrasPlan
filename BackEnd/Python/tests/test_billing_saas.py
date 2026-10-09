@@ -43,6 +43,9 @@ def stripe_fake(monkeypatch):
             org_id = int(campos["metadata[organizacao_id]"])
             plano = campos["metadata[plano_slug]"]
             state["sessions"][session_id] = {"id": session_id, "status": "open",
+                "payment_status": "unpaid", "client_reference_id": str(org_id),
+                "metadata": {"organizacao_id": str(org_id), "plano_slug": plano,
+                             "periodicidade": campos["metadata[periodicidade]"]},
                 "url": f"https://checkout.stripe.com/c/pay/session_{index}", "subscription": sub_id}
             state["subs"][sub_id] = {"id": sub_id, "status": "active",
                 "metadata": {"organizacao_id": str(org_id), "plano_slug": plano},
