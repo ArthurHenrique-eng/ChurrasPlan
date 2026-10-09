@@ -12,6 +12,12 @@
         box.style.borderColor = erro ? "#d88d78" : "#a6bba5";
         box.scrollIntoView({ behavior: "smooth", block: "nearest" });
     };
+    const variaveisPreco = {
+        premium: { mensal: "STRIPE_PRICE_USER_PREMIUM_MONTHLY", anual: "STRIPE_PRICE_USER_PREMIUM_YEARLY" },
+        pro: { mensal: "STRIPE_PRICE_PRO", anual: "STRIPE_PRICE_PRO_YEARLY" },
+        business: { mensal: "STRIPE_PRICE_BUSINESS", anual: "STRIPE_PRICE_BUSINESS_YEARLY" }
+    };
+    const catalogoFalhou = { usuario: false, parceiro: false };
     function mostrar() {
         for (const plano of ["premium", "pro", "business"]) {
             const publico = plano === "premium" ? "usuario" : "parceiro";
@@ -21,9 +27,15 @@
             el("preco-" + plano).textContent = achado
                 ? formato(achado.centavos) + (periodicidade() === "mensal" ? " / mês" : " / ano")
                 : "Indisponível no teste";
-            el("aviso-" + plano).textContent = achado
-                ? "Preço do Stripe Test. Nenhuma cobrança real."
-                : "Cadastre o Price ID de " + periodicidade() + " no ambiente de testes.";
+            const nota = el("aviso-" + plano);
+            if (achado) {
+                nota.textContent = "Preço validado no Stripe Test. Nenhuma cobrança real.";
+            } else if (catalogoFalhou[publico]) {
+                nota.textContent = "Falha ao consultar o Stripe Test. Verifique chave sk_test_, Price ID e logs da API.";
+            } else {
+                nota.textContent = "Configuração pendente no backend: verifique BILLING_ENABLED=true, sk_test_, whsec_ e " +
+                    variaveisPreco[plano][periodicidade()] + " no .env.";
+            }
         }
     }
     const chave = () => (window.crypto && crypto.randomUUID ? crypto.randomUUID() :
@@ -82,6 +94,8 @@
         usuario = u.status === "fulfilled" ? u.value : null;
         precos.usuario = p.status === "fulfilled" ? (p.value.planos || []) : [];
         precos.parceiro = m.status === "fulfilled" ? (m.value.planos || []) : [];
+        catalogoFalhou.usuario = p.status === "rejected";
+        catalogoFalhou.parceiro = m.status === "rejected";
         mostrar();
         if (params.has("contratar") && usuario) aviso("Você já está conectado. Escolha o plano para abrir o Checkout Stripe Test.", false);
         if (p.status === "rejected" || m.status === "rejected")
