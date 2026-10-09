@@ -1,4 +1,4 @@
-const VERSION = "churrasplan-v6.5.1";
+const VERSION = "churrasplan-v6.9.1";
 const STATIC_CACHE = `${VERSION}-static`;
 const PAGE_CACHE = `${VERSION}-pages`;
 const STATIC_ASSETS = [
@@ -39,6 +39,7 @@ self.addEventListener("activate", (event) => {
 
 function isApi(requestUrl) { return requestUrl.pathname.startsWith("/api/"); }
 function isStatic(requestUrl) { return /\.(?:css|js|png|jpg|jpeg|svg|webp|woff2?|webmanifest)$/.test(requestUrl.pathname); }
+function isApplicationCode(requestUrl) { return /\.(?:js|css)$/.test(requestUrl.pathname); }
 
 self.addEventListener("fetch", (event) => {
   const request = event.request;
@@ -65,12 +66,26 @@ self.addEventListener("fetch", (event) => {
 
   if (isStatic(url)) {
     event.respondWith((async () => {
+      // Scripts e estilos precisam acompanhar cada deploy. Cache-first mantinha
+      // config.js antigo (API :8000), quebrando autenticação no Docker :8080.
+      // force-cache nunca deve ser usado para o código da aplicação.
+      if (isApplicationCode(url)) {
+        try {
+          const fresh = await fetch(request, { cache: "no-store" });
+          if (fresh.ok) {
+            (await caches.open(STATIC_CACHE)).put(request, fresh.clone());
+            return fresh;
+          }
+        } catch { /* offline: reutiliza o último código disponível */ }
+        return (await caches.match(request)) || new Response("", { status: 504 });
+      }
       const cached = await caches.match(request);
-      const network = fetch(request).then(async (response) => {
-        if (response.ok) (await caches.open(STATIC_CACHE)).put(request, response.clone());
-        return response;
-      }).catch(() => null);
-      return cached || await network || new Response("", { status: 504 });
+      if (cached) return cached;
+      try {
+        const fresh = await fetch(request);
+        if (fresh.ok) (await caches.open(STATIC_CACHE)).put(request, fresh.clone());
+        return fresh;
+      } catch { return new Response("", { status: 504 }); }
     })());
   }
 });
