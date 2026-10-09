@@ -72,6 +72,16 @@ class Settings:
     STRIPE_PRICE_PRO_YEARLY: str = os.getenv("STRIPE_PRICE_PRO_YEARLY", "")
     STRIPE_PRICE_BUSINESS_YEARLY: str = os.getenv("STRIPE_PRICE_BUSINESS_YEARLY", "")
     BILLING_GRACE_DAYS: int = int(os.getenv("BILLING_GRACE_DAYS", "3"))
+    # Valores comerciais aprovados em centavos. Se um Price ID do Sandbox
+    # apontar para outro valor, falhar fechado antes de abrir Checkout.
+    # Anuais ficam sem valor presumido (0) até aprovação comercial específica.
+    STRIPE_EXPECTED_PREMIUM_MONTHLY_CENTS: int = int(os.getenv("STRIPE_EXPECTED_PREMIUM_MONTHLY_CENTS", "990"))
+    STRIPE_EXPECTED_PRO_MONTHLY_CENTS: int = int(os.getenv("STRIPE_EXPECTED_PRO_MONTHLY_CENTS", "4990"))
+    STRIPE_EXPECTED_BUSINESS_MONTHLY_CENTS: int = int(os.getenv("STRIPE_EXPECTED_BUSINESS_MONTHLY_CENTS", "9990"))
+    STRIPE_EXPECTED_PREMIUM_YEARLY_CENTS: int = int(os.getenv("STRIPE_EXPECTED_PREMIUM_YEARLY_CENTS", "0"))
+    STRIPE_EXPECTED_PRO_YEARLY_CENTS: int = int(os.getenv("STRIPE_EXPECTED_PRO_YEARLY_CENTS", "0"))
+    STRIPE_EXPECTED_BUSINESS_YEARLY_CENTS: int = int(os.getenv("STRIPE_EXPECTED_BUSINESS_YEARLY_CENTS", "0"))
+
     # Produtos B2C test-only: ambos opcionais; configure os Price IDs do sandbox.
     STRIPE_PRICE_USER_PREMIUM_MONTHLY: str = os.getenv("STRIPE_PRICE_USER_PREMIUM_MONTHLY", "")
     STRIPE_PRICE_USER_PREMIUM_YEARLY: str = os.getenv("STRIPE_PRICE_USER_PREMIUM_YEARLY", "")
