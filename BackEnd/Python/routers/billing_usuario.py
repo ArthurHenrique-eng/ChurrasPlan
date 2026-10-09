@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import hashlib
 import re
-from urllib.parse import quote
+from urllib.parse import quote, urlencode
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -16,7 +16,7 @@ from models import AssinaturaStripeUsuario, TentativaCheckoutUsuario, Usuario
 from services.auth import usuario_atual, usuario_atual_com_csrf
 from services.billing import stripe_request, validar_destino
 from services.billing_usuario import (billing_usuario_habilitado, exigir_billing_usuario,
-    validar_preco_usuario, preco_usuario, assinatura_usuario_efetiva, resumo_usuario)
+    validar_preco_usuario, preco_usuario, assinatura_usuario_efetiva, resumo_usuario, reconciliar_usuario)
 
 router = APIRouter(prefix="/api/billing/usuario", tags=["billing-usuario"])
 
@@ -137,6 +137,106 @@ def sincronizar_premium(
         return {**resumo_usuario(row), "sincronizado": True}
 
     return {**resumo_usuario(atual), "sincronizado": False}
+
+
+class TrocarPeriodoPremiumBody(BaseModel):
+    periodicidade: Literal["mensal", "anual"]
+    chave_idempotencia: str
+
+
+def _assinatura_gerenciavel(db: Session, usuario: Usuario) -> AssinaturaStripeUsuario:
+    atual = db.query(AssinaturaStripeUsuario).filter_by(usuario_id=usuario.id).with_for_update().first()
+    if not atual or not atual.stripe_subscription_id:
+        raise HTTPException(status_code=404, detail="Nenhuma assinatura Premium Stripe Test vinculada.")
+    return atual
+
+
+@router.get("/faturas")
+def faturas_pessoais(usuario: Usuario = Depends(usuario_atual), db: Session = Depends(get_db)):
+    atual = db.get(AssinaturaStripeUsuario, usuario.id)
+    if not atual or not atual.stripe_customer_id:
+        return []
+    if not billing_usuario_habilitado():
+        raise HTTPException(status_code=503, detail="Stripe Test não configurado.")
+    resposta = stripe_request("GET", "/v1/invoices?" + urlencode({
+        "customer": atual.stripe_customer_id, "limit": 20,
+    }))
+    return [{
+        "id": inv["id"], "status": inv.get("status"),
+        "moeda": (inv.get("currency") or "").upper(),
+        "total_centavos": inv.get("total"), "pago_centavos": inv.get("amount_paid"),
+        "criado_em": inv.get("created"),
+    } for inv in resposta.get("data", []) if isinstance(inv, dict)
+        and inv.get("customer") == atual.stripe_customer_id
+        and isinstance(inv.get("id"), str) and inv["id"].startswith("in_")]
+
+
+@router.post("/cancelar")
+def cancelar_premium(usuario: Usuario = Depends(usuario_atual_com_csrf), db: Session = Depends(get_db)):
+    if not billing_usuario_habilitado():
+        raise HTTPException(status_code=503, detail="Stripe Test não configurado.")
+    atual = _assinatura_gerenciavel(db, usuario)
+    if atual.cancelamento_agendado or atual.status in ("canceled", "incomplete_expired"):
+        raise HTTPException(status_code=409, detail="Assinatura já cancelada ou com cancelamento agendado.")
+    resposta = stripe_request("POST", "/v1/subscriptions/" + quote(atual.stripe_subscription_id, safe=""),
+        {"cancel_at_period_end": "true"},
+        idempotency="churrasplan-b2c-cancel-" + str(usuario.id) + "-" + atual.stripe_subscription_id)
+    if resposta.get("id") != atual.stripe_subscription_id:
+        raise HTTPException(status_code=502, detail="Cancelamento Stripe Test não confirmado.")
+    atual = reconciliar_usuario(db, atual.stripe_subscription_id)
+    db.commit()
+    return {**resumo_usuario(atual), "mensagem": "Cancelamento agendado para o fim do período."}
+
+
+@router.post("/reativar")
+def reativar_premium(usuario: Usuario = Depends(usuario_atual_com_csrf), db: Session = Depends(get_db)):
+    if not billing_usuario_habilitado():
+        raise HTTPException(status_code=503, detail="Stripe Test não configurado.")
+    atual = _assinatura_gerenciavel(db, usuario)
+    if not atual.cancelamento_agendado or atual.status != "active" or not assinatura_usuario_efetiva(atual):
+        raise HTTPException(status_code=409, detail="Não existe cancelamento agendado elegível à reativação.")
+    resposta = stripe_request("POST", "/v1/subscriptions/" + quote(atual.stripe_subscription_id, safe=""),
+        {"cancel_at_period_end": "false"},
+        idempotency="churrasplan-b2c-reactivate-" + str(usuario.id) + "-" + atual.stripe_subscription_id)
+    if resposta.get("id") != atual.stripe_subscription_id:
+        raise HTTPException(status_code=502, detail="Reativação Stripe Test não confirmada.")
+    atual = reconciliar_usuario(db, atual.stripe_subscription_id)
+    db.commit()
+    return resumo_usuario(atual)
+
+
+@router.post("/trocar-periodo")
+def trocar_periodo_premium(
+    payload: TrocarPeriodoPremiumBody,
+    usuario: Usuario = Depends(usuario_atual_com_csrf), db: Session = Depends(get_db),
+):
+    exigir_billing_usuario(payload.periodicidade)
+    if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]{7,79}", payload.chave_idempotencia):
+        raise HTTPException(status_code=422, detail="Chave de idempotência inválida.")
+    atual = _assinatura_gerenciavel(db, usuario)
+    if (not assinatura_usuario_efetiva(atual) or atual.cancelamento_agendado
+            or atual.periodicidade == payload.periodicidade):
+        raise HTTPException(status_code=409, detail="Troca indisponível: assinatura inativa, cancelada ou período igual.")
+    validar_preco_usuario(payload.periodicidade)
+    remoto = stripe_request("GET", "/v1/subscriptions/" + quote(atual.stripe_subscription_id, safe=""))
+    itens = (remoto.get("items") or {}).get("data") or []
+    if (remoto.get("id") != atual.stripe_subscription_id or len(itens) != 1
+            or not isinstance(itens[0].get("id"), str)
+            or (itens[0].get("price") or {}).get("id") != preco_usuario(atual.periodicidade)):
+        raise HTTPException(status_code=409, detail="Assinatura remota divergente; sincronize antes de trocar.")
+    resposta = stripe_request("POST", "/v1/subscriptions/" + quote(atual.stripe_subscription_id, safe=""), {
+        "items[0][id]": itens[0]["id"],
+        "items[0][price]": preco_usuario(payload.periodicidade),
+        "payment_behavior": "pending_if_incomplete",
+        "proration_behavior": "always_invoice",
+    }, idempotency=hashlib.sha256(
+        f"churrasplan-b2c-change|{usuario.id}|{payload.chave_idempotencia}|{payload.periodicidade}".encode()
+    ).hexdigest())
+    if resposta.get("id") != atual.stripe_subscription_id:
+        raise HTTPException(status_code=502, detail="Troca Stripe Test não confirmada.")
+    atual = reconciliar_usuario(db, atual.stripe_subscription_id)
+    db.commit()
+    return {**resumo_usuario(atual), "mensagem": "Troca solicitada; benefícios dependem da confirmação Stripe."}
 
 
 @router.post("/portal")
