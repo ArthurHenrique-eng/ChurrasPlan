@@ -11,6 +11,7 @@ from schemas.otimizacao import (
 from services.auth import usuario_atual, usuario_atual_com_csrf
 from services.geoapify import autocomplete_enderecos, buscar_proximos, buscar_tile_mapa
 from services.otimizacao import distancia_km, otimizar_compra
+from services.entitlements_usuario import exigir_premium_usuario
 
 router = APIRouter(prefix="/api/onde-comprar", tags=["onde-comprar"])
 
@@ -143,6 +144,37 @@ def comparar_churrasco_post(
         raise HTTPException(status_code=404, detail="Lista de compras não encontrada.")
     dados = otimizar_compra(db, lista, payload.latitude, payload.longitude, payload.modo)
     return OtimizacaoOut(churrasco_id=c.id, modo=payload.modo, **dados)
+
+
+@router.post("/churrasco/{churrasco_id}/comparacao-avancada")
+def comparacao_avancada(
+    churrasco_id: int, payload: OtimizacaoConsultaIn,
+    usuario: Usuario = Depends(usuario_atual), db: Session = Depends(get_db),
+):
+    """Indicadores Premium além do comparador básico, com ofertas verificadas."""
+    exigir_premium_usuario(db, usuario, "comparacao_avancada")
+    churrasco = _churrasco_usuario(db, churrasco_id, usuario)
+    if not churrasco.lista_compras:
+        raise HTTPException(status_code=404, detail="Lista de compras não encontrada.")
+    dados = otimizar_compra(db, churrasco.lista_compras, payload.latitude, payload.longitude, payload.modo)
+    cestas = dados["cestas"]
+    completas = [c for c in cestas if c["cobertura_percentual"] == 100]
+    ordenadas = sorted(completas, key=lambda c: c["total"])
+    custo_unica = ordenadas[0]["total"] if ordenadas else None
+    custo_multiplas = dados["compra_otimizada"]["total"]
+    return {
+        "churrasco_id": churrasco_id, "modo": payload.modo,
+        "lojas_com_ofertas": len(cestas), "lojas_com_cesta_completa": len(completas),
+        "melhor_cesta_completa": ordenadas[0] if ordenadas else None,
+        "alternativas_completas": ordenadas[:5],
+        "compra_por_multiplas_lojas": dados["compra_otimizada"],
+        "economia_potencial": (
+            round(custo_unica - custo_multiplas, 2)
+            if custo_unica is not None and custo_multiplas is not None else None
+        ),
+        "aviso": dados["aviso"],
+        "observacao": "Comparação de ofertas cadastradas; não confirma estoque ou compra realizada.",
+    }
 
 
 @router.post("/interacoes", status_code=204)
