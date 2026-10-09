@@ -105,7 +105,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         const premiumAtivo = assinatura.beneficios_ativos === true;
         const status = assinatura.status || "sem_assinatura";
         document.getElementById("conta-plano").innerHTML =
-            `<strong>Plano pessoal: ${escaparHTML(premiumAtivo ? "Premium" : (assinatura.plano || usuario.plano))}</strong>
+            `<strong>Plano pessoal: ${escaparHTML(premiumAtivo ? "Premium" : "Gratuito")}</strong>
             <p>${premiumAtivo ? "Premium de teste ativo, confirmado pela Stripe." : "Você pode conhecer o Premium e os planos comerciais."}</p>
             <small>Status: ${escaparHTML(status)} · Pagamentos reais desativados.</small>
             <div style="margin-top:12px"><a class="botao botao--secundario" href="planos.html">Ver planos</a>
