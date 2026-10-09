@@ -64,7 +64,10 @@ def detalhar_custos(churrasco, itens) -> dict:
 def exportar_csv(relatorio: dict) -> bytes:
     stream = io.StringIO(newline="")
     out = csv.writer(stream, delimiter=";")
-    out.writerow(["ChurrasPlan - Planejamento Premium", relatorio["nome"]])
+    nome_evento = relatorio["nome"]
+    if nome_evento.startswith(("=", "+", "-", "@", "\\t", "\\r")):
+        nome_evento = "'" + nome_evento
+    out.writerow(["ChurrasPlan - Planejamento Premium", nome_evento])
     out.writerow(["Pessoas", relatorio["pessoas"]])
     out.writerow(["Estimativa completa", "sim" if relatorio["estimativa_completa"] else "nao"])
     out.writerow(["Item", "Categoria", "Quantidade de compra", "Unidade", "Preco unitario estimado (BRL)",
