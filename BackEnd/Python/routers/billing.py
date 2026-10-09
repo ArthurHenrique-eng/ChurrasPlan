@@ -123,8 +123,10 @@ def criar_checkout(
         "subscription_data[metadata][organizacao_id]": str(org.id),
         "subscription_data[metadata][plano_slug]": payload.plano,
         "subscription_data[metadata][periodicidade]": payload.periodicidade,
-        "success_url": settings.PUBLIC_APP_URL.rstrip("/") + "/parceiro.html?cobranca=retorno",
-        "cancel_url": settings.PUBLIC_APP_URL.rstrip("/") + "/parceiro.html?cobranca=cancelada",
+        "success_url": (settings.PUBLIC_APP_URL.rstrip("/")
+                        + f"/minha-conta.html?cobranca=retorno&organizacao_id={org.id}"),
+        "cancel_url": (settings.PUBLIC_APP_URL.rstrip("/")
+                       + f"/minha-conta.html?cobranca=cancelada&organizacao_id={org.id}"),
     }
     if atual and atual.stripe_customer_id:
         campos.pop("customer_email")
@@ -237,10 +239,36 @@ def sincronizar_assinatura(
     bloquear_organizacao(db, org.id)
     atual = _assinatura(db, org.id)
     if not atual or not atual.stripe_subscription_id:
-        return {**resumo_billing(atual), "mensagem": "Sem assinatura vinculada."}
-    reconciliar_assinatura(db, atual.stripe_subscription_id)
+        # Webhook ainda não processado: recupere apenas um Checkout registrado
+        # localmente, concluído e pago para a organização do proprietário.
+        tentativas = (db.query(TentativaCheckout)
+                     .filter_by(organizacao_id=org.id)
+                     .order_by(TentativaCheckout.id.desc()).limit(10).all())
+        for tentativa in tentativas:
+            sessao = stripe_request("GET", "/v1/checkout/sessions/" + quote(tentativa.stripe_session_id, safe=""))
+            if sessao.get("id") != tentativa.stripe_session_id:
+                raise HTTPException(status_code=409, detail="Checkout Stripe divergente.")
+            if sessao.get("status") != "complete" or sessao.get("payment_status") != "paid":
+                continue
+            if sessao.get("client_reference_id") != str(org.id):
+                raise HTTPException(status_code=409, detail="Organização do Checkout divergente.")
+            meta = sessao.get("metadata") or {}
+            if (meta.get("organizacao_id") != str(org.id) or meta.get("plano_slug") != tentativa.plano_slug
+                    or meta.get("periodicidade") != tentativa.periodicidade):
+                raise HTTPException(status_code=409, detail="Metadata do Checkout da organização divergente.")
+            sub_id = sessao.get("subscription")
+            if isinstance(sub_id, dict):
+                sub_id = sub_id.get("id")
+            if not isinstance(sub_id, str) or not sub_id.startswith("sub_"):
+                continue
+            atual = reconciliar_assinatura(db, sub_id, sessao=tentativa)
+            db.commit()
+            return {**resumo_billing(atual), "organizacao_id": org.id, "sincronizado": True}
+        return {**resumo_billing(atual), "organizacao_id": org.id,
+                "sincronizado": False, "mensagem": "Checkout ainda não confirmado pelo Stripe Test."}
+    atual = reconciliar_assinatura(db, atual.stripe_subscription_id)
     db.commit()
-    return resumo_billing(atual)
+    return {**resumo_billing(atual), "organizacao_id": org.id, "sincronizado": True}
 
 
 @router.post("/portal")
@@ -256,7 +284,7 @@ def portal_cliente(
         raise HTTPException(status_code=404, detail="Cliente Stripe ainda não vinculado.")
     portal = stripe_request("POST", "/v1/billing_portal/sessions", {
         "customer": atual.stripe_customer_id,
-        "return_url": settings.PUBLIC_APP_URL.rstrip("/") + "/parceiro.html",
+        "return_url": settings.PUBLIC_APP_URL.rstrip("/") + f"/minha-conta.html?cobranca=portal&organizacao_id={org.id}",
     })
     return {"portal_url": validar_destino(portal.get("url", ""), "billing.stripe.com")}
 
