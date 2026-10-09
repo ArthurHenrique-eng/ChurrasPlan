@@ -36,10 +36,12 @@ def exigir_premium_usuario(db: Session, usuario: Usuario, recurso: str) -> None:
         })
 
 
-def total_planejamentos(db: Session, usuario_id: int) -> int:
-    return int(db.execute(
-        select(func.count(Churrasco.id)).where(Churrasco.usuario_id == usuario_id)
-    ).scalar_one())
+def total_planejamentos(db: Session, usuario_id: int, *, bloqueio: bool = False) -> int:
+    stmt = select(func.count(Churrasco.id)).where(Churrasco.usuario_id == usuario_id)
+    if bloqueio:
+        # Leitura corrente InnoDB mesmo que transação tenha aberto snapshot RR.
+        stmt = stmt.with_for_update()
+    return int(db.execute(stmt).scalar_one())
 
 
 def exigir_vaga_planejamento(db: Session, usuario: Usuario) -> None:
@@ -49,7 +51,7 @@ def exigir_vaga_planejamento(db: Session, usuario: Usuario) -> None:
         raise HTTPException(status_code=404, detail="Conta não encontrada.")
     if premium_usuario(db, usuario.id):
         return
-    uso = total_planejamentos(db, usuario.id)
+    uso = total_planejamentos(db, usuario.id, bloqueio=True)
     if uso >= LIMITE_FREE_PLANEJAMENTOS:
         raise HTTPException(status_code=409, detail={
             "codigo": "LIMITE_PLANEJAMENTOS_FREE",
