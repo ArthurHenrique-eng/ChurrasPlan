@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from urllib.parse import quote
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, Response
@@ -9,11 +10,12 @@ from sqlalchemy.orm import Session, joinedload
 from config import settings
 from database.connection import get_db
 from models import (
-    AssinaturaUsuario, Churrasco, ConsentimentoUsuario, Estabelecimento, Preco,
+    AssinaturaUsuario, AssinaturaStripeUsuario, Churrasco, ConsentimentoUsuario, Estabelecimento, Preco,
     Usuario,
 )
 from schemas.privacidade import ExclusaoContaIn, PreferenciaMarketingIn
 from services.auth import limpar_cookies, usuario_atual, usuario_atual_com_csrf, verificar_senha
+from services.billing import stripe_request
 
 router = APIRouter(prefix="/api/privacidade", tags=["privacidade-lgpd"])
 
@@ -119,6 +121,7 @@ def exportar_meus_dados(usuario: Usuario = Depends(usuario_atual), db: Session =
     estabelecimentos = db.query(Estabelecimento).filter(Estabelecimento.usuario_responsavel_id == usuario.id).all()
     consentimentos = db.query(ConsentimentoUsuario).filter(ConsentimentoUsuario.usuario_id == usuario.id).all()
     assinatura = db.query(AssinaturaUsuario).filter(AssinaturaUsuario.usuario_id == usuario.id).all()
+    assinatura_stripe = db.get(AssinaturaStripeUsuario, usuario.id)
 
     return {
         "formato": "ChurrasPlan-LGPD-export-v1",
@@ -127,6 +130,7 @@ def exportar_meus_dados(usuario: Usuario = Depends(usuario_atual), db: Session =
         "churrascos": dados_churrascos,
         "estabelecimentos_responsavel": [_modelo_dict(e) for e in estabelecimentos],
         "assinaturas": [_modelo_dict(a) for a in assinatura],
+        "assinatura_stripe_teste": _modelo_dict(assinatura_stripe) if assinatura_stripe else None,
         "observacao": "Tokens de autenticação, hashes de senha e segredos de sessão não fazem parte da exportação.",
     }
 
@@ -143,6 +147,19 @@ def excluir_minha_conta(
     if not verificar_senha(payload.senha, usuario.senha_hash):
         raise HTTPException(status_code=403, detail="Senha incorreta.")
 
+    # Remover o usuário antes de encerrar a assinatura remota poderia deixar
+    # cobrança em aberto e perder a referência de titularidade. Falhe fechado.
+    assinatura_stripe = db.get(AssinaturaStripeUsuario, usuario.id)
+    if assinatura_stripe and assinatura_stripe.stripe_subscription_id:
+        sid = assinatura_stripe.stripe_subscription_id
+        remoto = stripe_request("GET", "/v1/subscriptions/" + quote(sid, safe=""))
+        if remoto.get("id") != sid:
+            raise HTTPException(status_code=502, detail="Assinatura Stripe inconsistente.")
+        if remoto.get("status") not in {"canceled", "incomplete_expired"}:
+            raise HTTPException(status_code=409, detail={
+                "codigo": "ASSINATURA_DEVE_SER_ENCERRADA",
+                "mensagem": "Encerre a assinatura Stripe no portal e aguarde confirmação do término antes de excluir a conta.",
+            })
     # Eventos privados pertencem ao usuário e são removidos. Registros de negócio
     # (estabelecimentos/ofertas) permanecem apenas de forma desvinculada da pessoa.
     for churrasco in list(usuario.churrascos):
