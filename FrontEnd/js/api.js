@@ -79,6 +79,10 @@ function definirOrganizacaoAtiva(id) {
     organizacaoAtivaMemoria = id ? String(id) : null;
 }
 function opcoesOrganizacao(opcoes = {}) {
+    // O retorno autenticado do Checkout pode se referir a uma organização
+    // diferente da selecionada na aba anterior. A escolha explícita prevalece;
+    // o backend valida a titularidade, nunca confia no valor do navegador.
+    if (opcoes.headers?.["X-Organizacao-ID"]) return opcoes;
     let id = organizacaoAtivaMemoria;
     if (!id) {
         try { id = sessionStorage.getItem("churrasplan_organizacao_id"); } catch { /* fallback */ }
