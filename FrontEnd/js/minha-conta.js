@@ -77,7 +77,24 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("conta-perfil").innerHTML = `<strong>${escaparHTML(usuario.nome)}</strong><p class="texto-suave">${escaparHTML(usuario.email)}</p><div class="restriction-chips" style="margin-top:10px"><span>${escaparHTML(usuario.papel)}</span>${usuario.email_verificado_em ? '<span>e-mail verificado</span>' : '<span>verificação pendente</span>'}</div>`;
 
     try {
-        const assinatura = await ChurrasPlanAPI.minhaAssinatura();
+        let assinatura = await ChurrasPlanAPI.minhaAssinatura();
+        // O retorno do Checkout não concede direitos: consulta a Stripe pelo
+        // backend e só mostra Premium após verificar pagamento e titularidade.
+        if (new URLSearchParams(location.search).get("assinatura") === "retorno") {
+            try {
+                assinatura = await ChurrasPlanAPI.billingUsuarioSincronizar();
+                if (assinatura.beneficios_ativos) {
+                    mostrarMensagem(document.getElementById("conta-mensagem"), "Sua assinatura Premium de teste foi confirmada.", "sucesso");
+                    history.replaceState(null, "", "minha-conta.html");
+                } else {
+                    mostrarMensagem(document.getElementById("conta-mensagem"),
+                        "Pagamento ainda não confirmado na conta. Confira o webhook Stripe Test e atualize esta página.", "aviso");
+                }
+            } catch (erro) {
+                mostrarMensagem(document.getElementById("conta-mensagem"),
+                    "Não foi possível confirmar a assinatura: " + erro.message, "erro");
+            }
+        }
         const premiumAtivo = assinatura.beneficios_ativos === true;
         const status = assinatura.status || "sem_assinatura";
         document.getElementById("conta-plano").innerHTML =
