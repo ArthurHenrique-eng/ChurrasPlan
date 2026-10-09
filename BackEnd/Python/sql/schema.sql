@@ -244,6 +244,17 @@ CREATE TABLE eventos_billing (
 ) ENGINE=InnoDB;
 
 
+CREATE TABLE modelos_evento_usuario (
+    id INTEGER NOT NULL AUTO_INCREMENT,
+    usuario_id INTEGER NOT NULL,
+    nome VARCHAR(150) NOT NULL,
+    dados JSON NOT NULL,
+    criado_em DATETIME NOT NULL DEFAULT now(),
+    PRIMARY KEY (id),
+    FOREIGN KEY(usuario_id) REFERENCES usuarios (id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+CREATE INDEX ix_modelos_evento_usuario_usuario_id ON modelos_evento_usuario (usuario_id);
+
 CREATE TABLE assinaturas_stripe_usuario (
     usuario_id INTEGER NOT NULL,
     stripe_customer_id VARCHAR(100),
