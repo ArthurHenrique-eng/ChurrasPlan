@@ -23,8 +23,12 @@ def billing_usuario_habilitado(periodicidade: str | None = None) -> bool:
             and settings.STRIPE_WEBHOOK_SECRET.startswith("whsec_")):
         return False
     if periodicidade:
-        return periodicidade in PRICE_FIELDS_USUARIO and getattr(settings, PRICE_FIELDS_USUARIO[periodicidade], "").startswith("price_")
-    return any(getattr(settings, v, "").startswith("price_") for v in PRICE_FIELDS_USUARIO.values())
+        if periodicidade not in PRICE_FIELDS_USUARIO:
+            return False
+        if periodicidade == "anual" and settings.STRIPE_EXPECTED_PREMIUM_YEARLY_CENTS <= 0:
+            return False  # não anunciar anual sem valor comercial aprovado
+        return getattr(settings, PRICE_FIELDS_USUARIO[periodicidade], "").startswith("price_")
+    return any(billing_usuario_habilitado(p) for p in PRICE_FIELDS_USUARIO)
 
 
 def exigir_billing_usuario(periodicidade: str) -> None:
