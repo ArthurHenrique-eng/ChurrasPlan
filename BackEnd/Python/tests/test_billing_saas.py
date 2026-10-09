@@ -35,7 +35,7 @@ def stripe_fake(monkeypatch):
             price_id = path.removeprefix("/v1/prices/")
             return {"id": price_id, "currency": "brl", "active": True,
                     "recurring": {"interval": "month", "interval_count": 1},
-                    "unit_amount": 1990 if price_id.endswith("_pro") else 4990}
+                    "unit_amount": 4990 if price_id.endswith("_pro") else 9990}
         if method == "POST" and path == "/v1/checkout/sessions":
             index = len(state["sessions"]) + 1
             session_id = f"cs_test_session_{index}"
@@ -59,7 +59,7 @@ def stripe_fake(monkeypatch):
             from urllib.parse import parse_qs, urlsplit
             customer = parse_qs(urlsplit(path).query).get("customer", [""])[0]
             return {"data": [{"id": "in_fake_1", "customer": customer, "currency": "brl",
-                              "total": 1990, "amount_paid": 1990, "status": "paid", "created": int(time.time())}]}
+                              "total": 4990, "amount_paid": 4990, "status": "paid", "created": int(time.time())}]}
         if method == "POST" and path.startswith("/v1/subscriptions/"):
             item = state["subs"][path.rsplit("/", 1)[-1]]
             if "cancel_at_period_end" in campos:
@@ -125,7 +125,7 @@ def test_checkout_webhook_assinatura_ativa_replay_e_cancelamento(client, stripe_
     assert ent["pagamentos_habilitados"] is False
     assert ent["billing"]["status"] == "active"
     assert client.get("/api/billing/assinatura").json()["beneficios_ativos"] is True
-    assert client.get("/api/billing/catalogo").json()["planos"][0]["centavos"] == 1990
+    assert client.get("/api/billing/catalogo").json()["planos"][0]["centavos"] == 4990
     assert client.post("/api/billing/checkout", headers=h,
                        json={"plano": "business", "chave_idempotencia": "outro-checkout"}).status_code == 409
     portal = client.post("/api/billing/portal", headers=h)
@@ -238,7 +238,7 @@ def test_fatura_e_troca_de_planos_dependem_da_confirmacao_stripe(client, stripe_
     assert signed_webhook(client, "customer.subscription.updated",
         {"id": "sub_test_1"}, event_id="evt_novo_plano").status_code == 200
     assert client.get("/api/parceiro/entitlements").json()["plano"] == "business"
-    assert client.get("/api/billing/faturas").json()[0]["total_centavos"] == 1990
+    assert client.get("/api/billing/faturas").json()[0]["total_centavos"] == 4990
     db = next(app.dependency_overrides[get_db]())
     try:
         assert db.get(AssinaturaOrganizacao, org).plano_slug == "business"
