@@ -61,6 +61,8 @@ document.addEventListener("DOMContentLoaded", async () => {
                         await carregarPessoal();
                     }));
                     const novoPeriodo = assinatura.periodicidade === "anual" ? "mensal" : "anual";
+                    const catalogo = await ChurrasPlanAPI.billingUsuarioCatalogo().catch(() => ({planos: []}));
+                    if ((catalogo.planos || []).some(p => p.periodicidade === novoPeriodo)) {
                     controls.appendChild(button("Trocar para " + novoPeriodo, async () => {
                         if (!confirm("Alterar o período no Stripe Test? Pode gerar fatura de teste.")) return;
                         await ChurrasPlanAPI.billingUsuarioTrocarPeriodo({
@@ -69,6 +71,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                         });
                         await carregarPessoal();
                     }));
+                    }
                 } else {
                     controls.appendChild(button("Sincronizar pagamento", async () => {
                         await ChurrasPlanAPI.billingUsuarioSincronizar();
