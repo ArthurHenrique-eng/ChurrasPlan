@@ -344,3 +344,19 @@ def test_planos_logo_mantem_tamanho_do_cabecalho(page: Page):
     assert header["height"] < 130
     assert nav["x"] > logo["x"] + logo["width"]
 
+
+
+def test_planos_cabecalho_nao_amplia_logo(page: Page):
+    """A marca não pode usar as dimensões originais das imagens no cabeçalho."""
+    page.set_viewport_size({"width": 1366, "height": 768})
+    page.goto(url("planos.html"), wait_until="domcontentloaded")
+    icon = page.locator(".planos-topbar .home-logo-icon")
+    wordmark = page.locator(".planos-topbar .home-wordmark")
+    expect(icon).to_be_visible()
+    expect(wordmark).to_be_visible()
+    icon_box = icon.bounding_box()
+    wordmark_box = wordmark.bounding_box()
+    assert icon_box and wordmark_box
+    assert icon_box["width"] <= 46 and icon_box["height"] <= 46
+    assert wordmark_box["width"] <= 168 and wordmark_box["height"] <= 54
+    assert page.locator(".planos-topbar").bounding_box()["height"] <= 150
