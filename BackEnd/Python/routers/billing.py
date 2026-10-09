@@ -220,12 +220,39 @@ def cancelar_assinatura(
         raise HTTPException(status_code=404, detail="Não existe assinatura Stripe para cancelar.")
     resposta = stripe_request("POST", "/v1/subscriptions/" + quote(atual.stripe_subscription_id),
                               {"cancel_at_period_end": "true"},
-                              idempotency=f"churrasplan-cancel-{org.id}-{atual.stripe_subscription_id}")
+                              idempotency=hashlib.sha256(
+                                  f"churrasplan-cancel|{org.id}|{atual.stripe_subscription_id}|{atual.sincronizado_em}".encode()
+                              ).hexdigest())
     if resposta.get("id") != atual.stripe_subscription_id:
         raise HTTPException(status_code=502, detail="Confirmação de cancelamento inconsistente.")
     reconciliar_assinatura(db, atual.stripe_subscription_id)
     db.commit()
     return {**resumo_billing(atual), "mensagem": "Cancelamento solicitado ao fim do período."}
+
+
+@router.post("/reativar")
+def reativar_assinatura(
+    usuario: Usuario = Depends(exigir_papeis("parceiro", "admin", mutacao=True)),
+    db: Session = Depends(get_db),
+    organizacao_id: int | None = Header(default=None, alias="X-Organizacao-ID"),
+):
+    exigir_billing()
+    org = _proprietario(db, usuario, organizacao_id)
+    bloquear_organizacao(db, org.id)
+    atual = _assinatura(db, org.id)
+    if (not atual or not atual.stripe_subscription_id or not atual.cancelamento_agendado
+            or atual.status != "active" or not assinatura_efetiva(atual)):
+        raise HTTPException(status_code=409, detail="Não existe cancelamento agendado reativável.")
+    resposta = stripe_request("POST", "/v1/subscriptions/" + quote(atual.stripe_subscription_id, safe=""), {
+        "cancel_at_period_end": "false",
+    }, idempotency=hashlib.sha256(
+        f"churrasplan-reactivate|{org.id}|{atual.stripe_subscription_id}|{atual.sincronizado_em}".encode()
+    ).hexdigest())
+    if resposta.get("id") != atual.stripe_subscription_id:
+        raise HTTPException(status_code=502, detail="Reativação Stripe Test inconsistente.")
+    atual = reconciliar_assinatura(db, atual.stripe_subscription_id)
+    db.commit()
+    return {**resumo_billing(atual), "organizacao_id": org.id}
 
 
 @router.post("/sincronizar")
