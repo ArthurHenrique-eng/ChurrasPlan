@@ -180,7 +180,9 @@ def cancelar_premium(usuario: Usuario = Depends(usuario_atual_com_csrf), db: Ses
         raise HTTPException(status_code=409, detail="Assinatura já cancelada ou com cancelamento agendado.")
     resposta = stripe_request("POST", "/v1/subscriptions/" + quote(atual.stripe_subscription_id, safe=""),
         {"cancel_at_period_end": "true"},
-        idempotency="churrasplan-b2c-cancel-" + str(usuario.id) + "-" + atual.stripe_subscription_id)
+        idempotency=hashlib.sha256(
+            f"churrasplan-b2c-cancel|{usuario.id}|{atual.stripe_subscription_id}|{atual.sincronizado_em}".encode()
+        ).hexdigest())
     if resposta.get("id") != atual.stripe_subscription_id:
         raise HTTPException(status_code=502, detail="Cancelamento Stripe Test não confirmado.")
     atual = reconciliar_usuario(db, atual.stripe_subscription_id)
@@ -197,7 +199,9 @@ def reativar_premium(usuario: Usuario = Depends(usuario_atual_com_csrf), db: Ses
         raise HTTPException(status_code=409, detail="Não existe cancelamento agendado elegível à reativação.")
     resposta = stripe_request("POST", "/v1/subscriptions/" + quote(atual.stripe_subscription_id, safe=""),
         {"cancel_at_period_end": "false"},
-        idempotency="churrasplan-b2c-reactivate-" + str(usuario.id) + "-" + atual.stripe_subscription_id)
+        idempotency=hashlib.sha256(
+            f"churrasplan-b2c-reactivate|{usuario.id}|{atual.stripe_subscription_id}|{atual.sincronizado_em}".encode()
+        ).hexdigest())
     if resposta.get("id") != atual.stripe_subscription_id:
         raise HTTPException(status_code=502, detail="Reativação Stripe Test não confirmada.")
     atual = reconciliar_usuario(db, atual.stripe_subscription_id)
