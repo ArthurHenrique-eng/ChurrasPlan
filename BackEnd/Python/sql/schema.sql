@@ -1,6 +1,6 @@
--- ChurrasPlan SaaS - schema MySQL de referência (Alembic head 20261008_0011).
+-- ChurrasPlan SaaS - schema MySQL de referência (Alembic head 20261008_0016).
 -- Fonte de verdade para evolução: Alembic (`alembic upgrade head`).
--- Este arquivo representa uma instalação NOVA no head 20261008_0011.
+-- Este arquivo representa uma instalação NOVA no head 20261008_0016.
 -- Para bancos existentes, NÃO recrie tabelas: aplique as migrations.
 CREATE DATABASE IF NOT EXISTS churrasplan CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE churrasplan;
@@ -202,6 +202,7 @@ CREATE TABLE assinaturas_organizacao (
     stripe_customer_id VARCHAR(100),
     stripe_subscription_id VARCHAR(100),
     plano_slug VARCHAR(20) NOT NULL DEFAULT 'free',
+    periodicidade VARCHAR(10) NOT NULL DEFAULT 'mensal',
     status VARCHAR(30) NOT NULL DEFAULT 'sem_assinatura',
     periodo_fim_em DATETIME,
     tolerancia_ate DATETIME,
@@ -220,6 +221,7 @@ CREATE TABLE tentativas_checkout (
     usuario_id INTEGER,
     chave_idempotencia VARCHAR(80) NOT NULL,
     plano_slug VARCHAR(20) NOT NULL,
+    periodicidade VARCHAR(10) NOT NULL DEFAULT 'mensal',
     stripe_session_id VARCHAR(130) NOT NULL,
     stripe_subscription_id VARCHAR(100),
     criado_em DATETIME NOT NULL DEFAULT now(),
@@ -240,6 +242,41 @@ CREATE TABLE eventos_billing (
     PRIMARY KEY (event_id),
     FOREIGN KEY(organizacao_id) REFERENCES organizacoes (id) ON DELETE SET NULL
 ) ENGINE=InnoDB;
+
+
+CREATE TABLE assinaturas_stripe_usuario (
+    usuario_id INTEGER NOT NULL,
+    stripe_customer_id VARCHAR(100),
+    stripe_subscription_id VARCHAR(100),
+    plano_slug VARCHAR(30) NOT NULL DEFAULT 'free',
+    periodicidade VARCHAR(10) NOT NULL DEFAULT 'mensal',
+    status VARCHAR(30) NOT NULL DEFAULT 'sem_assinatura',
+    periodo_fim_em DATETIME,
+    cancelamento_agendado BOOL NOT NULL DEFAULT '0',
+    sincronizado_em DATETIME,
+    atualizado_em DATETIME NOT NULL DEFAULT now(),
+    PRIMARY KEY (usuario_id),
+    UNIQUE (stripe_customer_id),
+    UNIQUE (stripe_subscription_id),
+    FOREIGN KEY(usuario_id) REFERENCES usuarios (id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+CREATE TABLE tentativas_checkout_usuario (
+    id INTEGER NOT NULL AUTO_INCREMENT,
+    usuario_id INTEGER NOT NULL,
+    chave_idempotencia VARCHAR(80) NOT NULL,
+    plano_slug VARCHAR(30) NOT NULL,
+    periodicidade VARCHAR(10) NOT NULL,
+    stripe_session_id VARCHAR(130) NOT NULL,
+    stripe_subscription_id VARCHAR(100),
+    criado_em DATETIME NOT NULL DEFAULT now(),
+    PRIMARY KEY (id),
+    CONSTRAINT uq_checkout_usuario_chave UNIQUE (usuario_id, chave_idempotencia),
+    UNIQUE (stripe_session_id),
+    UNIQUE (stripe_subscription_id),
+    FOREIGN KEY(usuario_id) REFERENCES usuarios (id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+CREATE INDEX ix_tentativas_checkout_usuario_usuario_id ON tentativas_checkout_usuario (usuario_id);
 
 CREATE TABLE assinaturas_usuario (
 	id INTEGER NOT NULL AUTO_INCREMENT, 
