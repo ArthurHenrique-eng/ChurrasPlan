@@ -2,7 +2,8 @@
 from decimal import Decimal
 import secrets
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response, Query
+from typing import Literal
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -14,7 +15,8 @@ from services.auth import usuario_atual, usuario_atual_com_csrf, usuario_opciona
 from services.catalogo_produtos import ProdutoComercial, converter_produto, resolver_produto
 from services.calculo_precos import obter_melhor_oferta_atual
 from services.precos_referencia import obter_preco_referencia
-from services.entitlements_usuario import exigir_vaga_planejamento
+from services.entitlements_usuario import exigir_vaga_planejamento, exigir_premium_usuario
+from services.relatorios_usuario import detalhar_custos, exportar_csv, exportar_pdf
 
 router = APIRouter(prefix="/api/churrascos", tags=["churrascos"])
 
@@ -459,6 +461,33 @@ def criar_churrasco(payload: ChurrascoCreate, db: Session = Depends(get_db), usu
         _limpar_itens(db, churrasco); resposta = _recalcular(db, churrasco, payload); db.commit(); return resposta
     except ValueError as exc:
         db.rollback(); raise HTTPException(status_code=422, detail=str(exc))
+
+
+@router.get("/{churrasco_id}/analise-custos")
+def analise_custos_premium(
+    churrasco_id: int, usuario: Usuario = Depends(usuario_atual), db: Session = Depends(get_db),
+):
+    exigir_premium_usuario(db, usuario, "analise_detalhada_custos")
+    churrasco = db.get(Churrasco, churrasco_id)
+    if not churrasco or churrasco.usuario_id != usuario.id:
+        raise HTTPException(status_code=404, detail="Planejamento não encontrado nesta conta.")
+    return detalhar_custos(churrasco, _itens_persistidos(churrasco))
+
+
+@router.get("/{churrasco_id}/exportar")
+def exportar_planejamento_premium(
+    churrasco_id: int, formato: Literal["csv", "pdf"] = Query(default="pdf"),
+    usuario: Usuario = Depends(usuario_atual), db: Session = Depends(get_db),
+):
+    exigir_premium_usuario(db, usuario, "exportacao_planejamento")
+    churrasco = db.get(Churrasco, churrasco_id)
+    if not churrasco or churrasco.usuario_id != usuario.id:
+        raise HTTPException(status_code=404, detail="Planejamento não encontrado nesta conta.")
+    dados = detalhar_custos(churrasco, _itens_persistidos(churrasco))
+    conteudo = exportar_csv(dados) if formato == "csv" else exportar_pdf(dados)
+    return Response(content=conteudo, media_type="text/csv; charset=utf-8" if formato == "csv" else "application/pdf",
+                    headers={"Content-Disposition": f'attachment; filename="churrasplan-{churrasco.id}.{formato}"',
+                             "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff"})
 
 
 @router.get("/{churrasco_id}", response_model=ChurrascoOut)
