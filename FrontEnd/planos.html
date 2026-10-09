@@ -10,14 +10,15 @@
 <link rel="stylesheet" href="css/unified-core.css">
 <link rel="stylesheet" href="css/integracao-v3.css">
 <link rel="stylesheet" href="css/production-v63.css">
-<link rel="stylesheet" href="css/planos.css">
+<!-- Versão de layout para invalidar CSS antigo mantido pelo navegador/PWA. -->
+<link rel="stylesheet" href="css/planos.css?v=20261009-layout2">
 </head>
 <body class="pagina-planos">
 <a class="skip-link" href="#principal">Ir para os planos</a>
 <header class="planos-topbar">
-  <a class="home-brand" href="index.html" aria-label="ChurrasPlan início">
-    <img class="home-logo-icon" src="assets/logo-icon.png" alt="">
-    <img class="home-wordmark" src="assets/logo-wordmark.png" alt="ChurrasPlan">
+  <a class="home-brand" href="index.html" aria-label="ChurrasPlan início" style="display:inline-flex;align-items:center;gap:10px;max-width:240px">
+    <img class="home-logo-icon" src="assets/logo-icon.png" alt="" width="44" height="44" style="display:block;width:44px;height:44px;max-width:44px;max-height:44px;object-fit:contain;flex-shrink:0">
+    <img class="home-wordmark" src="assets/logo-wordmark.png" alt="ChurrasPlan" width="166" style="display:block;width:166px;max-width:166px;height:auto;max-height:52px;object-fit:contain">
   </a>
   <nav aria-label="Navegação"><a href="index.html">Início</a><a href="planejamento.html">Planejar</a><span id="auth-nav-slot"></span></nav>
 </header>
