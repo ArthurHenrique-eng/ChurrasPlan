@@ -330,7 +330,7 @@ Caddy/HTTPS
 MySQL em rede interna
 ```
 
-Veja `docs/DEPLOY_DOCKER_V6.3.md`.
+Consulte [`docs/ChurrasPlanSaaS.md`](docs/ChurrasPlanSaaS.md), a memória técnica mestra da plataforma.
 
 ## Geoapify
 
@@ -356,14 +356,8 @@ Ainda exigem credenciais reais:
 
 Preços de referência do planejador são **estimativas nacionais de orçamento**, não ofertas comerciais nem preços garantidos. Quando há oferta real/verificada para um item, ela substitui a referência no cálculo.
 
-## Documentação desta etapa
+## Documentação consolidada
 
-- `docs/PRODUCTION_READINESS_V6.3.md`
-- `docs/DEPLOY_DOCKER_V6.3.md`
-- `docs/LGPD_SEGURANCA_V6.3.md`
-- `docs/E2E_MYSQL_V6.3.md`
-- `docs/GEOAPIFY_ADMIN_V6.5.md`
-- `docs/RELEASE_NOTES_V6.5.md`
-- `docs/VALIDACAO_V6.4.md`
+Toda a memória técnica do projeto (arquitetura, regras de negócio, banco, frontend, segurança, integrações, histórico e roadmap) está centralizada em **[docs/ChurrasPlanSaaS.md](docs/ChurrasPlanSaaS.md)**.
 
-Os documentos antigos permanecem no repositório como histórico das versões anteriores.
+As 21 notas técnicas antigas foram incorporadas ao documento canônico; o histórico das versões originais continua acessível nos commits anteriores do Git. As duas imagens em docs/assets/ foram preservadas.
