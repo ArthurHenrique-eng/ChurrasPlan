@@ -1,4 +1,4 @@
-# ChurrasPlan v6.5.0 — Geoapify + administração segura
+# ChurrasPlan SaaS B2B2C — API v6.9.0
 
 <p align="center">
   <img src="docs/assets/LogoChurrasPlan.png" alt="Ícone do ChurrasPlan" width="72" />
@@ -8,7 +8,7 @@
 
 O **ChurrasPlan** é uma plataforma Full Stack para planejar churrascos do início ao fim: convidados, quantidades, restrições alimentares, orçamento, lista/checklist de compras, preços, histórico, convites/RSVP, parceiros e otimização de onde comprar.
 
-A v6.5.0 preserva a base production-ready da v6.4 e substitui a integração Google Maps/Places por Geoapify Places, Address Autocomplete e Map Tiles, mantendo o bootstrap seguro do administrador e o pipeline completo de testes.
+A branch SaaS mantém o planejador e Geoapify e implementa organizações, entitlements, filiais, campanhas, Stripe Test para consumidores/mercados e Premium B2C. **Stripe live e comercialização ainda não foram homologados.** Leia [ChurrasPlanSaaS.md](docs/ChurrasPlanSaaS.md).
 
 ## Estado da plataforma
 
@@ -35,7 +35,7 @@ A v6.5.0 preserva a base production-ready da v6.4 e substitui a integração Goo
 
 ### Produtos, parceiros e compras
 
-A trilha SaaS introduz organizações com papéis locais e isolamento B2B inicial. Consultas do painel usam a organização do membro; para usuários em mais de uma organização, o cabeçalho `X-Organizacao-ID` é obrigatório. **Entitlements, convites e seletor multi-org estão implementados; cobrança real continua desativada.** Veja `docs/SAAS_FASE_2A_ORGANIZACOES.md` e `docs/SAAS_FASE_2D_OPERACAO_B2B.md` para a operação atual.
+A trilha SaaS introduz organizações com papéis locais e isolamento B2B inicial. Consultas do painel usam a organização do membro; para usuários em mais de uma organização, o cabeçalho `X-Organizacao-ID` é obrigatório. **Entitlements, convites e seletor multi-org estão implementados; cobrança real continua desativada.** Veja `docs/ChurrasPlanSaaS.md` e `docs/ChurrasPlanSaaS.md` para a operação atual.
 
 - produto genérico + SKU comercial;
 - catálogo genérico amplo por categoria para parceiros: carnes, bebidas, mercearia, laticínios, padaria, hortifruti, congelados, limpeza, higiene e descartáveis;
@@ -89,36 +89,8 @@ ChurrasPlan/
 
 ## Banco e Alembic
 
-O Alembic é a fonte de verdade da evolução do banco.
+O Alembic é a fonte de verdade do schema. Head atual da branch SaaS: **`20261009_0017`**, incluindo as migrations 0009 organizações, 0010 entitlements, 0011 equipe/convites, 0012 filiais/ofertas CSV, 0013 catálogo/campanhas, 0014 Billing B2B, 0015 Billing B2C, 0016 periodicidade B2B e 0017 modelos Premium pessoais. Veja [a memória técnica mestra](docs/ChurrasPlanSaaS.md) para a matriz integral, rollback e requisitos de validação.
 
-Head atual:
-
-```text
-20261008_0014
-```
-
-Cadeia:
-
-```text
-20260917_0001  baseline consistente
-20260918_0002  contas/orçamento/RSVP/SKUs/parceiros
-20260918_0003  alinhamentos de schema
-20260918_0004  métricas agregadas de estabelecimentos
-20260918_0005  LGPD, rate limiting e auditoria admin
-20260922_0006  restaura defaults de timestamps em usuarios
-20260925_0007  amplia catálogo genérico para cadastro de produtos de parceiros
-20260925_0008  garante catálogo base do planejador em toda instalação
-20261008_0009  organizações B2B, membros e backfill conservador de parceiros
-20261008_0010  concessões administrativas temporárias e limites B2B (sem billing)
-20261008_0011  convites B2B, equipes, auditoria e gestão de membros
-20261008_0012  filiais com código/matriz e lotes de ofertas CSV idempotentes
-20261008_0013  importação em massa de SKUs e campanhas comerciais moderadas
-20261008_0014  assinaturas B2B, checkout Stripe Test, webhooks e histórico de cobrança
-
-A Fase 2C permite convidar equipes, revogar membros, aplicar papéis por organização e alternar entre contas no painel. Segurança, fluxos, migração/rollback e cotas: `docs/SAAS_FASE_2C_MEMBROS_CONVITES.md`. **Checkout e assinaturas estão implementados somente para Stripe Test, desligados por padrão.**
-
-O painel de parceiros aplica cotas B2B transacionais. Organizações começam sempre no tier Free; concessões temporárias Pro/Business dependem de administrador global, CSRF e registro de auditoria. **Checkout Stripe Test só fica disponível após configuração explícita; pagamentos reais continuam desativados.** Contratos, limites e rollback: `docs/SAAS_FASE_2B_ENTITLEMENTS.md`.
-```
 
 `BackEnd/Python/sql/schema.sql` representa uma **instalação nova** no head atual. Para banco existente, use migrations.
 
@@ -321,7 +293,7 @@ node --check FrontEnd/sw.js
 5. build das imagens Docker e validação de compose;
 6. E2E Chromium contra MySQL real.
 
-Na trilha SaaS, a branch `Saas-ChurrasPlan` também executa os seis jobs em pushes, além de PRs. A configuração de `CodeQL` faz análise estática de Python e JavaScript; o `Dependabot` propõe atualizações de dependências via PRs direcionados à branch SaaS. As regras de proteção e aprovações obrigatórias ainda devem ser configuradas no GitHub conforme `docs/SAAS_FASE_1C_SEGURANCA_INFRA.md`.
+Na trilha SaaS, a branch `Saas-ChurrasPlan` também executa os seis jobs em pushes, além de PRs. A configuração de `CodeQL` faz análise estática de Python e JavaScript; o `Dependabot` propõe atualizações de dependências via PRs direcionados à branch SaaS. As regras de proteção e aprovações obrigatórias ainda devem ser configuradas no GitHub conforme `docs/ChurrasPlanSaaS.md`.
 
 A etapa de **deploy** não está ligada a um provedor específico. Isso é intencional: primeiro deve ser definido onde staging/produção serão hospedados e como os segredos serão gerenciados.
 
@@ -348,7 +320,7 @@ Caddy/HTTPS
 MySQL em rede interna
 ```
 
-Veja `docs/DEPLOY_DOCKER_V6.3.md`.
+Veja `docs/ChurrasPlanSaaS.md`.
 
 ## Geoapify
 
@@ -370,30 +342,14 @@ Sem a chave de servidor, a página continua funcional com os estabelecimentos ca
 Ainda exigem credenciais reais:
 - SMTP para verificação/reset de e-mail;
 - Geoapify conforme configuração acima;
-- eventual provedor de pagamento, ainda não conectado.
+- Stripe TEST configurável no servidor, sem produção live habilitada.
 
 Preços de referência do planejador são **estimativas nacionais de orçamento**, não ofertas comerciais nem preços garantidos. Quando há oferta real/verificada para um item, ela substitui a referência no cálculo.
 
-## Documentação desta etapa
+## Documentação centralizada
 
-- `docs/PRODUCTION_READINESS_V6.3.md`
-- `docs/DEPLOY_DOCKER_V6.3.md`
-- `docs/LGPD_SEGURANCA_V6.3.md`
-- `docs/E2E_MYSQL_V6.3.md`
-- `docs/GEOAPIFY_ADMIN_V6.5.md`
-- `docs/RELEASE_NOTES_V6.5.md`
-- `docs/VALIDACAO_V6.4.md`
+O arquivo **[docs/ChurrasPlanSaaS.md](docs/ChurrasPlanSaaS.md)** é o único Markdown atual em `docs/`. Ele reúne arquitetura, regras matemáticas, segurança, banco, deploy, SaaS B2B2C, organizações, Stripe TEST, Premium, campanhas, catálogo, evidências, roadmap e links permanentes para as **35 notas históricas**. As imagens `docs/assets/` foram preservadas.
 
-Os documentos antigos permanecem no repositório como histórico das versões anteriores.
+Para contribuir, examine o código da branch `Saas-ChurrasPlan`, execute os testes/CI e atualize esse arquivo em vez de criar notas paralelas. Não enviar commits para `main` sem autorização explícita.
 
-### Fase 4A — Catálogo e campanhas B2B
-
-Importação CSV de produtos comerciais com criação/atualização por SKU, verificação de EAN, cotas e repetição idempotente; campanhas associadas a ofertas existentes, submetidas à revisão de administrador e exibidas publicamente só após aprovação e dentro da vigência. Consulte `docs/SAAS_FASE_4A_CATALOGO_CAMPANHAS.md`. **Pagamentos reais permanecem desativados; o sandbox Stripe Test é configurável pela Fase 3.**
-
-### Fase 3 — Billing B2B (somente sandbox)
-
-Assinaturas por organização com tiers Free/Pro/Business, checkout Stripe Test, webhook HMAC, controle de assinatura, renovação, inadimplência/tolerância, cancelamento, conciliação, troca de plano e histórico de faturas de teste. Consulte `docs/SAAS_FASE_3_BILLING_STRIPE_TEST.md` e configure Prices e credenciais Stripe Test **fora do repositório**. O sistema recusa chaves `sk_live_` e não disponibiliza cobrança em produção.
-
-## Assinaturas Stripe Test para usuários e mercados
-
-Nova página pública: [planos.html](FrontEnd/planos.html), com Premium pessoal e Pro/Business para mercados, mensal/anual quando o Price ID correspondente existe no Stripe Test. O Checkout não recebe cobranças reais nem libera benefícios por redirecionamento. Configuração, endpoints, webhook e migrations: [docs/STRIPE_TEST_B2B2C_SETUP.md](docs/STRIPE_TEST_B2B2C_SETUP.md). Tudo permanece desativado sem variáveis de sandbox.
+**B2C Free:** até 5 eventos novos salvos. **B2C Premium TEST reconciliado:** eventos ilimitados, modelos, relatórios, PDF/CSV e comparação avançada. **Mercados:** Free/Pro/Business com quotas por organização. Valores mensais-alvo do Sandbox: Premium pessoal R$ 9,90, Mercado Básico R$ 49,90, Mercado Pro R$ 99,90. Somente Price Stripe Test validado e webhook reconciliado liberam direito.
