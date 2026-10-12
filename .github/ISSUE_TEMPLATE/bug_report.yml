@@ -1,0 +1,15 @@
+name: Falha no ChurrasPlan
+description: Relate um problema reproduzível sem credenciais ou dados pessoais.
+body:
+  - type: textarea
+    id: problema
+    attributes:
+      label: Comportamento observado e esperado
+    validations:
+      required: true
+  - type: textarea
+    id: reproducao
+    attributes:
+      label: Passos para reproduzir e ambiente
+    validations:
+      required: true

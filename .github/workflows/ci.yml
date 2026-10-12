@@ -17,8 +17,8 @@ jobs:
       run:
         working-directory: BackEnd/Python
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: "3.12"
           cache: pip
@@ -26,6 +26,8 @@ jobs:
       - run: pip install -r requirements-dev.txt
       - run: python -m compileall -q .
       - run: pytest -q tests
+      - name: Validate deterministic SEO generation
+        run: python ../../scripts/build_seo.py --base-url https://churrasplan.example.com
       - name: ORM x schema.sql parity
         env:
           DATABASE_URL: "sqlite:///:memory:"
@@ -58,8 +60,8 @@ jobs:
       COOKIE_SECURE: "false"
       SECURITY_PEPPER: mysql-ci-pepper-012345678901234567890123456789
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: "3.12"
           cache: pip
@@ -84,12 +86,14 @@ jobs:
     name: Frontend static checks
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: "22"
       - name: JavaScript syntax
         run: find FrontEnd/js -name '*.js' -print0 | xargs -0 -n1 node --check
+      - name: UTC API dates
+        run: node scripts/test_api_dates.mjs
       - name: Service worker syntax
         run: node --check FrontEnd/sw.js
       - name: Browser API origin and Service Worker freshness
@@ -116,8 +120,8 @@ jobs:
     name: Security audit
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: "3.12"
           cache: pip
@@ -137,10 +141,11 @@ jobs:
       MYSQL_PASSWORD: ci-mysql-password
       MYSQL_ROOT_PASSWORD: ci-root-password
       SECURITY_PEPPER: ci-security-pepper-012345678901234567890123456789
+      DATA_ENCRYPTION_KEY: 2ovDR_SsHNLdnLWx_QKKkhJlMqMr-XUEJlDQGj_i_z4=
       SMTP_HOST: smtp.example.com
       SMTP_FROM: ChurrasPlan <no-reply@example.com>
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Validate compose files
         run: |
           docker compose -f docker-compose.dev.yml config >/dev/null
@@ -151,6 +156,17 @@ jobs:
         run: docker build -t churrasplan-frontend-ci FrontEnd
       - name: Validate Nginx configuration in built frontend image
         run: docker run --rm --add-host backend:127.0.0.1 --entrypoint nginx churrasplan-frontend-ci -t
+
+      - name: Validate security headers for frontend assets
+        run: |
+          docker run -d --rm --name churrasplan-frontend-headers -p 8080:80 --add-host backend:127.0.0.1 churrasplan-frontend-ci
+          python scripts/wait_http.py http://127.0.0.1:8080/index.html
+          for asset in /js/seguranca.js /css/saas.css /assets/logo-wordmark.png /manifest.webmanifest /sw.js; do
+            curl -fsSI "http://127.0.0.1:8080$asset" > /tmp/churrasplan-headers.txt
+            grep -qi '^Content-Security-Policy:' /tmp/churrasplan-headers.txt
+            grep -qi '^X-Content-Type-Options: nosniff' /tmp/churrasplan-headers.txt
+          done
+          docker stop churrasplan-frontend-headers
 
   e2e:
     name: E2E Chromium + MySQL
@@ -179,8 +195,8 @@ jobs:
       SECURITY_PEPPER: e2e-pepper-012345678901234567890123456789012
       E2E_BASE_URL: http://127.0.0.1:5500
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: "3.12"
           cache: pip
@@ -194,14 +210,14 @@ jobs:
           python scripts/seed_demo.py
       - name: Start API and frontend
         run: |
-          (cd BackEnd/Python && uvicorn main:app --host 127.0.0.1 --port 8000 > /tmp/churrasplan-api.log 2>&1 & echo $! > /tmp/churrasplan-api.pid)
+          (cd BackEnd/Python && uvicorn main:app --host 127.0.0.1 --port 8000 --no-access-log > /tmp/churrasplan-api.log 2>&1 & echo $! > /tmp/churrasplan-api.pid)
           (python -m http.server 5500 --bind 127.0.0.1 --directory FrontEnd > /tmp/churrasplan-web.log 2>&1 & echo $! > /tmp/churrasplan-web.pid)
           python scripts/wait_http.py http://127.0.0.1:8000/api/health http://127.0.0.1:5500/index.html
       - name: Run browser flows
         run: pytest -q e2e
       - name: Upload logs on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: e2e-logs
           path: |

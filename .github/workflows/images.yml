@@ -1,0 +1,32 @@
+name: Container security
+on:
+  push:
+    branches: [main, Saas-ChurrasPlan]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  scan:
+    name: Container scan (${{ matrix.image }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        image: [backend, frontend]
+        include:
+          - image: backend
+            directory: BackEnd/Python
+          - image: frontend
+            directory: FrontEnd
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - run: docker build --pull -t churrasplan-${{ matrix.image }}-scan ${{ matrix.directory }}
+      - name: Scan fixable critical and high vulnerabilities
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0
+        with:
+          image-ref: churrasplan-${{ matrix.image }}-scan
+          format: table
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: '1'

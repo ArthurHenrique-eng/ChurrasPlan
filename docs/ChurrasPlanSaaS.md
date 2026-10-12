@@ -1,7 +1,7 @@
 # ChurrasPlan SaaS B2B2C — Memória técnica mestra
 
 > **Documento canônico:** `docs/ChurrasPlanSaaS.md`. **Branch:** `Saas-ChurrasPlan`, nunca confundir com `main`.
-> **Atualizado:** 11/10/2026. **Snapshot auditado:** commit `208f34954033dc7bb280bdaa72194ba1e37d854c`, API v6.9.0, Alembic head `20261009_0017`.
+> **Atualizado:** 12/10/2026 (UTC). **Base histórica auditada:** commit `208f34954033dc7bb280bdaa72194ba1e37d854c`. **Revisão de lançamento:** API v6.10.0, Alembic head `20261012_0023`; implementação/evidências/gates na seção 19.
 > **CI comprovado no commit-base:** [GitHub CI 38004031754](https://github.com/ArthurHenrique-eng/ChurrasPlan/actions/runs/38004031754) e [CodeQL 38004031832](https://github.com/ArthurHenrique-eng/ChurrasPlan/actions/runs/38004031832), ambos success em 09/10/2026; esse resultado não avalia o novo commit documental.
 > **Objetivo:** consolidar as **35 notas Markdown** pré-existentes em `docs/` num único contexto de leitura. Os originais permanecem recuperáveis por links imutáveis no Git, listados na seção de histórico, sem manter arquivos obsoletos concorrentes. O README e imagens de `docs/assets/` são preservados.
 
@@ -137,7 +137,7 @@ O subsistema combina **estabelecimentos e preços próprios/verificados** com **
 
 ## 7. Autenticação, segurança, LGPD e limites do PWA
 
-**Controles implementados na base v6.3+:** PBKDF2-HMAC-SHA256 com salt para senhas; segredos de sessão e tokens opacos persistidos somente por hash; cookie churrasplan_session HttpOnly, SameSite=Lax e Secure em produção; cookie churrasplan_csrf para o frontend; checagem CSRF em mutações autenticadas; rate limiting com identificadores HMAC; headers de segurança/HSTS; CORS e Trusted Hosts explícitos; limite de payload; auditoria admin; validação de configuração de produção; pip-audit e bandit em CI.
+**Controles implementados:** senhas novas em Argon2id e migração de hashes PBKDF2 legados no login; segredos de sessão e tokens opacos persistidos somente por hash; cookie churrasplan_session HttpOnly, SameSite=Lax e Secure em produção; cookie churrasplan_csrf para o frontend; checagem CSRF em mutações autenticadas; rate limiting com identificadores HMAC; headers de segurança/HSTS; CORS e Trusted Hosts explícitos; limite de payload; auditoria admin; validação de configuração de produção; pip-audit e bandit em CI.
 
 **LGPD técnica:** termos/privacidade versionados, aceite de documentos, marketing opcional e separado, exportação JSON e exclusão autenticada/reconfirmada da conta. Dados pessoais envolvidos: cadastro, churrascos salvos, respostas de convidados, restrições voluntárias, dados comerciais e registros técnicos mínimos. Sem cookies de publicidade/analytics habilitados por padrão na base documentada.
 
@@ -251,8 +251,10 @@ A branch SaaS possui seis jobs GitHub Actions: **Backend unit/integration (SQLit
 | Importação CSV de SKUs e campanhas moderadas 4A | Implementado |
 | Stripe Test B2B/B2C, Premium, modelos, PDF/CSV e valores mensais guardados | Implementado para sandbox; não live |
 | Pagamento Premium realizado no Sandbox externo | Relatado pelo mantenedor; não verificado no CI/documentação do snapshot |
-| MFA admin, observabilidade produtiva, restore externo, staging | Pendente/necessita evidência |
-| Leads/CRM, SEO/referral, IA opcional, analytics e dashboard fundador completo | Pendente de evolução |
+| MFA admin, observabilidade e outbox | Implementados; exigem configuração/monitoramento no ambiente produtivo |
+| Restore em ambiente isolado | Comprovado na revisão 6.10; backup remoto/staging produtivo pendentes |
+| Leads/CRM, SEO/referral, analytics e dashboard operacional do fundador | Implementados; métricas financeiras reais dependem de dados comerciais |
+| Assistência local e contrato de IA | Implementados e testados; LLM externo não ativado |
 | Stripe live, impostos/NFS-e, clientes pagantes e operação comercial | Não homologado |
 
 **Critério:** classificar separadamente código implementado, teste automatizado, Sandbox manual, produção e operação comercial. O sistema pode estar bem estruturado sem estar pronto para lançar.
@@ -388,3 +390,107 @@ Estes documentos foram retirados da pasta ativa, mas **não foram perdidos**: os
 - [docs/VALIDACAO_V6.3.1.md](https://github.com/ArthurHenrique-eng/ChurrasPlan/blob/208f34954033dc7bb280bdaa72194ba1e37d854c/docs/VALIDACAO_V6.3.1.md)
 - [docs/VALIDACAO_V6.3.md](https://github.com/ArthurHenrique-eng/ChurrasPlan/blob/208f34954033dc7bb280bdaa72194ba1e37d854c/docs/VALIDACAO_V6.3.md)
 - [docs/VALIDACAO_V6.4.md](https://github.com/ArthurHenrique-eng/ChurrasPlan/blob/208f34954033dc7bb280bdaa72194ba1e37d854c/docs/VALIDACAO_V6.4.md)
+
+## 19. Auditoria dos 30 blocos e evolução de lançamento (11–12/10/2026)
+
+**Base:** `ac039bd`, branch `Saas-ChurrasPlan`. A primeira execução encontrou 166 testes aprovados e um teste de renovação com comparação de datetime UTC sem fuso contra horário local. A comparação foi corrigida com timezone explícito. A numeração abaixo corresponde aos BLOCOS do prompt mestre, não às numerações históricas de fases.
+
+**Critério de conclusão técnica de cada linha:** código integrado, autorização no backend, migration/schema coerentes, teste de aceitação e documentação. Configuração externa e resultado comercial não são inferidos dos arquivos. P0 bloqueia lançamento; P1 prepara o piloto; P2 é evolução proporcional à demanda.
+
+| Bloco | Diagnóstico na base | Evidência e solução na revisão de lançamento | Risco / prioridade | Dependência ou critério adicional |
+|---|---|---|---|---|
+| 01 Billing | Sandbox implementado | `services/billing*.py`, routers e testes: StripeClient, RAK Test, webhook autenticado e outbox opcional, reconciliação e ciclo de assinatura | Alto / P0 | Live recusado. Homologar ambiente, preços, impostos e pagamento real antes de vender |
+| 02 Entitlements | Cotas de lojas/SKUs/ofertas/equipe | `entitlements.py`: helpers centralizados, campanhas e importações mensais, locks; cotas pessoais/profissionais/assistente | Alto / P0 | Confirmar valores comerciais; quotas não são promessa de preço |
+| 03 Posicionamento | Home focada em cálculo | Home e `parceiros.html` comunicam consumidores, profissionais e mercados locais | Médio / P1 | Validar mensagem com entrevistas reais |
+| 04 Planos | Free/Premium pessoal e Free/Pro/Business empresarial | Preservados, sem criar Prices fictícios; ferramentas profissionais com limites gratuitos e benefícios Premium | Médio / P1 | Plano profissional separado e anuais exigem aprovação comercial |
+| 05 Multi-tenant | Organizações/equipe/filiais/RBAC | Queries por tenant preservadas; transferência com senha, confirmação e membro ativo, auditada | Alto / P0 | Papéis existentes proprietário/gestor/editor/leitor mantidos; restrição individual por filial depende de necessidade validada |
+| 06 Leads/CRM | Ausente | `models/growth.py`, `routers/growth.py`: interesse público, anti-spam, UTM limitada, pipeline, atividades e vínculo com organização | Médio / P1 | Atendimento e recrutamento são humanos; não enviar promoções sem preferência |
+| 07 SEO | Incompleto | `build_seo.py`, robots/sitemap, 8 guias originais, canonical/OG/JSON-LD; exemplos derivados do motor | Médio / P1 | Executar build com domínio real; local/staging permanecem noindex |
+| 08 Referral | Não instrumentado | Indicações com opt-in, códigos aleatórios, atribuição de cadastro consentida e totais sem identidade dos indicados | Médio / P1 | Não transforma RSVP em contato promocional |
+| 09 Analytics | Interações simples | Catálogo allowlist, deduplicação, propriedades mínimas, eventos operacionais transacionais e eventos opcionais do navegador | Médio / P1 | Consentimento reduz cobertura; não chamar essas contagens de censo de visitantes |
+| 10 IA na engenharia | Sem instrução central | `AGENTS.md`, instruções Copilot, contribuição e templates protegem cálculos, migrations, CSRF, MFA, tenant e preços | Médio / P1 | Revisões humanas permanecem necessárias |
+| 11 Supply chain | pip-audit/Bandit/CodeQL/Dependabot | Preservados; actions fixadas por SHA e estratégia de atualização documentada | Alto / P0 | Confirmar scanners e permissões efetivas do GitHub; imagem deve ser auditada no CI |
+| 12 Proteção de branch | Ruleset sem branches/checks | Leitura real do ruleset 23958344: `include=[]` e `required_status_checks=[]`; candidato preservado em `deploy/github-ruleset.json` | Alto / P0 | Aplicação requer revisão do proprietário; regras de restrição de update/creation e assinaturas podem bloquear merges sem bypass apropriado |
+| 13 Assistência no produto | Ausente | Extração local, contrato de provedor simulado, schema estrito, fallback, cotas, minimização e confirmação; resultado calculado pelo motor | Médio / P1 | LLM externo não configurado. Selecionar provedor, credencial, timeout e orçamento antes de ativar |
+| 14 Observabilidade | Headers/request IDs | JSON sem corpos/URLs/segredos, request IDs validados, métricas HTTP p50/95/99 por processo, fila/heartbeat/alertas administrativos | Alto / P0 | Coletor externo/alertas fora do painel exigem infraestrutura; quantis não são distribuídos |
+| 15 Filas | E-mails síncronos | Outbox cifrada, transacional, lease, retries/backoff/dead-letter e reprocessamento; webhooks assíncronos em produção | Alto / P0 | SMTP entrega ao menos uma vez; falha após envio pode gerar duplicata, nunca promessa de exactly-once |
+| 16 Geoapify | Timeout básico | Cache limitado, orçamento por processo, concorrência limitada, retry GET, circuit breaker, resposta limitada e coordenadas validadas | Médio / P1 | Limites são por processo; configurar quota da conta no provedor |
+| 17 Backup/restore | Estratégia ausente | `backup_mysql.py`: gzip/AES-256-GCM, chave independente, retenção e restore autenticado antes de importar, somente banco isolado vazio | Alto / P0 | Agendar e copiar para armazenamento independente; restauração real de produção é gate separado |
+| 18 MFA | Ausente | TOTP cifrado, replay atômico, códigos de recuperação hashed/uso único, troca com senha+segundo fator, auditoria e revogação | Alto / P0 | MFA admin obrigatório em produção; cofre da chave e recuperação assistida são operação humana |
+| 19 CSP/frontend | CSP parcial | Corrigida herança de headers em JS/CSS/imagens/SW/manifest; nenhuma página/API privada em cache; limites reais de body e Origin | Alto / P0 | Validar proxy/TLS/CSP no domínio final |
+| 20 Operação B2B | CSV/SKU/campanhas implementados | Acrescentadas prévias sem commit, cotas, feedback e transferência; preservados catálogo/categorias/ofertas/filiais | Médio / P1 | CSV é o formato inicial; XLSX/filas de catálogo somente quando volume justificar |
+| 21 Métricas comerciais | Views/cliques sem dedup | HMAC por conta/dia/loja/tipo; parceiro recebe apenas agregados; relatórios por filial preservados | Médio / P1 | Não são métricas aptas a faturamento por clique nem prova de venda |
+| 22 Marketplace | Comparação existente | Preservados motor/otimização, elegibilidade de oferta, referência estimativa e histórico | Alto / P0 | Sem e-commerce multi-loja, logística ou split; escopo do piloto é encaminhamento |
+| 23 README/Compose | Base corrigida, produção incompleta | Atualizados ambientes/keys/worker, Caddy, comandos e memória; schema SQL acompanha Alembic | Médio / P0 | Nunca executar seed demonstrativo em produção |
+| 24 Deploy | Docker/TLS, sem staging comprovado | Compose com worker e segredo obrigatório; smoke/carga básica; procedimento de build SEO, migration e rollback | Alto / P0 | Domínio, TLS/SMTP, hosting, cofre, staging e smoke externos permanecem gates |
+| 25 Qualidade SaaS | 167 testes na base | Regressões existentes mais MFA, fila, privacy/growth, profissional, assistente, CSV preview, webhook durável; MySQL/Alembic/E2E | Alto / P0 | Resultados finais abaixo devem citar revisão e ambiente exatos |
+| 26 Consentimentos | Conta técnica existente | Marketing separado de atendimento; métricas/referral opt-in; exportação/exclusão ampliadas; retenção operacional | Alto / P0 | Bases legais, controlador, subprocessadores e retenções precisam de revisão jurídica real |
+| 27 Piloto regional | Onboarding existente | Landing, CRM/pipeline, checklist preservado e feedback/disposição a pagar por organização | Médio / P1 | Recrutar cerca de 5 açougues + 5 mercados reais; não cadastrar clientes fictícios |
+| 28 Fundador | Dashboard básico | Aquisição/ativação/leads/assinaturas sandbox/feedback, custos registrados e alertas; MRR/ARR/CAC/LTV/churn reais nulos | Médio / P1 | Receitas/coortes/custos reais são necessários para calcular indicadores financeiros |
+| 29 GitHub | Manutenção parcial | AGENTS/SECURITY/CONTRIBUTING/CODEOWNERS/PR/issues/Copilot e memória canônica | Médio / P1 | Habilitar private vulnerability reporting e confirmar proprietário/revisão |
+| 30 Arquitetura B2B2C | Consumer/Business existentes | Professional integrado com dados próprios, propostas e snapshot; serviços Core compartilhados sem reconstrução | Alto / P0 | Monólito modular mantido; provedores externos opcionais continuam explícitos |
+
+### 19.1 Migrations e reversão
+
+- `0018`: MFA/sessão, recuperação, contadores e fila cifrada; índices de consumo e tarefas prontas. Não altera usuários existentes. Downgrade apaga somente novas credenciais/tarefas e a data MFA; exportar antes de reverter.
+- `0019`: leads/atividades, eventos mínimos, indicações/atribuição, feedback e custos; índices de status/tempo/titularidade e unicidade de dedup. Sem backfill artificial. Downgrade remove os novos dados de growth.
+- `0020`: clientes e propostas pessoais, snapshots imutáveis, favoritos e lembretes; chave idempotente por usuário e FKs de titularidade. Downgrade não remove churrascos/assinaturas.
+- `0021`: consumo diário do assistente, sem persistir prompts. Chave composta por usuário/dia, serializada pelo lock do usuário.
+- `0022`: titularidade nullable na outbox e HMAC nullable único nas métricas. Mantém registros legados; cascata para tarefas pessoais e deduplicação para novas interações. Reversão preserva tarefas/métricas e remove somente as colunas novas.
+
+### 19.2 Contratos novos e comportamento
+
+MFA: `GET /api/auth/mfa/status`; `POST /configurar` (senha), `/ativar` (TOTP), `/verificar` (TOTP/recuperação), `/substituir` (senha+segundo fator), `/revogar` (não permitido ao admin quando MFA é obrigatório). As mutações exigem CSRF. As demais APIs falham com `MFA_NECESSARIO` antes da verificação. A UI guia o usuário para `seguranca.html`, inclusive no login privilegiado.
+
+Growth: `POST /api/growth/leads` retorna resposta genérica; honeypot e limites não expõem existência de contato. `POST /api/growth/eventos` aceita somente eventos públicos allowlisted e consentimento explícito. `POST /indicacoes` fornece link de aquisição sem dados privados de eventos. `GET/PATCH /api/admin/growth/leads`, `/dashboard`, `POST /custos` exigem admin e MFA quando aplicável.
+
+Professional: `/api/profissional/clientes`, `/propostas`, `PATCH /propostas/{id}`, `GET /propostas/{id}/pdf`. Cota Free 3 clientes/5 propostas, Premium amplia e autoriza PDF. Proposta exige todos os preços, cliente/evento do mesmo titular e chave idempotente. Margem = `(preco_proposto - custo_estimado) / preco_proposto × 100`; é estimativa, não lucro realizado/documento fiscal. Snapshots não são reescritos ao editar o planejamento.
+
+Retenção: `/api/retencao/favoritos`, `/lembretes`; lembrete somente solicitado, com timezone e data futura até 90 dias, cancelável e sem promoções. Exportação inclui dados profissionais e lembretes. Exclusão cancela/remove tarefas pessoais e exige transferir/encerrar organizações que ainda dependam do proprietário.
+
+Operação: `/api/admin/operacao/metricas`, `/tarefas`, `POST /tarefas/{id}/reprocessar`; nenhuma resposta contém payload da fila. Heartbeat/fila são compartilhados no DB; HTTP/quantis/cache/circuit breaker são por processo. Worker realiza manutenção de retenção: eventos de segurança 7 dias, rate counters 1 dia, analytics/assistente/métricas 90 dias, leads não convertidos 180 dias, lembretes antigos e tarefas concluídas/canceladas 7 dias. Ajustar retenções à operação real e revisar juridicamente.
+
+Prévia CSV: use os endpoints existentes com `?previa=true`; todos os inserts/upserts são revertidos e nenhuma quota mensal/importação é persistida. Os commits normais mantêm compatibilidade e idempotência.
+
+### 19.3 Gates de lançamento e operação
+
+1. **Preparar staging:** banco separado, `AUTO_CREATE_SCHEMA=false`, Alembic, sem seed demonstrativo, domínio/origens/hosts explícitos, HTTPS e secrets fora do Git.
+2. **Gerar metadados:** `python scripts/build_seo.py --base-url https://DOMINIO_REAL`. Por padrão, arquivos locais/staging usam noindex. Depois validar robots/sitemap/canonical e ausência de URLs locais no build produtivo.
+3. **Cofre:** definir `SECURITY_PEPPER`, `DATA_ENCRYPTION_KEY` compartilhada API/worker e `BACKUP_ENCRYPTION_KEY` independente. Nunca perder chaves cifradas em backups. Gerar chaves fora de logs/repositório.
+4. **SMTP/worker/MFA:** verificar cadastro/reset/convite com entrega real, outbox/dead-letter/reprocessamento e segundo fator em todas as contas administrativas. Trocar autenticador exige senha + fator/código de recuperação.
+5. **Gateway:** Caddy encaminha `/api/*` diretamente ao backend e demais rotas ao Nginx. Isso preserva HTTPS no backend e evita o loop causado por reescrever `X-Forwarded-Proto` para HTTP no segundo proxy. Banco/backend não expõem portas públicas no Compose produtivo.
+6. **Billing:** defaults desligados, chaves `sk_test_`/`rk_test_` e webhook Test. Não inserir Live nesta revisão; é um gate explícito de implementação/homologação, com preços, contratos e requisitos fiscais. Sandbox nunca vira receita real no dashboard.
+7. **Backup:** agendar diariamente `python scripts/backup_mysql.py backup --directory CAMINHO_INDEPENDENTE --retention-days 14`, copiar ciphertext+manifest para armazenamento independente e guardar chave em cofre. Meta inicial RPO 24h/RTO 4h é hipótese operacional, não SLA medido. Restaurar em DB vazio `churrasplan_restore_*`, validar tag, Alembic, contagens, app e apenas então planejar recuperação produtiva.
+8. **Smoke/carga:** `python scripts/smoke.py https://DOMINIO_REAL`; carga básica `python scripts/load_smoke.py https://STAGING --requests 30 --concurrency 3`. A carga usa calculadora sem persistência, nunca checkout ou mutações financeiras.
+9. **Entrega:** backup antes da migration; rodar upgrade uma vez sob coordenação; trocar imagens, smoke e monitorar. Rollback de aplicação usa imagens anteriores identificadas por commit. Downgrade de schema que apaga dados exige exportação/plano de reversão; não executá-lo automaticamente em produção.
+10. **GitHub:** revisar `deploy/github-ruleset.json` na interface/API da conta. A configuração inclui main e checks reais, preserva regras existentes; avaliar bypass e restrições de update/creation para evitar bloqueio permanente. Não foi aplicada silenciosamente.
+11. **Legal/comercial:** definir responsável/controlador e contatos, revisar políticas/contratos/LGPD/subprocessadores/tributos, recrutar parceiros reais, conferir ofertas e registrar disposição a pagar. Controles técnicos e testes não substituem essas decisões.
+
+### 19.4 Evidências desta execução
+
+Resultados locais: backend, MySQL/Alembic, E2E Chromium, smoke/carga e restore estão sendo fechados para a revisão completa; o CI final deve ser associado ao commit entregue.
+
+`0023` preserva IDs/ofertas e troca unicidade global do EAN por unicidade dentro do tenant; novas entradas validam GTIN e dígito verificador. O downgrade bloqueia quando EANs já são compartilhados entre empresas, sem apagar registros. EANs legados inválidos não são apagados automaticamente.
+
+Cenários financeiros em `/api/admin/growth/cenarios` usam hipóteses fornecidas pelo administrador; custos ficam consultáveis por competência em `/custos`. A simulação não cria clientes, assinaturas ou receita. Leads fornecem ao administrador um link de descadastro para incluir em mensagens autorizadas; o descadastro não é revertido pelo reenvio anônimo do formulário. Alterar a preferência autenticada da conta também atualiza o lead do mesmo e-mail. Não reutilizar os números antigos ou um CI de outro commit como evidência de prontidão. O estado correto até esses gates é **pré-lançamento/piloto**, não produção comercial certificada.
+
+Datas de API sem offset em campos de timestamp conhecidos são UTC e normalizadas com `Z` no cliente. Offsets explícitos e campos textuais são preservados. Isso evita exibir eventos/expiração de assinatura três horas fora do horário no Brasil. MySQL dos ambientes Docker usa `+00:00`.
+
+O proprietário pode encerrar uma organização gratuita com senha+confirmação; isso desativa lojas/ofertas e membros e permite excluir a conta. Organização com assinatura existente exige confirmação do término remoto. Logs de acesso Nginx/Uvicorn produtivos são desativados para não registrar query strings com tokens. Erros frontend usam catálogo técnico mínimo, sem mensagens, stack, URLs ou PII, separado de analytics.
+
+Liveness tem limite em memória por processo para continuar funcionando sem DB. As demais rotas usam limite persistido/atômico; readiness confirma o banco e falha com 503 quando indisponível. Limites mais estritos se aplicam a autenticação e ações sensíveis.
+
+### 19.5 Evidência local fechada e limites de prontidão
+
+Ambiente: Python 3.12, MySQL **8.0.46 real** isolado, Chromium **143.0.7499.4**, Nginx 1.24 usado na QA local. CI utiliza MySQL 8.4 e as imagens versionadas do repositório; são ambientes distintos.
+
+- Backend: **208 aprovados** na suíte completa, incluindo consentimento, propriedade, encerramento, telemetria e transporte Stripe; testes críticos suplementares também aprovados. O CI da entrega permanece o gate da revisão publicada.
+- MySQL: **12 aprovados**, `alembic check` sem operações pendentes, migração do parceiro/loja/oferta legado, downgrade até 0008 e upgrade até 0023, backfill conferido.
+- Navegador: **13 fluxos aprovados**, incluindo os anteriores e mobile/lead, MFA, assistente com confirmação e analytics opt-in.
+- Frontend: **35 HTML** e JavaScript/SW verificados, testes Node de formulários/catálogos/tenants/operação/CSP/billing e datas UTC aprovados.
+- Smoke: health/readiness/home/parceiros/robots/sitemap/manifest aprovados. Carga básica de 30 requests, concorrência 3, sem gravar eventos: mediana aproximada 25 ms e p95 aproximado 40 ms no ambiente isolado, **não um SLA de produção**.
+- Restore: backup gzip/AES-256-GCM restaurado em banco vazio `churrasplan_restore_ci`, tag validada antes do SQL, Alembic e contagens de usuários/eventos/produtos/outbox/versionamento conferidos. Não comprova backup remoto ou recuperação de produção.
+- QA visual: desktop 1440 e mobile 390 sem overflow; heads CSP/nosniff conferidos em JS/CSS/logo/manifest/SW. A QA corrigiu o banner de métricas que cobria o botão do planejador e o autosave que sobrescrevia a aplicação do assistente.
+- Dependências: `pip-audit` não encontrou vulnerabilidades conhecidas; Bandit no nível alto sem achados. CodeQL/imagens/CI exigem a execução da revisão enviada ao GitHub.
+
+**Avaliação:** implementação técnica adequada para homologação/piloto controlado, com gates explícitos. Não atribuir 9–10/10 a faturamento Live, observabilidade externa, staging, backup remoto, proteção efetiva de branch ou operação comercial sem essa evidência. O próximo incremento é aplicar configuração de staging e homologar esses gates com dados e credenciais reais.

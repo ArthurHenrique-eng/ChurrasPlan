@@ -2,69 +2,52 @@ services:
   db:
     image: mysql:8.4
     restart: unless-stopped
-
     environment:
       MYSQL_DATABASE: ${MYSQL_DATABASE:-churrasplan}
       MYSQL_USER: ${MYSQL_USER:-churrasplan}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD:-churrasplan_dev}
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root_dev_change_me}
-
     command:
-      - --character-set-server=utf8mb4
-      - --collation-server=utf8mb4_unicode_ci
-
+    - --character-set-server=utf8mb4
+    - --collation-server=utf8mb4_unicode_ci
+    - --default-time-zone=+00:00
     ports:
-      - "${MYSQL_PORT:-3306}:3306"
-
+    - ${MYSQL_PORT:-3306}:3306
     volumes:
-      - churrasplan_mysql:/var/lib/mysql
-
+    - churrasplan_mysql:/var/lib/mysql
     healthcheck:
       test:
-        - CMD-SHELL
-        - mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent
+      - CMD-SHELL
+      - mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent
       interval: 5s
       timeout: 5s
       retries: 20
       start_period: 10s
-
-
   backend:
     build: ./BackEnd/Python
     restart: unless-stopped
-
     depends_on:
       db:
         condition: service_healthy
-
     environment:
       APP_ENV: development
-
       DB_HOST: db
       DB_PORT: 3306
       DB_USER: ${MYSQL_USER:-churrasplan}
       DB_PASSWORD: ${MYSQL_PASSWORD:-churrasplan_dev}
       DB_NAME: ${MYSQL_DATABASE:-churrasplan}
-
-      AUTO_CREATE_SCHEMA: "false"
-
+      AUTO_CREATE_SCHEMA: 'false'
       CORS_ORIGINS: http://localhost:8080,http://127.0.0.1:8080
       PUBLIC_APP_URL: http://localhost:8080
-
-      COOKIE_SECURE: "false"
-      REQUIRE_EMAIL_VERIFICATION: "false"
-
+      COOKIE_SECURE: 'false'
+      REQUIRE_EMAIL_VERIFICATION: 'false'
       SECURITY_PEPPER: ${SECURITY_PEPPER:-development-pepper-change-before-production-123456789}
-
       TRUSTED_HOSTS: localhost,127.0.0.1
-      FORCE_HTTPS: "false"
-      TRUST_PROXY_HEADERS: "true"
-
+      FORCE_HTTPS: 'false'
+      TRUST_PROXY_HEADERS: 'true'
       LOAD_DEMO_DATA: ${LOAD_DEMO_DATA:-true}
-
       GEOAPIFY_ENABLED: ${GEOAPIFY_ENABLED:-false}
       GEOAPIFY_SERVER_API_KEY: ${GEOAPIFY_SERVER_API_KEY:-}
-      # Stripe Test exclusivo do desenvolvimento (nenhuma chave live é aceita pelo backend).
       BILLING_ENABLED: ${BILLING_ENABLED:-false}
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
@@ -74,45 +57,71 @@ services:
       STRIPE_PRICE_BUSINESS_YEARLY: ${STRIPE_PRICE_BUSINESS_YEARLY:-}
       STRIPE_PRICE_USER_PREMIUM_MONTHLY: ${STRIPE_PRICE_USER_PREMIUM_MONTHLY:-}
       STRIPE_PRICE_USER_PREMIUM_YEARLY: ${STRIPE_PRICE_USER_PREMIUM_YEARLY:-}
-
+      DATA_ENCRYPTION_KEY: ${DATA_ENCRYPTION_KEY:-}
     command:
-      - /bin/sh
-      - -c
-      - |
-        python scripts/wait_for_db.py &&
-        alembic upgrade head &&
-        if [ "$$LOAD_DEMO_DATA" = "true" ]; then
-          python scripts/seed_demo.py;
-        fi &&
-        uvicorn main:app \
-          --host 0.0.0.0 \
-          --port 8000 \
-          --proxy-headers \
-          --forwarded-allow-ips='*'
-
+    - /bin/sh
+    - -c
+    - "python scripts/wait_for_db.py &&\nalembic upgrade head &&\nif [ \"$$LOAD_DEMO_DATA\"\
+      \ = \"true\" ]; then\n  python scripts/seed_demo.py;\nfi &&\nuvicorn main:app\
+      \ \\\n  --host 0.0.0.0 \\\n  --port 8000 \\\n  --proxy-headers \\\n  --forwarded-allow-ips='*'\n"
     healthcheck:
       test:
-        - CMD
-        - python
-        - -c
-        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health/ready', timeout=3)"
+      - CMD
+      - python
+      - -c
+      - import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health/ready',
+        timeout=3)
       interval: 10s
       timeout: 5s
       retries: 10
       start_period: 20s
-
-
   frontend:
     build: ./FrontEnd
     restart: unless-stopped
-
     depends_on:
       backend:
         condition: service_healthy
-
     ports:
-      - "${APP_PORT:-8080}:80"
-
-
+    - ${APP_PORT:-8080}:80
+  worker:
+    profiles:
+    - worker
+    build: ./BackEnd/Python
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      APP_ENV: development
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_USER: ${MYSQL_USER:-churrasplan}
+      DB_PASSWORD: ${MYSQL_PASSWORD:-churrasplan_dev}
+      DB_NAME: ${MYSQL_DATABASE:-churrasplan}
+      AUTO_CREATE_SCHEMA: 'false'
+      CORS_ORIGINS: http://localhost:8080,http://127.0.0.1:8080
+      PUBLIC_APP_URL: http://localhost:8080
+      COOKIE_SECURE: 'false'
+      REQUIRE_EMAIL_VERIFICATION: 'false'
+      SECURITY_PEPPER: ${SECURITY_PEPPER:-development-pepper-change-before-production-123456789}
+      TRUSTED_HOSTS: localhost,127.0.0.1
+      FORCE_HTTPS: 'false'
+      TRUST_PROXY_HEADERS: 'true'
+      LOAD_DEMO_DATA: ${LOAD_DEMO_DATA:-true}
+      GEOAPIFY_ENABLED: ${GEOAPIFY_ENABLED:-false}
+      GEOAPIFY_SERVER_API_KEY: ${GEOAPIFY_SERVER_API_KEY:-}
+      BILLING_ENABLED: ${BILLING_ENABLED:-false}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+      STRIPE_PRICE_PRO: ${STRIPE_PRICE_PRO:-}
+      STRIPE_PRICE_BUSINESS: ${STRIPE_PRICE_BUSINESS:-}
+      STRIPE_PRICE_PRO_YEARLY: ${STRIPE_PRICE_PRO_YEARLY:-}
+      STRIPE_PRICE_BUSINESS_YEARLY: ${STRIPE_PRICE_BUSINESS_YEARLY:-}
+      STRIPE_PRICE_USER_PREMIUM_MONTHLY: ${STRIPE_PRICE_USER_PREMIUM_MONTHLY:-}
+      STRIPE_PRICE_USER_PREMIUM_YEARLY: ${STRIPE_PRICE_USER_PREMIUM_YEARLY:-}
+      DATA_ENCRYPTION_KEY: ${DATA_ENCRYPTION_KEY:-}
+    command:
+    - python
+    - -m
+    - scripts.worker
 volumes:
-  churrasplan_mysql:
+  churrasplan_mysql: null

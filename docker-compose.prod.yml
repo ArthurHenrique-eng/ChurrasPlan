@@ -4,6 +4,8 @@ services:
   backend:
     environment:
       APP_ENV: production
+      MFA_REQUIRED_ADMIN: "true"
+      DATA_ENCRYPTION_KEY: ${DATA_ENCRYPTION_KEY:?defina DATA_ENCRYPTION_KEY}
       COOKIE_SECURE: "true"
       REQUIRE_EMAIL_VERIFICATION: "true"
       FORCE_HTTPS: "true"

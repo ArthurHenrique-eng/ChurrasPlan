@@ -1,4 +1,4 @@
-# ChurrasPlan SaaS B2B2C — API v6.9.0
+# ChurrasPlan SaaS B2B2C — API v6.10.0
 
 <p align="center">
   <img src="docs/assets/LogoChurrasPlan.png" alt="Ícone do ChurrasPlan" width="72" />
@@ -9,6 +9,22 @@
 O **ChurrasPlan** é uma plataforma Full Stack para planejar churrascos do início ao fim: convidados, quantidades, restrições alimentares, orçamento, lista/checklist de compras, preços, histórico, convites/RSVP, parceiros e otimização de onde comprar.
 
 A branch SaaS mantém o planejador e Geoapify e implementa organizações, entitlements, filiais, campanhas, Stripe Test para consumidores/mercados e Premium B2C. **Stripe live e comercialização ainda não foram homologados.** Leia [ChurrasPlanSaaS.md](docs/ChurrasPlanSaaS.md).
+
+## Preparação para lançamento
+
+A revisão 6.10 acrescenta MFA/TOTP e Argon2, filas duráveis para e-mails/webhooks, observabilidade, leads/CRM, analytics opcionais, indicações, SEO, ferramentas profissionais, lembretes, prévias CSV e transferência de propriedade. Os cálculos, preços e fluxos SaaS anteriores foram preservados.
+
+- Consumidor: `index.html` e planejador.
+- Parceiros: `parceiros.html` para interesse comercial; `parceiro.html` para operação.
+- Profissional: `profissional.html` para clientes e propostas.
+- Conta: `seguranca.html` para MFA e recuperação.
+- Administrador: `operacao.html` para funis, leads, custos e alertas.
+
+**Estado: pré-lançamento/piloto.** Stripe permanece Test; produção comercial exige homologação Live, domínio/TLS/SMTP, secrets, backup independente, revisão legal e gates GitHub. A auditoria dos 30 blocos, migrations, evidências e runbooks estão na seção 19 da [memória técnica](docs/ChurrasPlanSaaS.md).
+
+Antes do Compose produtivo, configure `DATA_ENCRYPTION_KEY` compartilhada entre API/worker e `BACKUP_ENCRYPTION_KEY` independente, além das variáveis existentes. Configure MFA nas contas administrativas. Gere SEO com `python scripts/build_seo.py --base-url https://SEU_DOMINIO`; a versão local/staging permanece noindex. O worker produtivo sobe automaticamente; em desenvolvimento, use `docker compose --profile worker -f docker-compose.dev.yml up --build` após configurar a chave de dados.
+
+Validação de publicação: `python scripts/smoke.py https://SEU_DOMINIO`; carga básica em staging: `python scripts/load_smoke.py https://STAGING --requests 30 --concurrency 3`. Agende backup cifrado e prove a restauração em banco isolado; não rode seeds demonstrativos em produção.
 
 ## Estado da plataforma
 
@@ -35,7 +51,7 @@ A branch SaaS mantém o planejador e Geoapify e implementa organizações, entit
 
 ### Produtos, parceiros e compras
 
-A trilha SaaS introduz organizações com papéis locais e isolamento B2B inicial. Consultas do painel usam a organização do membro; para usuários em mais de uma organização, o cabeçalho `X-Organizacao-ID` é obrigatório. **Entitlements, convites e seletor multi-org estão implementados; cobrança real continua desativada.** Veja `docs/ChurrasPlanSaaS.md` e `docs/ChurrasPlanSaaS.md` para a operação atual.
+A trilha SaaS introduz organizações com papéis locais e isolamento B2B inicial. Consultas do painel usam a organização do membro; para usuários em mais de uma organização, o cabeçalho `X-Organizacao-ID` é obrigatório. **Entitlements, convites e seletor multi-org estão implementados; cobrança real continua desativada.** Veja `docs/ChurrasPlanSaaS.md` para a operação atual.
 
 - produto genérico + SKU comercial;
 - catálogo genérico amplo por categoria para parceiros: carnes, bebidas, mercearia, laticínios, padaria, hortifruti, congelados, limpeza, higiene e descartáveis;
