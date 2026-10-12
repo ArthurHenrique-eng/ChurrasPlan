@@ -75,7 +75,7 @@ def test_catalogo_quota_erro_e_cross_tenant(client, monkeypatch):
         org_b = _ativar(outra, hb)
         sku_b = outra.post("/api/parceiro/importacoes/catalogo", headers=hb,
                           json=lote("fase4a-lote-b-2026", catalogo_csv(
-                              pai_id, ("SKU-B", "Produto B", "Marca B", "1234567890123"))))
+                              pai_id, ("SKU-B", "Produto B", "Marca B", "4006381333931"))))
         assert sku_b.status_code == 201 and sku_b.json()["criados"] == 1
         assert outra.post("/api/parceiro/importacoes/catalogo",
                           headers={**hb, "X-Organizacao-ID": str(org_a)},
@@ -83,7 +83,7 @@ def test_catalogo_quota_erro_e_cross_tenant(client, monkeypatch):
                               pai_id, ("SKU-A", "Produto A", "Marca A", "")))).status_code == 404
     csv = catalogo_csv(pai_id,
                        ("SKU-A", "Produto A", "Marca A", ""),
-                       ("SKU-EAN", "Produto Ean", "Marca E", "1234567890123"),
+                       ("SKU-EAN", "Produto Ean", "Marca E", "4006381333931"),
                        ("SKU-COTA", "Produto C", "Marca C", ""))
     resp = client.post("/api/parceiro/importacoes/catalogo", headers=ha,
                        json=lote("fase4a-lote-quota-2026", csv))

@@ -21,8 +21,7 @@ def _ip_cliente(request: Request) -> str:
 
 
 def chave_rate_limit(request: Request, escopo: str, adicional: str | None = None) -> str:
-    ua = (request.headers.get("user-agent") or "")[:120]
-    base = f"{escopo}|{_ip_cliente(request)}|{ua}|{adicional or ''}"
+    base = f"{escopo}|{_ip_cliente(request)}|{adicional or ''}"
     return hmac.new(
         settings.SECURITY_PEPPER.encode("utf-8"),
         base.encode("utf-8"),

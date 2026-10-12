@@ -8,6 +8,7 @@ import hashlib
 import hmac
 import json
 import time
+import stripe
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -30,7 +31,7 @@ PRICE_FIELDS_YEARLY = {"pro": "STRIPE_PRICE_PRO_YEARLY", "business": "STRIPE_PRI
 def billing_habilitado() -> bool:
     """Only TEST Stripe secret+webhook secret+both recurring price IDs."""
     return bool(settings.BILLING_ENABLED
-                and settings.STRIPE_SECRET_KEY.startswith("sk_test_")
+                and settings.STRIPE_SECRET_KEY.startswith(("sk_test_", "rk_test_"))
                 and settings.STRIPE_WEBHOOK_SECRET.startswith("whsec_")
                 and all(getattr(settings, field).startswith("price_") for field in PRICE_FIELDS.values())
                 and 0 <= settings.BILLING_GRACE_DAYS <= 7)
@@ -59,20 +60,23 @@ def preco_configurado(plano: str, periodicidade: str = "mensal") -> str:
 def stripe_request(method: str, path: str, campos: dict | None = None, *, idempotency: str | None = None) -> dict:
     # A API é compartilhada por Billing B2B e Premium B2C; não exige ambos os
     # preços de mercados para a contratação pessoal. Sempre recusa modo live.
-    if not (settings.BILLING_ENABLED and settings.STRIPE_SECRET_KEY.startswith("sk_test_")
+    if not (settings.BILLING_ENABLED and settings.STRIPE_SECRET_KEY.startswith(("sk_test_", "rk_test_"))
             and settings.STRIPE_WEBHOOK_SECRET.startswith("whsec_")):
         raise HTTPException(status_code=503, detail="Stripe Test não configurado.")
     if not path.startswith("/v1/") or "://" in path or ".." in path:
         raise ValueError("Endpoint Stripe inválido")
-    body = urllib.parse.urlencode(campos).encode("utf-8") if campos is not None else None
-    headers = {"Authorization": f"Bearer {settings.STRIPE_SECRET_KEY}", "Content-Type": "application/x-www-form-urlencoded"}
+    parametros = dict(campos or {})
     if idempotency:
-        headers["Idempotency-Key"] = idempotency
-    req = urllib.request.Request("https://api.stripe.com" + path, data=body, headers=headers, method=method)
+        parametros["idempotency_key"] = idempotency
+    if method.upper() == "POST" and path == "/v1/checkout/sessions":
+        origem = hmac.new(settings.SECURITY_PEPPER.encode(), (idempotency or "checkout").encode(), hashlib.sha256).digest()
+        parametros["integration_identifier"] = "churrasplan_" + "".join(chr(97 + x % 26) for x in origem[:8])
+    cliente = stripe.StripeClient(settings.STRIPE_SECRET_KEY, stripe_version=settings.STRIPE_API_VERSION,
+        max_network_retries=1, http_client=stripe.RequestsClient(timeout=12))
     try:
-        with urllib.request.urlopen(req, timeout=12) as resposta:
-            return json.loads(resposta.read(250000).decode("utf-8"))
-    except (urllib.error.URLError, TimeoutError, ValueError, json.JSONDecodeError) as exc:
+        resposta = cliente.raw_request(method.lower(), path, **parametros)
+        return dict(resposta.to_dict()) if hasattr(resposta, "to_dict") else dict(resposta)
+    except (stripe.StripeError, TimeoutError, OSError, ValueError) as exc:
         raise HTTPException(status_code=502, detail="Falha na comunicação com Stripe Test.") from exc
 
 
@@ -122,7 +126,7 @@ def preco_mensal_validado(plano: str, periodicidade: str = "mensal") -> dict:
 
 
 def verificar_assinatura_webhook(payload: bytes, assinatura: str) -> dict:
-    if not (settings.BILLING_ENABLED and settings.STRIPE_SECRET_KEY.startswith("sk_test_")
+    if not (settings.BILLING_ENABLED and settings.STRIPE_SECRET_KEY.startswith(("sk_test_", "rk_test_"))
             and settings.STRIPE_WEBHOOK_SECRET.startswith("whsec_")):
         raise HTTPException(status_code=503, detail="Stripe Test webhook não configurado.")
     if len(payload) > 250000:

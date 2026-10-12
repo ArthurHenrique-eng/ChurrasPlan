@@ -20,6 +20,10 @@ from .assinatura import PlanoAssinatura, AssinaturaUsuario
 from .metrica_estabelecimento import MetricaEstabelecimento
 from .privacidade import ConsentimentoUsuario
 from .seguranca import EventoSeguranca, AuditoriaAdmin
+from .operacoes import CredencialMFA, RecuperacaoMFA, ContadorRequisicao, TarefaOutbox, EstadoWorker
+from .growth import LeadComercial, AtividadeLead, EventoProduto, IndicacaoUsuario, AtribuicaoCadastro, FeedbackParceiro, CustoOperacao
+from .profissional import ClienteProfissional, PropostaProfissional, FavoritoEstabelecimento, LembreteEvento
+from .assistente import ConsumoAssistente
 
 __all__ = [
     "Usuario", "SessaoUsuario", "TokenUsuario", "Categoria", "Produto", "Estabelecimento", "Preco",

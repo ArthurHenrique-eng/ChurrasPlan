@@ -140,7 +140,7 @@ def criar_produto_comercial(
     pai = db.get(Produto, payload.produto_pai_id)
     if not pai or pai.tipo_produto != "generico":
         raise HTTPException(status_code=422, detail="Selecione um produto genérico válido como categoria comercial.")
-    if payload.ean and db.query(Produto).filter(Produto.ean == payload.ean).first():
+    if payload.ean and db.query(Produto).filter(Produto.ean == payload.ean, Produto.organizacao_id == (org.id if org else None)).first():
         raise HTTPException(status_code=409, detail="Já existe um produto com este EAN.")
     exigir_cota_criacao(db, org, usuario, "produtos_comerciais")
     base = slugificar(f"{payload.marca}-{payload.nome}-{payload.quantidade_embalagem}-{payload.unidade_embalagem}")

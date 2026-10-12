@@ -17,6 +17,7 @@ class SessaoUsuario(Base):
     revogada = Column(Boolean, nullable=False, default=False)
     user_agent = Column(String(255), nullable=True)
     ip_hash = Column(String(64), nullable=True)
+    mfa_verificado_em = Column(DateTime, nullable=True)
 
     usuario = relationship("Usuario", back_populates="sessoes")
 

@@ -1,6 +1,6 @@
 """Autenticação por sessão opaca em cookie HttpOnly.
 
-- senha: PBKDF2-HMAC-SHA256 com salt aleatório;
+- senha: Argon2id, com migração gradual dos hashes PBKDF2 legados;
 - sessão: segredo aleatório enviado no cookie, apenas SHA-256 persistido;
 - CSRF: double-submit cookie + hash vinculado à sessão para mutações autenticadas;
 - tokens de e-mail/reset: opacos, uso único e expirados.
@@ -12,9 +12,12 @@ import hashlib
 import hmac
 import secrets
 import smtplib
+import ssl
 from datetime import UTC, datetime, timedelta
 from email.message import EmailMessage
 from typing import Iterable
+from argon2 import PasswordHasher
+from argon2.exceptions import VerificationError, InvalidHashError
 
 from fastapi import Cookie, Depends, Header, HTTPException, Request, Response, status
 from sqlalchemy.orm import Session
@@ -24,6 +27,7 @@ from database.connection import get_db
 from models import SessaoUsuario, TokenUsuario, Usuario
 
 PBKDF2_ITERATIONS = 600_000
+PASSWORD_HASHER = PasswordHasher(time_cost=3, memory_cost=65536, parallelism=2)
 
 
 def agora() -> datetime:
@@ -46,15 +50,19 @@ def hash_senha(senha: str) -> str:
         raise ValueError("A senha deve ter pelo menos 10 caracteres.")
     if not any(c.isalpha() for c in senha) or not any(c.isdigit() for c in senha):
         raise ValueError("A senha deve combinar letras e números.")
-    salt = secrets.token_bytes(16)
-    digest = hashlib.pbkdf2_hmac("sha256", senha.encode(), salt, PBKDF2_ITERATIONS)
-    return f"pbkdf2_sha256${PBKDF2_ITERATIONS}${base64.urlsafe_b64encode(salt).decode()}${base64.urlsafe_b64encode(digest).decode()}"
+    if len(senha) > 1024:
+        raise ValueError("A senha deve possuir no máximo 1024 caracteres.")
+    return PASSWORD_HASHER.hash(senha)
 
 
 def verificar_senha(senha: str, senha_hash: str) -> bool:
     try:
+        if len(senha) > 1024:
+            return False
+        if senha_hash.startswith("$argon2id$"):
+            return PASSWORD_HASHER.verify(senha_hash, senha)
         algoritmo, iters, salt_b64, digest_b64 = senha_hash.split("$", 3)
-        if algoritmo != "pbkdf2_sha256":
+        if algoritmo != "pbkdf2_sha256" or not 1 <= int(iters) <= 2_000_000:
             return False
         salt = base64.urlsafe_b64decode(salt_b64.encode())
         esperado = base64.urlsafe_b64decode(digest_b64.encode())
@@ -93,6 +101,7 @@ def consumir_token_usuario(db: Session, token: str, tipo: str) -> Usuario | None
             TokenUsuario.usado_em.is_(None),
             TokenUsuario.expira_em > agora(),
         )
+        .with_for_update()
         .first()
     )
     if not registro:
@@ -102,7 +111,10 @@ def consumir_token_usuario(db: Session, token: str, tipo: str) -> Usuario | None
     return registro.usuario
 
 
-def enviar_email(destino: str, assunto: str, corpo: str) -> bool:
+def enviar_email(destino: str, assunto: str, corpo: str, *, db: Session | None = None) -> bool:
+    if db is not None:
+        from services.outbox import enfileirar_email
+        return enfileirar_email(db, destino, assunto, corpo)
     if not settings.SMTP_HOST:
         return False
     msg = EmailMessage()
@@ -112,7 +124,7 @@ def enviar_email(destino: str, assunto: str, corpo: str) -> bool:
     msg.set_content(corpo)
     with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=15) as smtp:
         if settings.SMTP_TLS:
-            smtp.starttls()
+            smtp.starttls(context=ssl.create_default_context())
         if settings.SMTP_USER:
             smtp.login(settings.SMTP_USER, settings.SMTP_PASSWORD or "")
         smtp.send_message(msg)
@@ -170,24 +182,30 @@ def _buscar_sessao(db: Session, segredo: str | None) -> SessaoUsuario | None:
 
 
 def usuario_opcional(
+    request: Request,
     db: Session = Depends(get_db),
     session_cookie: str | None = Cookie(default=None, alias=settings.SESSION_COOKIE_NAME),
 ) -> Usuario | None:
     sessao = _buscar_sessao(db, session_cookie)
+    if sessao:
+        _verificar_mfa(request, db, sessao)
     return sessao.usuario if sessao else None
 
 
 def usuario_atual(
+    request: Request,
     db: Session = Depends(get_db),
     session_cookie: str | None = Cookie(default=None, alias=settings.SESSION_COOKIE_NAME),
 ) -> Usuario:
     sessao = _buscar_sessao(db, session_cookie)
     if not sessao:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Faça login para acessar este recurso.")
+    _verificar_mfa(request, db, sessao)
     return sessao.usuario
 
 
 def usuario_atual_com_csrf(
+    request: Request,
     db: Session = Depends(get_db),
     session_cookie: str | None = Cookie(default=None, alias=settings.SESSION_COOKIE_NAME),
     csrf_cookie: str | None = Cookie(default=None, alias=settings.CSRF_COOKIE_NAME),
@@ -200,11 +218,20 @@ def usuario_atual_com_csrf(
         raise HTTPException(status_code=403, detail="Token CSRF ausente ou inválido.")
     if not hmac.compare_digest(sessao.csrf_hash, hash_token(csrf_header)):
         raise HTTPException(status_code=403, detail="Token CSRF não pertence à sessão atual.")
+    _verificar_mfa(request, db, sessao)
     return sessao.usuario
+
+
+def _verificar_mfa(request: Request, db: Session, sessao: SessaoUsuario) -> None:
+    if request.url.path.startswith("/api/auth/mfa") or request.url.path in {"/api/auth/me", "/api/auth/logout"}:
+        return
+    from services.mfa import exigir_mfa
+    exigir_mfa(db, sessao)
 
 
 
 def usuario_opcional_com_csrf(
+    request: Request,
     db: Session = Depends(get_db),
     session_cookie: str | None = Cookie(default=None, alias=settings.SESSION_COOKIE_NAME),
     csrf_cookie: str | None = Cookie(default=None, alias=settings.CSRF_COOKIE_NAME),
@@ -219,6 +246,7 @@ def usuario_opcional_com_csrf(
         raise HTTPException(status_code=403, detail="Token CSRF ausente ou inválido.")
     if not hmac.compare_digest(sessao.csrf_hash, hash_token(csrf_header)):
         raise HTTPException(status_code=403, detail="Token CSRF não pertence à sessão atual.")
+    _verificar_mfa(request, db, sessao)
     return sessao.usuario
 
 def exigir_papeis(*papeis: str, mutacao: bool = False):

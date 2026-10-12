@@ -15,9 +15,9 @@ from models import ConcessaoOrganizacao, AssinaturaOrganizacao, Estabelecimento,
 # Valores operacionais iniciais, NÃO preços nem ofertas comerciais.
 # Contagens incluem dados legados e registros inativos (evita contorno de quota).
 LIMITES_PLANOS = {
-    "free": {"estabelecimentos": 3, "produtos_comerciais": 100, "ofertas": 2000},
-    "pro": {"estabelecimentos": 20, "produtos_comerciais": 1000, "ofertas": 20000},
-    "business": {"estabelecimentos": 200, "produtos_comerciais": 10000, "ofertas": 100000},
+    "free": {"estabelecimentos": 3, "produtos_comerciais": 100, "ofertas": 2000, "campanhas": 5, "importacoes": 10},
+    "pro": {"estabelecimentos": 20, "produtos_comerciais": 1000, "ofertas": 20000, "campanhas": 50, "importacoes": 100},
+    "business": {"estabelecimentos": 200, "produtos_comerciais": 10000, "ofertas": 100000, "campanhas": 500, "importacoes": 1000},
 }
 RECURSOS_PLANOS = {
     "free": {"painel_parceiro": True, "dashboard": True, "api": False},
@@ -68,6 +68,19 @@ def _contagem_atual(db: Session, org_id: int, recurso: str, *, bloqueio: bool = 
         stmt = select(func.count(Preco.id)).select_from(Preco).join(Estabelecimento).where(
             Estabelecimento.organizacao_id == org_id
         )
+    elif recurso == "campanhas":
+        from models import CampanhaComercial
+        stmt = select(func.count(CampanhaComercial.id)).where(CampanhaComercial.organizacao_id == org_id)
+    elif recurso == "importacoes":
+        from models import ImportacaoOfertas, ImportacaoCatalogo
+        mes = agora_utc().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        total = 0
+        for modelo in (ImportacaoOfertas, ImportacaoCatalogo):
+            consulta = select(func.count(modelo.id)).where(modelo.organizacao_id == org_id, modelo.criado_em >= mes)
+            if bloqueio:
+                consulta = consulta.with_for_update()
+            total += int(db.execute(consulta).scalar_one())
+        return total
     else:
         raise ValueError("Recurso B2B desconhecido")
     if bloqueio:
@@ -121,3 +134,26 @@ def exigir_cota_criacao(
                 "mensagem": "Limite do plano atingido para novas inclusões.",
             },
         )
+
+
+def has_feature(db: Session, org: Organizacao, recurso: str) -> bool:
+    plano, _, _ = resolver_plano(db, org.id)
+    if recurso in {"importacoes", "campanhas", "analytics_basico"}:
+        return True
+    if recurso in {"analytics_avancado", "relatorios_avancados"}:
+        return plano in {"pro", "business"}
+    return bool(RECURSOS_PLANOS[plano].get(recurso, False))
+
+
+def get_limit(db: Session, org: Organizacao, recurso: str) -> int:
+    plano, _, _ = resolver_plano(db, org.id)
+    return LIMITES_PLANOS[plano][recurso]
+
+
+def get_usage(db: Session, org: Organizacao, recurso: str) -> int:
+    return _contagem_atual(db, org.id, recurso)
+
+
+def require_entitlement(db: Session, org: Organizacao, recurso: str) -> None:
+    if not has_feature(db, org, recurso):
+        raise HTTPException(403, detail={"codigo": "RECURSO_PLANO_NECESSARIO", "recurso": recurso})

@@ -108,7 +108,7 @@ def convidar(
                 email, f"Convite para {org.nome} — ChurrasPlan",
                 f"Você recebeu um convite para a equipe {org.nome}.\n"
                 f"Entre com a conta associada a {email} (ou crie sua conta).\n"
-                f"O convite expira em {VALIDADE_CONVITE_DIAS} dias.\n\n{link}\n",
+                f"O convite expira em {VALIDADE_CONVITE_DIAS} dias.\n\n{link}\n", db=db,
             )
         except (OSError, smtplib.SMTPException) as exc:
             db.rollback()
@@ -240,3 +240,71 @@ def remover_membro(
                    {"papel_anterior": alvo.papel})
     db.commit()
     return {"mensagem": "Acesso à organização revogado."}
+
+
+from pydantic import BaseModel, Field
+from typing import Literal
+
+
+class TransferirPropriedadeIn(BaseModel):
+    novo_usuario_id: int = Field(gt=0)
+    senha: str = Field(min_length=1, max_length=128)
+    confirmacao: Literal['TRANSFERIR']
+
+
+@router.post('/equipe/transferir-propriedade')
+def transferir_propriedade(payload: TransferirPropriedadeIn,
+        usuario: Usuario = Depends(exigir_papeis('parceiro', 'admin', mutacao=True)),
+        db: Session = Depends(get_db), organizacao_id: int | None = Header(None, alias='X-Organizacao-ID')):
+    from services.auth import verificar_senha
+    org = selecionar_organizacao(db, usuario, organizacao_id)
+    if org is None:
+        raise HTTPException(409, detail='Selecione a organização.')
+    org, ator = exigir_gestao(db, usuario, org.id)
+    if ator.papel != 'proprietario' or not verificar_senha(payload.senha, usuario.senha_hash):
+        raise HTTPException(403, detail='Somente o proprietário com senha confirmada pode transferir a organização.')
+    if payload.novo_usuario_id == usuario.id:
+        raise HTTPException(422, detail='Escolha outro membro ativo.')
+    alvo = db.query(OrganizacaoMembro).join(Usuario).filter(OrganizacaoMembro.organizacao_id == org.id,
+        OrganizacaoMembro.usuario_id == payload.novo_usuario_id, OrganizacaoMembro.ativo.is_(True),
+        Usuario.ativo.is_(True)).with_for_update().first()
+    if not alvo:
+        raise HTTPException(404, detail='Novo proprietário deve ser membro ativo desta organização.')
+    ator.papel, alvo.papel = 'gestor', 'proprietario'
+    if alvo.usuario.papel == 'usuario':
+        alvo.usuario.papel = 'parceiro'
+    registrar_acao(db, org.id, usuario.id, 'propriedade_transferida', alvo_id=alvo.usuario_id)
+    db.commit()
+    return {'mensagem':'Propriedade transferida. Seu acesso passa a gestor.', 'organizacao_id':org.id}
+
+
+class EncerrarOrganizacaoIn(BaseModel):
+    senha: str = Field(min_length=1, max_length=128)
+    confirmacao: Literal['ENCERRAR']
+
+
+@router.post('/organizacao/encerrar')
+def encerrar_organizacao(payload: EncerrarOrganizacaoIn,
+        usuario: Usuario = Depends(exigir_papeis('parceiro','admin',mutacao=True)),
+        db: Session = Depends(get_db), organizacao_id: int | None = Header(None,alias='X-Organizacao-ID')):
+    from services.auth import verificar_senha
+    from models import AssinaturaOrganizacao, Estabelecimento, Produto
+    from services.billing import stripe_request
+    from urllib.parse import quote
+    org=selecionar_organizacao(db,usuario,organizacao_id)
+    if org is None:raise HTTPException(409,detail='Selecione uma organização.')
+    org,ator=exigir_gestao(db,usuario,org.id)
+    if ator.papel!='proprietario' or not verificar_senha(payload.senha,usuario.senha_hash):
+        raise HTTPException(403,detail='Proprietário e senha confirmada são necessários.')
+    assinatura=db.query(AssinaturaOrganizacao).filter_by(organizacao_id=org.id).first()
+    if assinatura and assinatura.stripe_subscription_id:
+        remoto=stripe_request('GET','/v1/subscriptions/'+quote(assinatura.stripe_subscription_id,safe=''))
+        if remoto.get('id')!=assinatura.stripe_subscription_id or remoto.get('status') not in {'canceled','incomplete_expired'}:
+            raise HTTPException(409,detail='Encerre a assinatura e aguarde confirmação do término antes de encerrar a organização.')
+    db.query(Estabelecimento).filter_by(organizacao_id=org.id).update({'ativo':False})
+    db.query(Produto).filter_by(organizacao_id=org.id).update({'ativo':False})
+    db.query(OrganizacaoMembro).filter_by(organizacao_id=org.id).update({'ativo':False})
+    org.ativo=False
+    registrar_acao(db,org.id,usuario.id,'organizacao_encerrada')
+    db.commit()
+    return {'mensagem':'Organização encerrada. As lojas e ofertas foram retiradas da publicação.'}

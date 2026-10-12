@@ -1,5 +1,5 @@
 from typing import Optional
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator, field_validator
 
 
 class ProdutoOut(BaseModel):
@@ -51,6 +51,12 @@ class ProdutoGenericoOut(BaseModel):
 
 
 class ProdutoComercialCreate(BaseModel):
+    @field_validator('ean')
+    @classmethod
+    def ean_valido(cls, valor):
+        from utils.validators import validar_ean
+        return validar_ean(valor)
+
     produto_pai_id: int
     nome: str = Field(min_length=2, max_length=120)
     marca: str = Field(min_length=1, max_length=100)
@@ -66,6 +72,12 @@ class ProdutoComercialCreate(BaseModel):
 
 
 class ProdutoComercialUpdate(BaseModel):
+    @field_validator('ean')
+    @classmethod
+    def ean_valido(cls, valor):
+        from utils.validators import validar_ean
+        return validar_ean(valor)
+
     nome: Optional[str] = Field(default=None, min_length=2, max_length=120)
     marca: Optional[str] = Field(default=None, min_length=1, max_length=100)
     variante: Optional[str] = Field(default=None, max_length=120)

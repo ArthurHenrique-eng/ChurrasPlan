@@ -8,7 +8,7 @@ import secrets
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
 
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -18,7 +18,7 @@ from models import (CampanhaComercial, CampanhaComercialItem, Estabelecimento,
 from schemas.comercial_b2b import CampanhaCriar, CampanhaRevisao, CatalogoCSV
 from services.auth import agora, exigir_papeis
 from services.catalogo_produtos import slugificar
-from services.entitlements import LIMITES_PLANOS, _contagem_atual, resolver_plano
+from services.entitlements import LIMITES_PLANOS, _contagem_atual, resolver_plano, exigir_cota_criacao
 from services.equipe_organizacao import exigir_gestao, registrar_acao
 from services.organizacoes import selecionar_organizacao
 from services.seguranca import registrar_auditoria
@@ -77,8 +77,8 @@ def _upsert_csv(db: Session, org_id: int, linha: dict, vistos: set[str],
     if variante and len(variante) > 120:
         raise ValueError("Variante muito longa.")
     ean = (linha.get("ean") or "").strip() or None
-    if ean and (len(ean) < 8 or len(ean) > 32 or not ean.isdigit()):
-        raise ValueError("EAN precisa ter de 8 a 32 dígitos.")
+    from utils.validators import validar_ean
+    validar_ean(ean)
     if ean and ean in eans:
         raise ValueError("EAN repetido neste lote.")
     ativo = (linha.get("ativo") or "true").strip().lower()
@@ -98,6 +98,7 @@ def _upsert_csv(db: Session, org_id: int, linha: dict, vistos: set[str],
     if ean:
         terceiro = db.query(Produto.id).filter(
             Produto.ean == ean,
+            Produto.organizacao_id == org_id,
             Produto.id != (produto.id if produto else -1),
         ).first()
         if terceiro:
@@ -130,6 +131,7 @@ def importar_catalogo(
     usuario: Usuario = Depends(exigir_papeis("parceiro", "admin", mutacao=True)),
     db: Session = Depends(get_db),
     organizacao_id: int | None = Header(default=None, alias="X-Organizacao-ID"),
+    previa: bool = False,
 ):
     org = _org(db, usuario, organizacao_id, editar=True)
     # O lock do tenant serializa lotes e preserva o limite mesmo com escritores simultâneos.
@@ -143,6 +145,8 @@ def importar_catalogo(
             raise HTTPException(status_code=409, detail="Chave já utilizada com CSV diferente.")
         return {**anterior.resultado, "repetida": True}
     stream = io.StringIO(payload.csv_texto.lstrip("\ufeff"))
+    if not previa:
+        exigir_cota_criacao(db, org, usuario, "importacoes")
     primeiro = stream.readline()
     stream.seek(0)
     leitor = csv.DictReader(stream, delimiter=";" if ";" in primeiro else ",")
@@ -174,6 +178,9 @@ def importar_catalogo(
                  "atualizados": atualizados, "rejeitados": len(erros),
                  "erros": erros, "repetida": False,
                  "chave_idempotencia": payload.chave_idempotencia}
+    if previa:
+        db.rollback()
+        return {**resultado, "previa": True}
     db.add(ImportacaoCatalogo(organizacao_id=org.id, usuario_id=usuario.id,
             chave_idempotencia=payload.chave_idempotencia,
             payload_hash=hash_arquivo, resultado=resultado))
@@ -270,6 +277,7 @@ def criar_campanha(
     org = _org(db, usuario, organizacao_id)
     exigir_gestao(db, usuario, org.id)
     campanha = CampanhaComercial(organizacao_id=org.id, criado_por_usuario_id=usuario.id)
+    exigir_cota_criacao(db, org, usuario, "campanhas")
     db.add(campanha)
     _alterar_campos(db, campanha, payload, org)
     registrar_acao(db, org.id, usuario.id, "campanha_criada",

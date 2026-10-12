@@ -18,7 +18,7 @@ from models import (Estabelecimento, ImportacaoOfertas, MetricaEstabelecimento,
 from schemas.estabelecimento import EstabelecimentoOut
 from schemas.operacao_b2b import FilialMetaUpdate, ImportacaoOfertasCSV
 from services.auth import agora, exigir_papeis
-from services.entitlements import LIMITES_PLANOS, _contagem_atual, resolver_plano
+from services.entitlements import LIMITES_PLANOS, _contagem_atual, resolver_plano, exigir_cota_criacao
 from services.equipe_organizacao import exigir_gestao
 from services.organizacoes import selecionar_organizacao
 
@@ -195,6 +195,7 @@ def importar_ofertas_csv(
     usuario: Usuario = Depends(exigir_papeis("parceiro", "admin", mutacao=True)),
     db: Session = Depends(get_db),
     organizacao_id: int | None = Header(default=None, alias="X-Organizacao-ID"),
+    previa: bool = False,
 ):
     org = _org(db, usuario, organizacao_id, editar=True)
     # Serializa importações concorrentes e criações manuais na mesma organização.
@@ -212,6 +213,8 @@ def importar_ofertas_csv(
         return {**anterior.resultado, "repetida": True}
 
     fonte = io.StringIO(payload.csv_texto.lstrip("\ufeff"))
+    if not previa:
+        exigir_cota_criacao(db, org, usuario, "importacoes")
     cabecalho = fonte.readline()
     if not cabecalho:
         raise HTTPException(status_code=422, detail="Arquivo CSV vazio.")
@@ -281,6 +284,9 @@ def importar_ofertas_csv(
         "organizacao_id": org.id, "chave_idempotencia": chave, "linhas": len(linhas),
         "criadas": len(aceitos), "rejeitadas": len(erros), "erros": erros, "repetida": False,
     }
+    if previa:
+        db.rollback()
+        return {**resultado, "previa": True}
     lote = ImportacaoOfertas(
         organizacao_id=org.id, usuario_id=usuario.id,
         chave_idempotencia=chave, payload_hash=resumo_hash, resultado=resultado,

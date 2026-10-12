@@ -87,6 +87,9 @@ def atualizar_marketing(
     else:
         registro.concedido = payload.concedido
         registro.origem = "minha_conta"
+    from models import LeadComercial
+    from services.auth import agora
+    db.query(LeadComercial).filter_by(email=usuario.email).update({"marketing_concedido": payload.concedido, "marketing_revogado_em": None if payload.concedido else agora()})
     db.commit()
     return {"mensagem": "Preferência atualizada.", "concedido": payload.concedido}
 
@@ -122,6 +125,7 @@ def exportar_meus_dados(usuario: Usuario = Depends(usuario_atual), db: Session =
     consentimentos = db.query(ConsentimentoUsuario).filter(ConsentimentoUsuario.usuario_id == usuario.id).all()
     assinatura = db.query(AssinaturaUsuario).filter(AssinaturaUsuario.usuario_id == usuario.id).all()
     assinatura_stripe = db.get(AssinaturaStripeUsuario, usuario.id)
+    from models import ClienteProfissional, PropostaProfissional, LembreteEvento, FavoritoEstabelecimento
 
     return {
         "formato": "ChurrasPlan-LGPD-export-v1",
@@ -131,6 +135,10 @@ def exportar_meus_dados(usuario: Usuario = Depends(usuario_atual), db: Session =
         "estabelecimentos_responsavel": [_modelo_dict(e) for e in estabelecimentos],
         "assinaturas": [_modelo_dict(a) for a in assinatura],
         "assinatura_stripe_teste": _modelo_dict(assinatura_stripe) if assinatura_stripe else None,
+        "clientes_profissionais": [_modelo_dict(x) for x in db.query(ClienteProfissional).filter_by(usuario_id=usuario.id)],
+        "propostas_profissionais": [_modelo_dict(x) for x in db.query(PropostaProfissional).filter_by(usuario_id=usuario.id)],
+        "lembretes": [_modelo_dict(x) for x in db.query(LembreteEvento).filter_by(usuario_id=usuario.id)],
+        "favoritos": [_modelo_dict(x) for x in db.query(FavoritoEstabelecimento).filter_by(usuario_id=usuario.id)],
         "observacao": "Tokens de autenticação, hashes de senha e segredos de sessão não fazem parte da exportação.",
     }
 
@@ -162,6 +170,18 @@ def excluir_minha_conta(
             })
     # Eventos privados pertencem ao usuário e são removidos. Registros de negócio
     # (estabelecimentos/ofertas) permanecem apenas de forma desvinculada da pessoa.
+    from models import (OrganizacaoMembro, Organizacao, TarefaOutbox, ClienteProfissional, PropostaProfissional,
+                        LembreteEvento, FavoritoEstabelecimento, ConsumoAssistente, IndicacaoUsuario, AtribuicaoCadastro, CredencialMFA, RecuperacaoMFA, LeadComercial)
+    dono = db.query(OrganizacaoMembro).join(Organizacao).filter(OrganizacaoMembro.usuario_id == usuario.id,
+        OrganizacaoMembro.papel == "proprietario", OrganizacaoMembro.ativo.is_(True), Organizacao.ativo.is_(True)).first()
+    if dono:
+        raise HTTPException(409, detail="Transfira a propriedade ou encerre a organização antes de excluir a conta.")
+    db.query(OrganizacaoMembro).filter_by(usuario_id=usuario.id).delete(synchronize_session=False)
+    for modelo in (LembreteEvento, PropostaProfissional, ClienteProfissional, FavoritoEstabelecimento, ConsumoAssistente,
+                   IndicacaoUsuario, AtribuicaoCadastro, RecuperacaoMFA, CredencialMFA, TarefaOutbox):
+        db.query(modelo).filter_by(usuario_id=usuario.id).delete(synchronize_session=False)
+    db.query(AtribuicaoCadastro).filter_by(indicador_id=usuario.id).update({"indicador_id": None})
+    db.query(LeadComercial).filter_by(email=usuario.email).update({"marketing_concedido": False})
     for churrasco in list(usuario.churrascos):
         db.delete(churrasco)
     db.query(Estabelecimento).filter(Estabelecimento.usuario_responsavel_id == usuario.id).update(

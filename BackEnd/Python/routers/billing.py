@@ -323,6 +323,18 @@ async def webhook_stripe(request: Request, db: Session = Depends(get_db)):
     """Without CSRF/session: Stripe raw body authenticated by HMAC and 5min timestamp."""
     raw = await request.body()
     evento = verificar_assinatura_webhook(raw, request.headers.get("Stripe-Signature", ""))
+    if settings.BILLING_WEBHOOK_ASYNC:
+        from services.outbox import enfileirar
+        obj = evento["data"]["object"]
+        minimo = {k: obj[k] for k in ("id", "subscription", "parent", "metadata") if k in obj}
+        enfileirar(db, "billing_webhook", "stripe:" + evento["id"],
+                  {"id": evento["id"], "type": evento.get("type", ""), "data": {"object": minimo}})
+        db.commit()
+        return {"status": "enfileirado"}
+    return processar_evento_billing(db, evento)
+
+
+def processar_evento_billing(db: Session, evento: dict):
     eid = evento["id"]
     # Checkout Premium e assinatura pessoal usam o mesmo endpoint de webhook
     # assinado que o B2B; mantém separação de clientes e titularidade.

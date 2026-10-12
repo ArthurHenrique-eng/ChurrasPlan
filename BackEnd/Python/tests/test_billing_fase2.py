@@ -1,5 +1,6 @@
 """Fase 2: regressão financeira B2C/B2B apenas em Stripe Test simulado."""
 import time
+from datetime import UTC
 
 from config import settings
 from database.connection import get_db
@@ -106,7 +107,7 @@ def test_fase2_b2c_renovacao_inadimplencia_cancelamento_reativacao_troca_e_fatur
     db = next(app.dependency_overrides[get_db]())
     try:
         u = db.query(AssinaturaStripeUsuario).first()
-        assert abs(u.periodo_fim_em.timestamp() - novo_fim) <= 1
+        assert abs(u.periodo_fim_em.replace(tzinfo=UTC).timestamp() - novo_fim) <= 1
     finally:
         db.close()
 

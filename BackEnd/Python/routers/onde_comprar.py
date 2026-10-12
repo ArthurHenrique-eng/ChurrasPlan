@@ -1,3 +1,4 @@
+from datetime import UTC, datetime
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy.orm import Session
 
@@ -195,10 +196,18 @@ def registrar_interacoes(
     existentes = {row[0] for row in db.query(Estabelecimento.id).filter(Estabelecimento.id.in_(ids), Estabelecimento.ativo.is_(True)).all()}
     for estabelecimento_id in ids:
         if estabelecimento_id in existentes:
-            db.add(MetricaEstabelecimento(
-                estabelecimento_id=estabelecimento_id,
-                tipo=tipo,
-                contexto=contexto,
-            ))
+            import hashlib, hmac
+            from config import settings
+            from sqlalchemy.dialects.mysql import insert as mysql_insert
+            from sqlalchemy.dialects.sqlite import insert as sqlite_insert
+            chave = hmac.new(settings.SECURITY_PEPPER.encode(),
+                f"{usuario.id}:{datetime.now(UTC).date()}:{estabelecimento_id}:{tipo}".encode(), hashlib.sha256).hexdigest()
+            campos = dict(estabelecimento_id=estabelecimento_id, tipo=tipo, contexto=contexto, dedup_hash=chave)
+            if db.bind.dialect.name == 'mysql':
+                stmt = mysql_insert(MetricaEstabelecimento).values(**campos)
+                stmt = stmt.on_duplicate_key_update(dedup_hash=stmt.inserted.dedup_hash)
+            else:
+                stmt = sqlite_insert(MetricaEstabelecimento).values(**campos).on_conflict_do_nothing(index_elements=['dedup_hash'])
+            db.execute(stmt)
     db.commit()
     return None

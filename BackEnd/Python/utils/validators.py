@@ -19,6 +19,18 @@ def validar_nao_negativo(valor: float, nome_campo: str) -> None:
         raise ValueError(f"{nome_campo} não pode ser negativo")
 
 
+def validar_ean(valor: str | None) -> str | None:
+    if valor is None:
+        return None
+    import re
+    if not re.fullmatch(r"[0-9]{8}|[0-9]{12}|[0-9]{13}|[0-9]{14}", valor):
+        raise ValueError("EAN/GTIN deve ter 8, 12, 13 ou 14 dígitos.")
+    soma = sum(int(d) * (3 if i % 2 == 0 else 1) for i, d in enumerate(reversed(valor[:-1])))
+    if (10 - soma % 10) % 10 != int(valor[-1]):
+        raise ValueError("Dígito verificador do EAN/GTIN inválido.")
+    return valor
+
+
 CHAVES_PERFIL_PERSONALIZADO = {
     "carne_adulto_kg", "carne_crianca_kg", "agua_litros_pessoa",
     "refrigerante_litros_pessoa", "suco_litros_pessoa",

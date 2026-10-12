@@ -19,7 +19,7 @@ PRICE_FIELDS_USUARIO = {
 
 
 def billing_usuario_habilitado(periodicidade: str | None = None) -> bool:
-    if not (settings.BILLING_ENABLED and settings.STRIPE_SECRET_KEY.startswith("sk_test_")
+    if not (settings.BILLING_ENABLED and settings.STRIPE_SECRET_KEY.startswith(("sk_test_", "rk_test_"))
             and settings.STRIPE_WEBHOOK_SECRET.startswith("whsec_")):
         return False
     if periodicidade:

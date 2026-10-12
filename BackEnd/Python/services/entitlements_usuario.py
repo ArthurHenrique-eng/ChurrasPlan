@@ -17,6 +17,7 @@ LIMITE_FREE_PLANEJAMENTOS = 5
 RECURSOS_PREMIUM = frozenset({
     "comparacao_avancada", "exportacao_planejamento",
     "modelos_eventos", "analise_detalhada_custos",
+    "exportacao_profissional",
 })
 
 
