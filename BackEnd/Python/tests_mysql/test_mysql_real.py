@@ -31,11 +31,40 @@ def test_mysql_schema_head_e_utf8mb4():
         "organizacoes", "organizacao_membros", "importacoes_ofertas", "importacoes_catalogo", "campanhas_comerciais", "campanhas_comerciais_itens", "assinaturas_organizacao", "tentativas_checkout", "eventos_billing", "concessoes_organizacao", "convites_organizacao", "auditoria_organizacao", "modelos_evento_usuario",
     }
     assert esperadas.issubset(set(insp.get_table_names()))
+    assert {"contexto_hash", "contexto_tipo"}.issubset({c["name"] for c in insp.get_columns("eventos_produto")})
+    assert any(i["name"] == "ix_eventos_produto_funil" for i in insp.get_indexes("eventos_produto"))
     with engine.connect() as conn:
         head = conn.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
         charset = conn.execute(text("SELECT @@character_set_database")).scalar_one()
-    assert head == "20261012_0023"
+    assert head == "20261012_0024"
     assert str(charset).lower() == "utf8mb4"
+
+
+def test_mysql_funis_agregados_preservam_ordem_e_contexto(monkeypatch):
+    _setup_url()
+    from datetime import datetime, timedelta
+    from sqlalchemy.orm import Session
+    from database.connection import engine
+    from models import EventoProduto
+    from services.analytics import registrar_produto
+    from services import analytics_dashboard
+    instante = datetime(2040, 1, 1, 12)
+    monkeypatch.setattr(analytics_dashboard, "agora", lambda: instante + timedelta(hours=1))
+    contexto = "teste-mysql-funil-" + uuid.uuid4().hex
+    with Session(engine) as db:
+        try:
+            for n, evento in enumerate(["landing_visualizada", "planejamento_iniciado", "planejamento_concluido", "resultado_visualizado"]):
+                registrar_produto(db, evento, contexto + evento, {"segmento": "b2c"}, contexto=contexto, contexto_tipo="sessao_dia")
+                registro = db.query(EventoProduto).filter_by(evento=evento).order_by(EventoProduto.id.desc()).first()
+                registro.criado_em = instante + timedelta(minutes=n);db.flush()
+            dados = analytics_dashboard.funis_produto(db, instante)["resultados"]["planejamento_b2c"]["etapas"]
+            assert [e["quantidade"] for e in dados] == [1, 1, 1, 1]
+            assert dados[-1]["conversao_inicio_pct"] == 100
+            registro.criado_em = instante + timedelta(seconds=30);db.flush()
+            dados = analytics_dashboard.funis_produto(db, instante)["resultados"]["planejamento_b2c"]["etapas"]
+            assert [e["quantidade"] for e in dados] == [1, 1, 1, 0]
+        finally:
+            db.rollback()
 
 
 def test_mysql_fk_json_decimal_e_cascade():

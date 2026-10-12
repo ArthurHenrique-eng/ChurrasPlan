@@ -1,4 +1,4 @@
--- ChurrasPlan: referência de instalação NOVA. Alembic head 20261012_0023.
+-- ChurrasPlan: referência de instalação NOVA. Alembic head 20261012_0024.
 -- Bancos existentes: use Alembic; não recrie tabelas.
 CREATE DATABASE IF NOT EXISTS churrasplan CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE churrasplan;
@@ -9,7 +9,7 @@ CREATE TABLE categorias (
 	tipo VARCHAR(30) NOT NULL,
 	PRIMARY KEY (id),
 	UNIQUE (nome)
-) ENGINE=InnoDB;
+)ENGINE=InnoDB;
 CREATE INDEX ix_categorias_id ON categorias (id);
 
 CREATE TABLE contadores_requisicao (
@@ -17,7 +17,7 @@ CREATE TABLE contadores_requisicao (
 	janela INTEGER NOT NULL,
 	quantidade INTEGER NOT NULL,
 	PRIMARY KEY (chave, janela)
-) ENGINE=InnoDB;
+)ENGINE=InnoDB;
 
 CREATE TABLE custos_operacao (
 	id INTEGER NOT NULL AUTO_INCREMENT,
@@ -26,26 +26,29 @@ CREATE TABLE custos_operacao (
 	valor NUMERIC(12, 2) NOT NULL,
 	criado_em DATETIME NOT NULL DEFAULT now(),
 	PRIMARY KEY (id)
-) ENGINE=InnoDB;
+)ENGINE=InnoDB;
 CREATE INDEX ix_custos_operacao_competencia ON custos_operacao (competencia);
 
 CREATE TABLE estado_worker (
 	nome VARCHAR(80) NOT NULL,
 	heartbeat_em DATETIME NOT NULL,
 	PRIMARY KEY (nome)
-) ENGINE=InnoDB;
+)ENGINE=InnoDB;
 
 CREATE TABLE eventos_produto (
 	id INTEGER NOT NULL AUTO_INCREMENT,
 	evento VARCHAR(60) NOT NULL,
 	propriedades JSON NOT NULL,
 	dedup_hash VARCHAR(64) NOT NULL,
+	contexto_tipo VARCHAR(20),
+	contexto_hash VARCHAR(64),
 	criado_em DATETIME NOT NULL DEFAULT now(),
 	PRIMARY KEY (id),
 	UNIQUE (dedup_hash)
-) ENGINE=InnoDB;
+)ENGINE=InnoDB;
 CREATE INDEX ix_eventos_produto_criado_em ON eventos_produto (criado_em);
 CREATE INDEX ix_eventos_produto_evento ON eventos_produto (evento);
+CREATE INDEX ix_eventos_produto_funil ON eventos_produto (contexto_tipo, criado_em, contexto_hash, evento);
 
 CREATE TABLE eventos_seguranca (
 	id INTEGER NOT NULL AUTO_INCREMENT,
@@ -54,7 +57,7 @@ CREATE TABLE eventos_seguranca (
 	sucesso BOOL NOT NULL DEFAULT '0',
 	criado_em DATETIME NOT NULL DEFAULT now(),
 	PRIMARY KEY (id)
-) ENGINE=InnoDB;
+)ENGINE=InnoDB;
 CREATE INDEX ix_eventos_seguranca_chave_hash ON eventos_seguranca (chave_hash);
 CREATE INDEX ix_eventos_seguranca_criado_em ON eventos_seguranca (criado_em);
 CREATE INDEX ix_eventos_seguranca_tipo ON eventos_seguranca (tipo);
@@ -67,7 +70,7 @@ CREATE TABLE organizacoes (
 	ativo BOOL NOT NULL DEFAULT '1',
 	criado_em DATETIME NOT NULL DEFAULT now(),
 	PRIMARY KEY (id)
-) ENGINE=InnoDB;
+)ENGINE=InnoDB;
 CREATE UNIQUE INDEX ix_organizacoes_slug ON organizacoes (slug);
 
 CREATE TABLE planos_assinatura (
@@ -80,7 +83,7 @@ CREATE TABLE planos_assinatura (
 	ativo BOOL NOT NULL DEFAULT '1',
 	criado_em DATETIME NOT NULL DEFAULT now(),
 	PRIMARY KEY (id)
-) ENGINE=InnoDB;
+)ENGINE=InnoDB;
 CREATE UNIQUE INDEX ix_planos_assinatura_slug ON planos_assinatura (slug);
 
 CREATE TABLE usuarios (
@@ -96,7 +99,7 @@ CREATE TABLE usuarios (
 	criado_em DATETIME NOT NULL DEFAULT now(),
 	atualizado_em DATETIME NOT NULL DEFAULT now(),
 	PRIMARY KEY (id)
-) ENGINE=InnoDB;
+)ENGINE=InnoDB;
 CREATE UNIQUE INDEX ix_usuarios_email ON usuarios (email);
 CREATE INDEX ix_usuarios_id ON usuarios (id);
 CREATE INDEX ix_usuarios_papel ON usuarios (papel);
@@ -117,7 +120,7 @@ CREATE TABLE assinaturas_organizacao (
 	FOREIGN KEY(organizacao_id) REFERENCES organizacoes (id) ON DELETE CASCADE,
 	UNIQUE (stripe_customer_id),
 	UNIQUE (stripe_subscription_id)
-) ENGINE=InnoDB;
+)ENGINE=InnoDB;
 
 CREATE TABLE assinaturas_stripe_usuario (
 	usuario_id INTEGER NOT NULL,
@@ -134,7 +137,7 @@ CREATE TABLE assinaturas_stripe_usuario (
 	FOREIGN KEY(usuario_id) REFERENCES usuarios (id) ON DELETE CASCADE,
 	UNIQUE (stripe_customer_id),
 	UNIQUE (stripe_subscription_id)
-) ENGINE=InnoDB;
+)ENGINE=InnoDB;
 
 CREATE TABLE assinaturas_usuario (
 	id INTEGER NOT NULL AUTO_INCREMENT,
@@ -149,7 +152,7 @@ CREATE TABLE assinaturas_usuario (
 	FOREIGN KEY(usuario_id) REFERENCES usuarios (id) ON DELETE CASCADE,
 	FOREIGN KEY(plano_id) REFERENCES planos_assinatura (id) ON DELETE RESTRICT,
 	UNIQUE (id_externo)
-) ENGINE=InnoDB;
+)ENGINE=InnoDB;
 CREATE INDEX ix_assinaturas_usuario_usuario_id ON assinaturas_usuario (usuario_id);
 
 CREATE TABLE atribuicoes_cadastro (
@@ -159,7 +162,7 @@ CREATE TABLE atribuicoes_cadastro (
 	PRIMARY KEY (usuario_id),
 	FOREIGN KEY(usuario_id) REFERENCES usuarios (id) ON DELETE CASCADE,
 	FOREIGN KEY(indicador_id) REFERENCES usuarios (id) ON DELETE SET NULL
-) ENGINE=InnoDB;
+)ENGINE=InnoDB;
 CREATE INDEX ix_atribuicoes_cadastro_indicador_id ON atribuicoes_cadastro (indicador_id);
 
 CREATE TABLE auditoria_admin (
@@ -172,7 +175,7 @@ CREATE TABLE auditoria_admin (
 	criado_em DATETIME NOT NULL DEFAULT now(),
 	PRIMARY KEY (id),
 	FOREIGN KEY(admin_usuario_id) REFERENCES usuarios (id) ON DELETE SET NULL
-) ENGINE=InnoDB;
+)ENGINE=InnoDB;
 CREATE INDEX ix_auditoria_admin_acao ON auditoria_admin (acao);
 CREATE INDEX ix_auditoria_admin_admin_usuario_id ON auditoria_admin (admin_usuario_id);
 CREATE INDEX ix_auditoria_admin_criado_em ON auditoria_admin (criado_em);
@@ -191,7 +194,7 @@ CREATE TABLE auditoria_organizacao (
 	FOREIGN KEY(organizacao_id) REFERENCES organizacoes (id) ON DELETE CASCADE,
 	FOREIGN KEY(autor_usuario_id) REFERENCES usuarios (id) ON DELETE SET NULL,
 	FOREIGN KEY(alvo_usuario_id) REFERENCES usuarios (id) ON DELETE SET NULL
-) ENGINE=InnoDB;
+)ENGINE=InnoDB;
 CREATE INDEX ix_auditoria_organizacao_organizacao_id ON auditoria_organizacao (organizacao_id);
 
 CREATE TABLE campanhas_comerciais (
@@ -213,7 +216,7 @@ CREATE TABLE campanhas_comerciais (
 	FOREIGN KEY(organizacao_id) REFERENCES organizacoes (id) ON DELETE CASCADE,
 	FOREIGN KEY(criado_por_usuario_id) REFERENCES usuarios (id) ON DELETE SET NULL,
 	FOREIGN KEY(revisado_por_usuario_id) REFERENCES usuarios (id) ON DELETE SET NULL
-) ENGINE=InnoDB;
+)ENGINE=InnoDB;
 CREATE INDEX ix_campanhas_comerciais_organizacao_id ON campanhas_comerciais (organizacao_id);
 
 CREATE TABLE churrascos (
@@ -254,7 +257,7 @@ CREATE TABLE churrascos (
 	atualizado_em DATETIME NOT NULL DEFAULT now(),
 	PRIMARY KEY (id),
 	FOREIGN KEY(usuario_id) REFERENCES usuarios (id) ON DELETE SET NULL
-) ENGINE=InnoDB;
+)ENGINE=InnoDB;
 CREATE UNIQUE INDEX ix_churrascos_chave_cliente ON churrascos (chave_cliente);
 CREATE INDEX ix_churrascos_data_evento ON churrascos (data_evento);
 CREATE INDEX ix_churrascos_id ON churrascos (id);
@@ -270,7 +273,7 @@ CREATE TABLE clientes_profissionais (
 	criado_em DATETIME NOT NULL DEFAULT now(),
 	PRIMARY KEY (id),
 	FOREIGN KEY(usuario_id) REFERENCES usuarios (id) ON DELETE CASCADE
-) ENGINE=InnoDB;
+)ENGINE=InnoDB;
 CREATE INDEX ix_clientes_profissionais_usuario_id ON clientes_profissionais (usuario_id);
 
 CREATE TABLE concessoes_organizacao (
@@ -283,7 +286,7 @@ CREATE TABLE concessoes_organizacao (
 	PRIMARY KEY (organizacao_id),
 	FOREIGN KEY(organizacao_id) REFERENCES organizacoes (id) ON DELETE CASCADE,
 	FOREIGN KEY(alterado_por_usuario_id) REFERENCES usuarios (id) ON DELETE SET NULL
-) ENGINE=InnoDB;
+)ENGINE=InnoDB;
 
 CREATE TABLE consentimentos_usuario (
 	id INTEGER NOT NULL AUTO_INCREMENT,
@@ -297,7 +300,7 @@ CREATE TABLE consentimentos_usuario (
 	PRIMARY KEY (id),
 	CONSTRAINT uq_consentimento_usuario_tipo_versao UNIQUE (usuario_id, tipo, versao),
 	FOREIGN KEY(usuario_id) REFERENCES usuarios (id) ON DELETE CASCADE
-) ENGINE=InnoDB;
+)ENGINE=InnoDB;
 CREATE INDEX ix_consentimentos_usuario_tipo ON consentimentos_usuario (tipo);
 CREATE INDEX ix_consentimentos_usuario_usuario_id ON consentimentos_usuario (usuario_id);
 
@@ -307,7 +310,7 @@ CREATE TABLE consumo_assistente (
 	quantidade INTEGER NOT NULL DEFAULT '0',
 	PRIMARY KEY (usuario_id, dia),
 	FOREIGN KEY(usuario_id) REFERENCES usuarios (id) ON DELETE CASCADE
-) ENGINE=InnoDB;
+)ENGINE=InnoDB;
 
 CREATE TABLE convites_organizacao (
 	id INTEGER NOT NULL AUTO_INCREMENT,
@@ -323,7 +326,7 @@ CREATE TABLE convites_organizacao (
 	PRIMARY KEY (id),
 	FOREIGN KEY(organizacao_id) REFERENCES organizacoes (id) ON DELETE CASCADE,
 	FOREIGN KEY(criado_por_usuario_id) REFERENCES usuarios (id) ON DELETE SET NULL
-) ENGINE=InnoDB;
+)ENGINE=InnoDB;
 CREATE INDEX ix_convite_org_org_email ON convites_organizacao (organizacao_id, email);
 CREATE INDEX ix_convites_organizacao_organizacao_id ON convites_organizacao (organizacao_id);
 CREATE UNIQUE INDEX ix_convites_organizacao_token_hash ON convites_organizacao (token_hash);
@@ -336,7 +339,7 @@ CREATE TABLE credenciais_mfa (
 	criado_em DATETIME NOT NULL DEFAULT now(),
 	PRIMARY KEY (usuario_id),
 	FOREIGN KEY(usuario_id) REFERENCES usuarios (id) ON DELETE CASCADE
-) ENGINE=InnoDB;
+)ENGINE=InnoDB;
 
 CREATE TABLE estabelecimentos (
 	id INTEGER NOT NULL AUTO_INCREMENT,
@@ -368,7 +371,7 @@ CREATE TABLE estabelecimentos (
 	CONSTRAINT uq_estabelecimentos_org_codigo_filial UNIQUE (organizacao_id, codigo_filial),
 	FOREIGN KEY(usuario_responsavel_id) REFERENCES usuarios (id) ON DELETE SET NULL,
 	CONSTRAINT fk_estabelecimentos_organizacao_id FOREIGN KEY(organizacao_id) REFERENCES organizacoes (id) ON DELETE SET NULL
-) ENGINE=InnoDB;
+)ENGINE=InnoDB;
 CREATE INDEX ix_estabelecimentos_cidade ON estabelecimentos (cidade);
 CREATE INDEX ix_estabelecimentos_estado ON estabelecimentos (estado);
 CREATE UNIQUE INDEX ix_estabelecimentos_google_place_id ON estabelecimentos (google_place_id);
@@ -387,7 +390,7 @@ CREATE TABLE eventos_billing (
 	registrado_em DATETIME NOT NULL DEFAULT now(),
 	PRIMARY KEY (event_id),
 	FOREIGN KEY(organizacao_id) REFERENCES organizacoes (id) ON DELETE SET NULL
-) ENGINE=InnoDB;
+)ENGINE=InnoDB;
 
 CREATE TABLE feedback_parceiro (
 	id INTEGER NOT NULL AUTO_INCREMENT,
@@ -398,7 +401,7 @@ CREATE TABLE feedback_parceiro (
 	criado_em DATETIME NOT NULL DEFAULT now(),
 	PRIMARY KEY (id),
 	FOREIGN KEY(organizacao_id) REFERENCES organizacoes (id) ON DELETE CASCADE
-) ENGINE=InnoDB;
+)ENGINE=InnoDB;
 CREATE INDEX ix_feedback_parceiro_organizacao_id ON feedback_parceiro (organizacao_id);
 
 CREATE TABLE importacoes_catalogo (
@@ -413,7 +416,7 @@ CREATE TABLE importacoes_catalogo (
 	CONSTRAINT uq_importacoes_catalogo_org_chave UNIQUE (organizacao_id, chave_idempotencia),
 	FOREIGN KEY(organizacao_id) REFERENCES organizacoes (id) ON DELETE CASCADE,
 	FOREIGN KEY(usuario_id) REFERENCES usuarios (id) ON DELETE SET NULL
-) ENGINE=InnoDB;
+)ENGINE=InnoDB;
 CREATE INDEX ix_importacoes_catalogo_organizacao_id ON importacoes_catalogo (organizacao_id);
 
 CREATE TABLE importacoes_ofertas (
@@ -428,7 +431,7 @@ CREATE TABLE importacoes_ofertas (
 	CONSTRAINT uq_importacao_ofertas_org_chave UNIQUE (organizacao_id, chave_idempotencia),
 	FOREIGN KEY(organizacao_id) REFERENCES organizacoes (id) ON DELETE CASCADE,
 	FOREIGN KEY(usuario_id) REFERENCES usuarios (id) ON DELETE SET NULL
-) ENGINE=InnoDB;
+)ENGINE=InnoDB;
 CREATE INDEX ix_importacoes_ofertas_organizacao_id ON importacoes_ofertas (organizacao_id);
 
 CREATE TABLE indicacoes_usuario (
@@ -438,7 +441,7 @@ CREATE TABLE indicacoes_usuario (
 	PRIMARY KEY (usuario_id),
 	FOREIGN KEY(usuario_id) REFERENCES usuarios (id) ON DELETE CASCADE,
 	UNIQUE (codigo)
-) ENGINE=InnoDB;
+)ENGINE=InnoDB;
 
 CREATE TABLE leads_comerciais (
 	id INTEGER NOT NULL AUTO_INCREMENT,
@@ -459,7 +462,7 @@ CREATE TABLE leads_comerciais (
 	PRIMARY KEY (id),
 	UNIQUE (descadastro_hash),
 	FOREIGN KEY(organizacao_id) REFERENCES organizacoes (id) ON DELETE SET NULL
-) ENGINE=InnoDB;
+)ENGINE=InnoDB;
 CREATE INDEX ix_leads_comerciais_criado_em ON leads_comerciais (criado_em);
 CREATE INDEX ix_leads_comerciais_email ON leads_comerciais (email);
 CREATE INDEX ix_leads_comerciais_status ON leads_comerciais (status);
@@ -472,7 +475,7 @@ CREATE TABLE modelos_evento_usuario (
 	criado_em DATETIME NOT NULL DEFAULT now(),
 	PRIMARY KEY (id),
 	FOREIGN KEY(usuario_id) REFERENCES usuarios (id) ON DELETE CASCADE
-) ENGINE=InnoDB;
+)ENGINE=InnoDB;
 CREATE INDEX ix_modelos_evento_usuario_usuario_id ON modelos_evento_usuario (usuario_id);
 
 CREATE TABLE organizacao_membros (
@@ -486,7 +489,7 @@ CREATE TABLE organizacao_membros (
 	CONSTRAINT uq_organizacao_membro UNIQUE (organizacao_id, usuario_id),
 	FOREIGN KEY(organizacao_id) REFERENCES organizacoes (id) ON DELETE CASCADE,
 	FOREIGN KEY(usuario_id) REFERENCES usuarios (id) ON DELETE CASCADE
-) ENGINE=InnoDB;
+)ENGINE=InnoDB;
 CREATE INDEX ix_organizacao_membros_organizacao_id ON organizacao_membros (organizacao_id);
 CREATE INDEX ix_organizacao_membros_usuario_id ON organizacao_membros (usuario_id);
 
@@ -517,7 +520,7 @@ CREATE TABLE produtos (
 	FOREIGN KEY(categoria_id) REFERENCES categorias (id) ON DELETE RESTRICT,
 	FOREIGN KEY(produto_pai_id) REFERENCES produtos (id) ON DELETE SET NULL,
 	CONSTRAINT fk_produtos_organizacao_id FOREIGN KEY(organizacao_id) REFERENCES organizacoes (id) ON DELETE SET NULL
-) ENGINE=InnoDB;
+)ENGINE=InnoDB;
 CREATE INDEX ix_produtos_categoria_id ON produtos (categoria_id);
 CREATE INDEX ix_produtos_ean ON produtos (ean);
 CREATE INDEX ix_produtos_id ON produtos (id);
@@ -536,7 +539,7 @@ CREATE TABLE recuperacao_mfa (
 	PRIMARY KEY (id),
 	FOREIGN KEY(usuario_id) REFERENCES usuarios (id) ON DELETE CASCADE,
 	UNIQUE (codigo_hash)
-) ENGINE=InnoDB;
+)ENGINE=InnoDB;
 CREATE INDEX ix_recuperacao_mfa_usuario_id ON recuperacao_mfa (usuario_id);
 
 CREATE TABLE sessoes_usuario (
@@ -553,7 +556,7 @@ CREATE TABLE sessoes_usuario (
 	mfa_verificado_em DATETIME,
 	PRIMARY KEY (id),
 	FOREIGN KEY(usuario_id) REFERENCES usuarios (id) ON DELETE CASCADE
-) ENGINE=InnoDB;
+)ENGINE=InnoDB;
 CREATE INDEX ix_sessoes_usuario_expira_em ON sessoes_usuario (expira_em);
 CREATE UNIQUE INDEX ix_sessoes_usuario_token_hash ON sessoes_usuario (token_hash);
 CREATE INDEX ix_sessoes_usuario_usuario_id ON sessoes_usuario (usuario_id);
@@ -575,7 +578,7 @@ CREATE TABLE tarefas_outbox (
 	PRIMARY KEY (id),
 	FOREIGN KEY(usuario_id) REFERENCES usuarios (id) ON DELETE CASCADE,
 	UNIQUE (chave)
-) ENGINE=InnoDB;
+)ENGINE=InnoDB;
 CREATE INDEX ix_outbox_pronta ON tarefas_outbox (status, disponivel_em);
 CREATE INDEX ix_tarefas_outbox_usuario_id ON tarefas_outbox (usuario_id);
 
@@ -594,7 +597,7 @@ CREATE TABLE tentativas_checkout (
 	FOREIGN KEY(organizacao_id) REFERENCES organizacoes (id) ON DELETE CASCADE,
 	FOREIGN KEY(usuario_id) REFERENCES usuarios (id) ON DELETE SET NULL,
 	UNIQUE (stripe_session_id)
-) ENGINE=InnoDB;
+)ENGINE=InnoDB;
 CREATE INDEX ix_tentativas_checkout_organizacao_id ON tentativas_checkout (organizacao_id);
 
 CREATE TABLE tentativas_checkout_usuario (
@@ -611,7 +614,7 @@ CREATE TABLE tentativas_checkout_usuario (
 	FOREIGN KEY(usuario_id) REFERENCES usuarios (id) ON DELETE CASCADE,
 	UNIQUE (stripe_session_id),
 	UNIQUE (stripe_subscription_id)
-) ENGINE=InnoDB;
+)ENGINE=InnoDB;
 CREATE INDEX ix_tentativas_checkout_usuario_usuario_id ON tentativas_checkout_usuario (usuario_id);
 
 CREATE TABLE tokens_usuario (
@@ -624,7 +627,7 @@ CREATE TABLE tokens_usuario (
 	usado_em DATETIME,
 	PRIMARY KEY (id),
 	FOREIGN KEY(usuario_id) REFERENCES usuarios (id) ON DELETE CASCADE
-) ENGINE=InnoDB;
+)ENGINE=InnoDB;
 CREATE INDEX ix_tokens_usuario_tipo ON tokens_usuario (tipo);
 CREATE UNIQUE INDEX ix_tokens_usuario_token_hash ON tokens_usuario (token_hash);
 CREATE INDEX ix_tokens_usuario_usuario_id ON tokens_usuario (usuario_id);
@@ -639,7 +642,7 @@ CREATE TABLE atividades_lead (
 	PRIMARY KEY (id),
 	FOREIGN KEY(lead_id) REFERENCES leads_comerciais (id) ON DELETE CASCADE,
 	FOREIGN KEY(admin_id) REFERENCES usuarios (id) ON DELETE SET NULL
-) ENGINE=InnoDB;
+)ENGINE=InnoDB;
 CREATE INDEX ix_atividades_lead_lead_id ON atividades_lead (lead_id);
 
 CREATE TABLE convites_churrasco (
@@ -651,7 +654,7 @@ CREATE TABLE convites_churrasco (
 	expira_em DATETIME,
 	PRIMARY KEY (id),
 	FOREIGN KEY(churrasco_id) REFERENCES churrascos (id) ON DELETE CASCADE
-) ENGINE=InnoDB;
+)ENGINE=InnoDB;
 CREATE UNIQUE INDEX ix_convites_churrasco_churrasco_id ON convites_churrasco (churrasco_id);
 CREATE UNIQUE INDEX ix_convites_churrasco_codigo ON convites_churrasco (codigo);
 
@@ -661,7 +664,7 @@ CREATE TABLE favoritos_estabelecimentos (
 	PRIMARY KEY (usuario_id, estabelecimento_id),
 	FOREIGN KEY(usuario_id) REFERENCES usuarios (id) ON DELETE CASCADE,
 	FOREIGN KEY(estabelecimento_id) REFERENCES estabelecimentos (id) ON DELETE CASCADE
-) ENGINE=InnoDB;
+)ENGINE=InnoDB;
 
 CREATE TABLE lembretes_evento (
 	id INTEGER NOT NULL AUTO_INCREMENT,
@@ -674,7 +677,7 @@ CREATE TABLE lembretes_evento (
 	FOREIGN KEY(usuario_id) REFERENCES usuarios (id) ON DELETE CASCADE,
 	FOREIGN KEY(churrasco_id) REFERENCES churrascos (id) ON DELETE CASCADE,
 	FOREIGN KEY(tarefa_id) REFERENCES tarefas_outbox (id) ON DELETE SET NULL
-) ENGINE=InnoDB;
+)ENGINE=InnoDB;
 CREATE INDEX ix_lembretes_evento_usuario_id ON lembretes_evento (usuario_id);
 
 CREATE TABLE lista_compras (
@@ -683,7 +686,7 @@ CREATE TABLE lista_compras (
 	criado_em DATETIME NOT NULL DEFAULT now(),
 	PRIMARY KEY (id),
 	FOREIGN KEY(churrasco_id) REFERENCES churrascos (id) ON DELETE CASCADE
-) ENGINE=InnoDB;
+)ENGINE=InnoDB;
 CREATE UNIQUE INDEX ix_lista_compras_churrasco_id ON lista_compras (churrasco_id);
 CREATE INDEX ix_lista_compras_id ON lista_compras (id);
 
@@ -698,7 +701,7 @@ CREATE TABLE metricas_estabelecimentos (
 	CONSTRAINT ck_metricas_estabelecimentos_tipo CHECK (tipo IN ('visualizacao','clique')),
 	FOREIGN KEY(estabelecimento_id) REFERENCES estabelecimentos (id) ON DELETE CASCADE,
 	UNIQUE (dedup_hash)
-) ENGINE=InnoDB;
+)ENGINE=InnoDB;
 CREATE INDEX ix_metricas_estabelecimentos_criado_em ON metricas_estabelecimentos (criado_em);
 CREATE INDEX ix_metricas_estabelecimentos_estabelecimento_id ON metricas_estabelecimentos (estabelecimento_id);
 CREATE INDEX ix_metricas_estabelecimentos_estabelecimento_tipo_criado ON metricas_estabelecimentos (estabelecimento_id, tipo, criado_em);
@@ -725,7 +728,7 @@ CREATE TABLE precos (
 	FOREIGN KEY(produto_id) REFERENCES produtos (id) ON DELETE CASCADE,
 	FOREIGN KEY(estabelecimento_id) REFERENCES estabelecimentos (id) ON DELETE CASCADE,
 	FOREIGN KEY(criado_por_usuario_id) REFERENCES usuarios (id) ON DELETE SET NULL
-) ENGINE=InnoDB;
+)ENGINE=InnoDB;
 CREATE INDEX ix_precos_criado_por_usuario_id ON precos (criado_por_usuario_id);
 CREATE INDEX ix_precos_estabelecimento_id ON precos (estabelecimento_id);
 CREATE INDEX ix_precos_id ON precos (id);
@@ -748,7 +751,7 @@ CREATE TABLE propostas_profissionais (
 	FOREIGN KEY(usuario_id) REFERENCES usuarios (id) ON DELETE CASCADE,
 	FOREIGN KEY(cliente_id) REFERENCES clientes_profissionais (id) ON DELETE SET NULL,
 	FOREIGN KEY(churrasco_id) REFERENCES churrascos (id) ON DELETE SET NULL
-) ENGINE=InnoDB;
+)ENGINE=InnoDB;
 CREATE INDEX ix_propostas_profissionais_usuario_id ON propostas_profissionais (usuario_id);
 
 CREATE TABLE campanhas_comerciais_itens (
@@ -759,7 +762,7 @@ CREATE TABLE campanhas_comerciais_itens (
 	CONSTRAINT uq_campanha_preco UNIQUE (campanha_id, preco_id),
 	FOREIGN KEY(campanha_id) REFERENCES campanhas_comerciais (id) ON DELETE CASCADE,
 	FOREIGN KEY(preco_id) REFERENCES precos (id) ON DELETE RESTRICT
-) ENGINE=InnoDB;
+)ENGINE=InnoDB;
 CREATE INDEX ix_campanhas_comerciais_itens_campanha_id ON campanhas_comerciais_itens (campanha_id);
 CREATE INDEX ix_campanhas_comerciais_itens_preco_id ON campanhas_comerciais_itens (preco_id);
 
@@ -786,7 +789,7 @@ CREATE TABLE churrasco_bebidas (
 	FOREIGN KEY(produto_id) REFERENCES produtos (id) ON DELETE SET NULL,
 	FOREIGN KEY(preco_id) REFERENCES precos (id) ON DELETE SET NULL,
 	FOREIGN KEY(estabelecimento_id) REFERENCES estabelecimentos (id) ON DELETE SET NULL
-) ENGINE=InnoDB;
+)ENGINE=InnoDB;
 CREATE INDEX ix_churrasco_bebidas_churrasco_id ON churrasco_bebidas (churrasco_id);
 CREATE INDEX ix_churrasco_bebidas_id ON churrasco_bebidas (id);
 CREATE INDEX ix_churrasco_bebidas_produto_id ON churrasco_bebidas (produto_id);
@@ -816,7 +819,7 @@ CREATE TABLE churrasco_carnes (
 	FOREIGN KEY(produto_id) REFERENCES produtos (id) ON DELETE SET NULL,
 	FOREIGN KEY(preco_id) REFERENCES precos (id) ON DELETE SET NULL,
 	FOREIGN KEY(estabelecimento_id) REFERENCES estabelecimentos (id) ON DELETE SET NULL
-) ENGINE=InnoDB;
+)ENGINE=InnoDB;
 CREATE INDEX ix_churrasco_carnes_churrasco_id ON churrasco_carnes (churrasco_id);
 CREATE INDEX ix_churrasco_carnes_id ON churrasco_carnes (id);
 CREATE INDEX ix_churrasco_carnes_produto_id ON churrasco_carnes (produto_id);
@@ -846,7 +849,7 @@ CREATE TABLE churrasco_extras (
 	FOREIGN KEY(produto_id) REFERENCES produtos (id) ON DELETE SET NULL,
 	FOREIGN KEY(preco_id) REFERENCES precos (id) ON DELETE SET NULL,
 	FOREIGN KEY(estabelecimento_id) REFERENCES estabelecimentos (id) ON DELETE SET NULL
-) ENGINE=InnoDB;
+)ENGINE=InnoDB;
 CREATE INDEX ix_churrasco_extras_churrasco_id ON churrasco_extras (churrasco_id);
 CREATE INDEX ix_churrasco_extras_id ON churrasco_extras (id);
 CREATE INDEX ix_churrasco_extras_produto_id ON churrasco_extras (produto_id);
@@ -872,7 +875,7 @@ CREATE TABLE lista_compras_itens (
 	FOREIGN KEY(lista_compras_id) REFERENCES lista_compras (id) ON DELETE CASCADE,
 	FOREIGN KEY(produto_id) REFERENCES produtos (id) ON DELETE SET NULL,
 	FOREIGN KEY(estabelecimento_compra_id) REFERENCES estabelecimentos (id) ON DELETE SET NULL
-) ENGINE=InnoDB;
+)ENGINE=InnoDB;
 CREATE INDEX ix_lista_compras_itens_id ON lista_compras_itens (id);
 CREATE INDEX ix_lista_compras_itens_lista_compras_id ON lista_compras_itens (lista_compras_id);
 
@@ -895,7 +898,7 @@ CREATE TABLE respostas_convite (
 	atualizado_em DATETIME NOT NULL DEFAULT now(),
 	PRIMARY KEY (id),
 	FOREIGN KEY(convite_id) REFERENCES convites_churrasco (id) ON DELETE CASCADE
-) ENGINE=InnoDB;
+)ENGINE=InnoDB;
 CREATE UNIQUE INDEX ix_respostas_convite_chave_resposta ON respostas_convite (chave_resposta);
 CREATE INDEX ix_respostas_convite_convite_id ON respostas_convite (convite_id);
 CREATE INDEX ix_respostas_convite_resposta ON respostas_convite (resposta);

@@ -19,7 +19,7 @@ def registrar_pela_interface(page):
     page.locator('#aceite-privacidade').check()
     page.locator('#auth-form button[type=submit]').click()
     page.wait_for_url('**/minha-conta.html',timeout=15000)
-    expect(page.locator('#conta-saudacao')).to_contain_text('Teste SaaS')
+    expect(page.locator('#conta-saudacao')).to_have_text('Olá, Teste.')
     return email
 
 

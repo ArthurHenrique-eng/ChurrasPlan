@@ -1,5 +1,5 @@
 """Leads solicitados, métricas mínimas e indicação consentida."""
-from sqlalchemy import Column, DateTime, Boolean, ForeignKey, Integer, JSON, Numeric, String, Text, func
+from sqlalchemy import Column, DateTime, Boolean, ForeignKey, Index, Integer, JSON, Numeric, String, Text, func
 from database.connection import Base
 
 
@@ -34,10 +34,13 @@ class AtividadeLead(Base):
 
 class EventoProduto(Base):
     __tablename__ = "eventos_produto"
+    __table_args__ = (Index("ix_eventos_produto_funil", "contexto_tipo", "criado_em", "contexto_hash", "evento"),)
     id = Column(Integer, primary_key=True)
     evento = Column(String(60), nullable=False, index=True)
     propriedades = Column(JSON, nullable=False)
     dedup_hash = Column(String(64), nullable=False, unique=True)
+    contexto_tipo = Column(String(20), nullable=True)
+    contexto_hash = Column(String(64), nullable=True)
     criado_em = Column(DateTime, nullable=False, server_default=func.now(), index=True)
 
 

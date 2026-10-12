@@ -193,7 +193,7 @@ def registrar_interacoes(
     contexto = (payload.contexto or "onde_comprar").strip()[:40] or "onde_comprar"
     if payload.churrasco_id is not None:
         _churrasco_usuario(db, payload.churrasco_id, usuario)
-    existentes = {row[0] for row in db.query(Estabelecimento.id).filter(Estabelecimento.id.in_(ids), Estabelecimento.ativo.is_(True)).all()}
+    existentes = {row.id: row for row in db.query(Estabelecimento.id, Estabelecimento.organizacao_id, Estabelecimento.parceiro_verificado).filter(Estabelecimento.id.in_(ids), Estabelecimento.ativo.is_(True)).all()}
     for estabelecimento_id in ids:
         if estabelecimento_id in existentes:
             import hashlib, hmac
@@ -209,5 +209,11 @@ def registrar_interacoes(
             else:
                 stmt = sqlite_insert(MetricaEstabelecimento).values(**campos).on_conflict_do_nothing(index_elements=['dedup_hash'])
             db.execute(stmt)
+            loja = existentes[estabelecimento_id]
+            if loja.organizacao_id and loja.parceiro_verificado:
+                from services.analytics import registrar_produto
+                evento = "primeira_impressao" if tipo == "visualizacao" else "primeiro_clique"
+                registrar_produto(db, evento, str(loja.organizacao_id), {"segmento": "b2b"},
+                    contexto=str(loja.organizacao_id), contexto_tipo="organizacao")
     db.commit()
     return None

@@ -1,7 +1,7 @@
 # ChurrasPlan SaaS B2B2C — Memória técnica mestra
 
 > **Documento canônico:** `docs/ChurrasPlanSaaS.md`. **Branch:** `Saas-ChurrasPlan`, nunca confundir com `main`.
-> **Atualizado:** 12/10/2026 (UTC). **Base histórica auditada:** commit `208f34954033dc7bb280bdaa72194ba1e37d854c`. **Revisão de lançamento:** API v6.10.0, Alembic head `20261012_0023`; implementação/evidências/gates na seção 19.
+> **Atualizado:** 12/10/2026 (UTC). **Base histórica auditada:** commit `208f34954033dc7bb280bdaa72194ba1e37d854c`. **Revisão de lançamento:** API v6.10.0, Alembic head `20261012_0024`; implementação/evidências/gates na seção 19.
 > **CI comprovado no commit-base:** [GitHub CI 38004031754](https://github.com/ArthurHenrique-eng/ChurrasPlan/actions/runs/38004031754) e [CodeQL 38004031832](https://github.com/ArthurHenrique-eng/ChurrasPlan/actions/runs/38004031832), ambos success em 09/10/2026; esse resultado não avalia o novo commit documental.
 > **Objetivo:** consolidar as **35 notas Markdown** pré-existentes em `docs/` num único contexto de leitura. Os originais permanecem recuperáveis por links imutáveis no Git, listados na seção de histórico, sem manter arquivos obsoletos concorrentes. O README e imagens de `docs/assets/` são preservados.
 
@@ -32,7 +32,7 @@ Princípio central: o backend é a fonte de verdade de cálculos, persistência,
 |---|---|
 | Frontend | HTML/CSS/JavaScript modular e PWA em `FrontEnd/`, SW e MapLibre GL |
 | API | FastAPI, API v6.10.0, Pydantic, SQLAlchemy; `BackEnd/Python/main.py`, `routers/`, `schemas/`, `services/` |
-| Persistência | MySQL 8.4 em Docker/CI, SQLite para unidade; Alembic até `20261012_0023` |
+| Persistência | MySQL 8.4 em Docker/CI, SQLite para unidade; Alembic até `20261012_0024` |
 | Tenant B2B | `models/organizacao.py`, `routers/parceiros.py`, `equipe.py`, `operacao_b2b.py`, `comercial_b2b.py` |
 | Direitos | `services/entitlements.py` (B2B) e `entitlements_usuario.py` (B2C) |
 | Stripe TEST | `routers/billing.py`, `billing_usuario.py`, `services/billing.py`, `billing_usuario.py` |
@@ -171,9 +171,9 @@ Preço vem do Stripe Test e é validado no servidor: modo teste, moeda BRL, Pric
 
 **Status de homologação:** as notas de 09/10 documentam testes automatizados com transporte simulado e pedem comprovação externa do sandbox. O mantenedor informou posteriormente que **concluiu** um fluxo Premium real no Sandbox, com benefícios/reconciliação e retorno corrigido via `PUBLIC_APP_URL`. Registre como **CONCLUÍDO CONFORME RELATO DO MANTENEDOR, sem comprovação no código/CI desta inspeção**, e verifique para B2B/novos ambientes antes de declarar gates satisfeitos. Produção, Stripe Connect/Tax/Invoicing e obrigações fiscais/NFS-e não estão validados.
 
-## 9. Schema e Alembic — linha completa até 0023
+## 9. Schema e Alembic — linha completa até 0024
 
-**Head `20261012_0023` na branch SaaS.** Alembic é fonte de verdade e `BackEnd/Python/sql/schema.sql` referência de instalação nova; não aplicar SQL manualmente em banco versionado.
+**Head `20261012_0024` na branch SaaS.** Alembic é fonte de verdade e `BackEnd/Python/sql/schema.sql` referência de instalação nova; não aplicar SQL manualmente em banco versionado.
 
 | Migration | O que evoluiu |
 |---|---|
@@ -200,6 +200,7 @@ Preço vem do Stripe Test e é validado no servidor: modo teste, moeda BRL, Pric
 | `20261012_0021` | cota diária do assistente sem persistir prompts |
 | `20261012_0022` | titularidade da outbox e deduplicação HMAC das interações |
 | `20261012_0023` | GTIN validado e EAN único por organização |
+| `20261012_0024` | contexto pseudônimo e índice para funis agregados |
 
 **Migração/rollback:** preservar FKs e dados legados, não atribuir a uma organização SKUs de dono incerto; ensaiar `upgrade head`, `alembic check`, downgrade/upgrade, MySQL real e dados de cópia em staging. Downgrade das migrações SaaS pode apagar grants, convites, auditorias, campanhas, lotes idempotentes, modelos e registros locais de Billing, **mas não cancela assinatura remota no Stripe**. Realizar backup, avaliação de impacto e conciliação externa antes de reverter. Testes SQLite não substituem FK, charset, InnoDB e concorrência MySQL.
 
@@ -404,7 +405,7 @@ Estes documentos foram retirados da pasta ativa, mas **não foram perdidos**: os
 **Critério de conclusão técnica de cada linha:** código integrado, autorização no backend, migration/schema coerentes, teste de aceitação e documentação. Os estados se referem ao escopo descrito na linha. “Implementado e validado” comprova o comportamento técnico na revisão, não prontidão comercial; pendências ampliadas e requisitos externos continuam explícitos. Configuração externa e resultado comercial não são inferidos dos arquivos. P0 bloqueia lançamento; P1 prepara o piloto; P2 é evolução proporcional à demanda.
 
 | Bloco | Estado da entrega | Diagnóstico na base | Evidência e solução na revisão de lançamento | Risco / prioridade | Dependência ou critério adicional |
-|---|---|---|---|---|
+|---|---|---|---|---|---|
 | 01 Billing | Implementado, aguardando integração externa | Sandbox implementado | `services/billing*.py`, routers e testes: StripeClient, RAK Test, webhook autenticado e outbox opcional, reconciliação e ciclo de assinatura | Alto / P0 | Live recusado. Homologar ambiente, preços, impostos e pagamento real antes de vender |
 | 02 Entitlements | Implementado e validado | Cotas de lojas/SKUs/ofertas/equipe | `entitlements.py`: helpers centralizados, campanhas e importações mensais, locks; cotas pessoais/profissionais/assistente | Alto / P0 | Confirmar valores comerciais; quotas não são promessa de preço |
 | 03 Posicionamento | Implementado e validado | Home focada em cálculo | Home e `parceiros.html` comunicam consumidores, profissionais e mercados locais | Médio / P1 | Validar mensagem com entrevistas reais |
@@ -413,7 +414,7 @@ Estes documentos foram retirados da pasta ativa, mas **não foram perdidos**: os
 | 06 Leads/CRM | Implementado e validado | Ausente | `models/growth.py`, `routers/growth.py`: interesse público, anti-spam, UTM limitada, pipeline, atividades e vínculo com organização | Médio / P1 | Atendimento e recrutamento são humanos; não enviar promoções sem preferência |
 | 07 SEO | Implementado, aguardando integração externa | Incompleto | `build_seo.py`, robots/sitemap, 8 guias originais, canonical/OG/JSON-LD; exemplos derivados do motor | Médio / P1 | Executar build com domínio real; local/staging permanecem noindex |
 | 08 Referral | Implementado e validado | Não instrumentado | Indicações com opt-in, códigos aleatórios, atribuição de cadastro consentida e totais sem identidade dos indicados | Médio / P1 | Não transforma RSVP em contato promocional |
-| 09 Analytics | Parcialmente implementado | Interações simples | Catálogo allowlist, deduplicação, propriedades mínimas, eventos operacionais transacionais e eventos opcionais do navegador | Médio / P1 | Consentimento reduz cobertura; não chamar essas contagens de censo de visitantes |
+| 09 Analytics | Implementado e validado | Interações simples | Catálogo allowlist, deduplicação, eventos transacionais, quatro funis agregados por contexto/ordem e retenção de planejamentos salvos | Médio / P1 | Consentimento reduz cobertura; não chamar essas contagens de censo de visitantes |
 | 10 IA na engenharia | Implementado e validado | Sem instrução central | `AGENTS.md`, instruções Copilot, contribuição e templates protegem cálculos, migrations, CSRF, MFA, tenant e preços | Médio / P1 | Revisões humanas permanecem necessárias |
 | 11 Supply chain | Implementado e validado | pip-audit/Bandit/CodeQL/Dependabot | Preservados; actions fixadas por SHA e estratégia de atualização documentada | Alto / P0 | Confirmar scanners e permissões efetivas do GitHub; imagem deve ser auditada no CI |
 | 12 Proteção de branch | Bloqueado | Ruleset sem branches/checks | Leitura real do ruleset 23958344: `include=[]` e `required_status_checks=[]`; candidato preservado em `deploy/github-ruleset.json` | Alto / P0 | Aplicação requer revisão do proprietário; regras de restrição de update/creation e assinaturas podem bloquear merges sem bypass apropriado |
@@ -432,7 +433,7 @@ Estes documentos foram retirados da pasta ativa, mas **não foram perdidos**: os
 | 25 Qualidade SaaS | Implementado e validado | 167 testes na base | Regressões existentes mais MFA, fila, privacy/growth, profissional, assistente, CSV preview, webhook durável; MySQL/Alembic/E2E | Alto / P0 | Resultados finais abaixo devem citar revisão e ambiente exatos |
 | 26 Consentimentos | Implementado, aguardando integração externa | Conta técnica existente | Marketing separado de atendimento; métricas/referral opt-in; exportação/exclusão ampliadas; retenção operacional | Alto / P0 | Bases legais, controlador, subprocessadores e retenções precisam de revisão jurídica real |
 | 27 Piloto regional | Parcialmente implementado | Onboarding existente | Landing, CRM/pipeline, checklist preservado e feedback/disposição a pagar por organização | Médio / P1 | Recrutar cerca de 5 açougues + 5 mercados reais; não cadastrar clientes fictícios |
-| 28 Fundador | Parcialmente implementado | Dashboard básico | Aquisição/ativação/leads/assinaturas sandbox/feedback, custos registrados e alertas; MRR/ARR/CAC/LTV/churn reais nulos | Médio / P1 | Receitas/coortes/custos reais são necessários para calcular indicadores financeiros |
+| 28 Fundador | Implementado e validado | Dashboard básico | Aquisição/ativação/funis/retenção/leads/assinaturas sandbox/feedback, custos e alertas; MRR/ARR/CAC/LTV/churn reais nulos | Médio / P1 | Receitas/coortes/custos reais são necessários para calcular indicadores financeiros |
 | 29 GitHub | Parcialmente implementado | Manutenção parcial | AGENTS/SECURITY/CONTRIBUTING/CODEOWNERS/PR/issues/Copilot e memória canônica | Médio / P1 | Habilitar private vulnerability reporting e confirmar proprietário/revisão |
 | 30 Arquitetura B2B2C | Implementado e validado | Consumer/Business existentes | Professional integrado com dados próprios, propostas e snapshot; serviços Core compartilhados sem reconstrução | Alto / P0 | Monólito modular mantido; provedores externos opcionais continuam explícitos |
 
@@ -491,8 +492,8 @@ Liveness tem limite em memória por processo para continuar funcionando sem DB. 
 
 Ambiente: Python 3.12, MySQL **8.0.46 real** isolado, Chromium **143.0.7499.4**, Nginx 1.24 usado na QA local. CI utiliza MySQL 8.4 e as imagens versionadas do repositório; são ambientes distintos.
 
-- Backend: **208 aprovados** na suíte completa, incluindo consentimento, propriedade, encerramento, telemetria e transporte Stripe; testes críticos suplementares também aprovados. O CI da entrega permanece o gate da revisão publicada.
-- MySQL: **12 aprovados**, `alembic check` sem operações pendentes, migração do parceiro/loja/oferta legado, downgrade até 0008 e upgrade até 0023, backfill conferido.
+- Backend: **213 aprovados** na suíte completa, incluindo consentimento, propriedade, encerramento, telemetria e transporte Stripe; testes críticos suplementares também aprovados. O CI da entrega permanece o gate da revisão publicada.
+- MySQL: **13 aprovados**, `alembic check` sem operações pendentes, migração do parceiro/loja/oferta legado, downgrade até 0008 e upgrade até 0024, backfill conferido.
 - Navegador: **13 fluxos aprovados**, incluindo os anteriores e mobile/lead, MFA, assistente com confirmação e analytics opt-in.
 - Frontend: **35 HTML** e JavaScript/SW verificados, testes Node de formulários/catálogos/tenants/operação/CSP/billing e datas UTC aprovados.
 - Smoke: health/readiness/home/parceiros/robots/sitemap/manifest aprovados. Carga básica de 30 requests, concorrência 3, sem gravar eventos: mediana aproximada 25 ms e p95 aproximado 40 ms no ambiente isolado, **não um SLA de produção**.
@@ -509,3 +510,13 @@ Ambiente: Python 3.12, MySQL **8.0.46 real** isolado, Chromium **143.0.7499.4**,
 - **P2 — somente com evidência de demanda:** plano profissional independente e documentos personalizados, segmentação/coortes avançadas, importação XLSX/assíncrona para grandes catálogos, limites individuais por filial e agregação distribuída de métricas/quota Geoapify. Microserviços, checkout multi-loja, split e logística estão descartados nesta etapa por complexidade sem necessidade comprovada.
 
 A revisão não executou contatos comerciais, serviços pagos, alteração da proteção de main, deploy real, transações Live nem transmissão de dados a LLM. O próximo incremento executável fora deste ambiente é homologação de staging com configuração fornecida pelo proprietário. Requisitos externos não são marcados como concluídos por existir um script.
+
+### 19.7 Funis e retenção consultáveis
+
+A migration `0024` adiciona `contexto_tipo`/`contexto_hash` nullable a `eventos_produto`, com índice composto por tipo, timestamp, hash e etapa. Usa HMAC da sessão consentida por dia em B2C e do tenant em B2B; não persiste identificadores brutos nem adiciona vínculo usuário/sessão. Eventos antigos permanecem sem contexto, sem backfill artificial. O downgrade remove somente essas duas colunas e o índice, preservando os eventos. Schema SQL e testes MySQL conferem estrutura, consulta e ordem.
+
+`GET /api/admin/growth/dashboard?dias=30` oferece funis de planejamento e descoberta B2C, ativação e entrega de valor B2B. Cada etapa exige o mesmo contexto e timestamp igual/posterior ao da etapa anterior, dentro de 1–90 dias. Conversão inicial = quantidade na etapa / quantidade na primeira etapa; conversão anterior usa a etapa anterior; abandono observado = quantidade anterior − quantidade atual. Denominador zero produz `null`, não zero percentual. A resposta/painel retornam agregados, sem hashes ou identidades. Primeira impressão/clique B2B são registrados transacionalmente somente para lojas próprias ativas/verificadas; cada tenant gera uma vez por evento na janela de retenção.
+
+B2C conta sessões consentidas por dia, não pessoas. A deduplicação por etapa/dia não distingue vários planejamentos na mesma sessão; entradas diretas, etapas anteriores à janela e jornadas entre dias não entram no mesmo funil. Cadastros, leads e billing são contagens operacionais separadas: não inferir vínculo entre um visitante consentido e uma conta ou empresa. Eventos de trial/upgrade/downgrade são observados no estado remoto reconciliado; billing continua Test, sem inferir receita ou prova de pagamento real.
+
+Retenção de planejamentos salvos = contas atualmente ativas que criaram planejamento em ambas as janelas consecutivas / contas atualmente ativas com planejamento na janela anterior. Retorna base, contas atuais, retornos, percentual e média de planejamentos por conta com evento no período. Contas excluídas não são identificadas. Essa métrica não mede visitas, RSVP, edições, satisfação ou churn financeiro. Coortes financeiras avançadas permanecem dependentes de dados comerciais reais.

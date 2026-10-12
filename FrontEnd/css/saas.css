@@ -2,3 +2,6 @@
 
 .analytics-choice{position:relative;bottom:auto;right:auto;left:auto;width:100%;max-width:none;margin:16px 0;box-sizing:border-box}
 .saas-shell .simple-topbar{display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap}.saas-shell .home-brand{display:inline-flex;align-items:center}.saas-shell .home-wordmark{display:block;width:210px;max-width:100%;height:auto}.saas-shell .simple-topbar nav a{display:inline-flex;align-items:center;min-height:44px;padding:0 8px}.saas-shell footer{font-size:14px;display:flex;align-items:center;justify-content:flex-start;gap:12px;flex-wrap:wrap}.saas-shell footer a{font-size:14px;color:#36452e;text-decoration:underline}@media(max-width:600px){.saas-shell .home-wordmark{width:170px}}
+.saas-table-scroll { overflow-x: auto; max-width: 100%; }
+.saas-table-scroll table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+.saas-table-scroll th, .saas-table-scroll td { padding: .65rem; text-align: left; border-bottom: 1px solid #d9ddcf; }

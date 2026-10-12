@@ -81,6 +81,12 @@
           },
           {
             "context": "Analyze (javascript-typescript)"
+          },
+          {
+            "context": "Container scan (backend)"
+          },
+          {
+            "context": "Container scan (frontend)"
           }
         ]
       }

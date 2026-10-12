@@ -87,7 +87,8 @@ class EventoIn(BaseModel):
 def evento_publico(payload: EventoIn, db: Session = Depends(get_db)):
     if payload.evento not in EVENTOS_PUBLICOS:
         raise HTTPException(422, detail="Evento não permitido no navegador.")
-    registrar_produto(db, payload.evento, f"{agora().date()}:{payload.sessao}", {"origem": payload.origem, "segmento": "b2c"})
+    contexto = f"{agora().date()}:{payload.sessao}"
+    registrar_produto(db, payload.evento, contexto, {"origem": payload.origem, "segmento": "b2c"}, contexto=contexto, contexto_tipo="sessao_dia")
     db.commit()
 
 
@@ -183,7 +184,9 @@ def dashboard(dias: int = Query(30, ge=1, le=90), admin: Usuario = Depends(exigi
     pro = sum(assinatura_efetiva(s) and s.plano_slug == "pro" for s in b2b)
     business = sum(assinatura_efetiva(s) and s.plano_slug == "business" for s in b2b)
     premium = sum(assinatura_usuario_efetiva(s) for s in b2c)
+    from services.analytics_dashboard import funis_produto, retencao_planejamentos
     return {"periodo_dias": dias, "desde_utc": desde, "eventos": eventos, "usuarios_ativos": usuarios,
+        "funis": funis_produto(db, desde), "retencao_planejamentos": retencao_planejamentos(db, dias),
         "usuarios_com_evento_no_periodo": ativos, "ativacao_evento_pct": round(100 * ativos / usuarios, 2) if usuarios else None,
         "leads": db.query(LeadComercial).filter(LeadComercial.criado_em >= desde).count(),
         "parceiros_ativos": db.query(Organizacao).filter_by(ativo=True).count(),
