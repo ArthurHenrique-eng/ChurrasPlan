@@ -195,3 +195,17 @@ document.addEventListener("DOMContentLoaded", () => {
         irPara("carnes.html");
     });
 });
+
+function aplicarParametrosAssistente(parametros) {
+    window.clearTimeout(timerRascunho);
+    estadoAtual = EstadoChurrasco.salvar({
+        convidados: { adultos: parametros.adultos, criancas: parametros.criancas, adultos_bebem_alcool: parametros.adultos_bebem_alcool },
+        evento: { tipo: parametros.tipo_evento, duracao_horas: parametros.duracao_horas },
+        perfil_consumo: parametros.perfil_consumo,
+        orcamento_maximo: parametros.orcamento_maximo == null ? null : Number(parametros.orcamento_maximo),
+    });
+    renderizarOpcoesEvento();
+    renderizarOpcoesPerfil();
+    preencherCampos();
+    salvarRascunhoPlanejamento();
+}

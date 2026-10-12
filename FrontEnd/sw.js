@@ -1,4 +1,4 @@
-const VERSION = "churrasplan-v6.9.1";
+const VERSION = "churrasplan-v6.10.0";
 const STATIC_CACHE = `${VERSION}-static`;
 const PAGE_CACHE = `${VERSION}-pages`;
 const STATIC_ASSETS = [

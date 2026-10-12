@@ -1,4 +1,11 @@
 const TEMPO_LIMITE_API_MS = 15000;
+const CAMPOS_DATA_UTC = new Set(["criado_em", "atualizado_em", "ultimo_login_em", "email_verificado_em", "data_evento", "periodo_fim_em", "sincronizado_em", "expira_em", "verificado_em", "inicio_em", "fim_em", "tolerancia_ate", "quando"]);
+function normalizarDatasServidor(valor, chave = "") {
+    if (typeof valor === "string" && CAMPOS_DATA_UTC.has(chave) && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?$/.test(valor)) return valor + "Z";
+    if (Array.isArray(valor)) return valor.map(item => normalizarDatasServidor(item));
+    if (valor && typeof valor === "object") return Object.fromEntries(Object.entries(valor).map(([k, v]) => [k, normalizarDatasServidor(v, k)]));
+    return valor;
+}
 
 function lerCookie(nome) {
     const prefixo = `${encodeURIComponent(nome)}=`;
@@ -40,13 +47,18 @@ async function requisitar(caminho, opcoes = {}) {
 
         if (!resposta.ok) {
             const detalhe = corpo && corpo.detail ? corpo.detail : `Erro ${resposta.status}`;
+            if (detalhe?.codigo === "MFA_NECESSARIO" && window.location && !window.location.pathname.endsWith("seguranca.html")) {
+                const next = window.location.pathname.split("/").pop() + window.location.search;
+                window.location.assign("seguranca.html?next=" + encodeURIComponent(next));
+            }
             const erro = new Error(typeof detalhe === "string" ? detalhe : JSON.stringify(detalhe));
             erro.status = resposta.status;
             erro.body = corpo;
             throw erro;
         }
-        return corpo;
+        return normalizarDatasServidor(corpo);
     } catch (erro) {
+        if (typeof ChurrasPlanTelemetria !== "undefined" && (erro.status >= 500 || erro.name === "AbortError" || erro instanceof TypeError)) ChurrasPlanTelemetria.registrar(erro.name === "AbortError" ? "timeout_api" : "falha_api");
         if (erro.name === "AbortError") {
             const timeout = new Error("A API demorou demais para responder. Tente novamente.");
             timeout.status = 408;
