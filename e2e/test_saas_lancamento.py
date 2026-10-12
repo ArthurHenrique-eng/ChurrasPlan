@@ -9,10 +9,17 @@ def essenciais(page):
     if botao.count():botao.click()
 
 
-def registrar_api(page):
+def registrar_pela_interface(page):
     email='e2e-saas-'+uuid.uuid4().hex[:10]+'@example.com'
-    r=page.request.post(url('api/auth/register'),data={'nome':'Teste SaaS','email':email,'senha':'SenhaSaasTeste123','aceite_termos':True,'aceite_privacidade':True})
-    assert r.status==201,r.text()
+    page.goto(url('cadastro.html'),wait_until='domcontentloaded');essenciais(page)
+    page.locator('#auth-nome').fill('Teste SaaS')
+    page.locator('#auth-email').fill(email)
+    page.locator('#auth-senha').fill('SenhaSaasTeste123')
+    page.locator('#aceite-termos').check()
+    page.locator('#aceite-privacidade').check()
+    page.locator('#auth-form button[type=submit]').click()
+    page.wait_for_url('**/minha-conta.html',timeout=15000)
+    expect(page.locator('#conta-saudacao')).to_contain_text('Teste SaaS')
     return email
 
 
@@ -31,7 +38,7 @@ def test_landing_parceiros_mobile_e_interesse_real(page):
 
 
 def test_mfa_configuracao_codigo_e_recuperacao_na_interface(page):
-    registrar_api(page)
+    registrar_pela_interface(page)
     page.goto(url('seguranca.html'),wait_until='domcontentloaded');essenciais(page)
     page.locator('#mfa-senha').fill('SenhaSaasTeste123')
     page.get_by_role('button',name='Cadastrar autenticador').click()
@@ -45,7 +52,7 @@ def test_mfa_configuracao_codigo_e_recuperacao_na_interface(page):
 
 
 def test_assistente_exige_revisao_e_preenche_formulario(page):
-    registrar_api(page)
+    registrar_pela_interface(page)
     page.goto(url('planejamento.html'),wait_until='domcontentloaded');essenciais(page)
     page.get_by_text('Descrever meu churrasco em uma frase',exact=True).click()
     page.locator('#assistente-texto').fill('25 pessoas incluindo 6 crianças, 4 horas, orçamento de R$ 800')

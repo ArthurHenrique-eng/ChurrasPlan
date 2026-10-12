@@ -105,7 +105,7 @@ ChurrasPlan/
 
 ## Banco e Alembic
 
-O Alembic é a fonte de verdade do schema. Head atual da branch SaaS: **`20261009_0017`**, incluindo as migrations 0009 organizações, 0010 entitlements, 0011 equipe/convites, 0012 filiais/ofertas CSV, 0013 catálogo/campanhas, 0014 Billing B2B, 0015 Billing B2C, 0016 periodicidade B2B e 0017 modelos Premium pessoais. Veja [a memória técnica mestra](docs/ChurrasPlanSaaS.md) para a matriz integral, rollback e requisitos de validação.
+O Alembic é a fonte de verdade do schema. Head atual da branch SaaS: **`20261012_0023`**, incluindo as migrations 0009 organizações, 0010 entitlements, 0011 equipe/convites, 0012 filiais/ofertas CSV, 0013 catálogo/campanhas, 0014 Billing B2B, 0015 Billing B2C, 0016 periodicidade B2B 0017 modelos Premium pessoais, 0018 segurança/MFA/outbox, 0019 growth, 0020 ferramentas profissionais/retenção, 0021 assistente, 0022 privacidade/métricas e 0023 EAN por organização. Veja [a memória técnica mestra](docs/ChurrasPlanSaaS.md) para a matriz integral, rollback e requisitos de validação.
 
 
 `BackEnd/Python/sql/schema.sql` representa uma **instalação nova** no head atual. Para banco existente, use migrations.
