@@ -2,7 +2,7 @@
 
 > **Documento canônico:** `docs/ChurrasPlanSaaS.md`. **Branch:** `Saas-ChurrasPlan`, nunca confundir com `main`.
 > **Atualizado:** 12/10/2026 (UTC). **Base histórica auditada:** commit `208f34954033dc7bb280bdaa72194ba1e37d854c`. **Revisão de lançamento:** API v6.10.0, Alembic head `20261012_0024`; implementação/evidências/gates na seção 19.
-> **CI comprovado no commit-base:** [GitHub CI 38004031754](https://github.com/ArthurHenrique-eng/ChurrasPlan/actions/runs/38004031754) e [CodeQL 38004031832](https://github.com/ArthurHenrique-eng/ChurrasPlan/actions/runs/38004031832), ambos success em 09/10/2026; esse resultado não avalia o novo commit documental.
+> **Revisão funcional comprovada:** commit `8b3112a48bd7d271a858a1925e59c982043d6434`, [CI 38195317834](https://github.com/ArthurHenrique-eng/ChurrasPlan/actions/runs/38195317834), [CodeQL 38195317935](https://github.com/ArthurHenrique-eng/ChurrasPlan/actions/runs/38195317935) e [Container security 38195317810](https://github.com/ArthurHenrique-eng/ChurrasPlan/actions/runs/38195317810), todos success em 12/10/2026. Atualizações documentais posteriores não substituem essa identificação exata.
 > **Objetivo:** consolidar as **35 notas Markdown** pré-existentes em `docs/` num único contexto de leitura. Os originais permanecem recuperáveis por links imutáveis no Git, listados na seção de histórico, sem manter arquivos obsoletos concorrentes. O README e imagens de `docs/assets/` são preservados.
 
 ## 0. Como uma IA deve usar e manter este documento
@@ -520,3 +520,25 @@ A migration `0024` adiciona `contexto_tipo`/`contexto_hash` nullable a `eventos_
 B2C conta sessões consentidas por dia, não pessoas. A deduplicação por etapa/dia não distingue vários planejamentos na mesma sessão; entradas diretas, etapas anteriores à janela e jornadas entre dias não entram no mesmo funil. Cadastros, leads e billing são contagens operacionais separadas: não inferir vínculo entre um visitante consentido e uma conta ou empresa. Eventos de trial/upgrade/downgrade são observados no estado remoto reconciliado; billing continua Test, sem inferir receita ou prova de pagamento real.
 
 Retenção de planejamentos salvos = contas atualmente ativas que criaram planejamento em ambas as janelas consecutivas / contas atualmente ativas com planejamento na janela anterior. Retorna base, contas atuais, retornos, percentual e média de planejamentos por conta com evento no período. Contas excluídas não são identificadas. Essa métrica não mede visitas, RSVP, edições, satisfação ou churn financeiro. Coortes financeiras avançadas permanecem dependentes de dados comerciais reais.
+
+### 19.8 Evidência de entrega no GitHub
+
+**Código testado:** commit `8b3112a48bd7d271a858a1925e59c982043d6434`, branch `Saas-ChurrasPlan`, API 6.10.0, Alembic `20261012_0024`.
+
+| Verificação | Resultado | Evidência |
+|---|---|---|
+| CI principal | Success em todos os seis jobs | [Run 38195317834](https://github.com/ArthurHenrique-eng/ChurrasPlan/actions/runs/38195317834) |
+| Backend SQLite | 213 aprovados; 2 avisos de depreciação conhecidos de Starlette/httpx/anyio | Job Backend unit/integration (SQLite), no run acima |
+| MySQL 8.4 real | 13 aprovados; Alembic sem drift; downgrade até 0008/upgrade 0024 e backfill legado aprovados | Job MySQL 8 real + Alembic |
+| Frontend/SEO/schema | Checks Node/HTML/CSP/datas e geração determinística aprovados; 53 tabelas alinhadas ao ORM | Jobs Frontend static checks e Backend unit/integration |
+| Docker/headers | Compose, build de backend/frontend, configuração Nginx e CSP/nosniff nos assets aprovados | Job Docker configuration and images |
+| E2E | Todos os 13 fluxos aprovados em Chromium/MySQL no CI | Job E2E Chromium + MySQL |
+| Segurança estática | pip-audit e Bandit aprovados | Job Security audit |
+| CodeQL | Success em Python e JavaScript/TypeScript | [Run 38195317935](https://github.com/ArthurHenrique-eng/ChurrasPlan/actions/runs/38195317935) |
+| Imagens de aplicação | Success em backend e frontend; bloqueia vulnerabilidades HIGH/CRITICAL com correção disponível | [Run 38195317810](https://github.com/ArthurHenrique-eng/ChurrasPlan/actions/runs/38195317810) |
+
+O primeiro scan encontrou correções Alpine disponíveis para libexpat, pcre2 e tiff na imagem Nginx. `apk upgrade --no-cache` na construção aplica essas atualizações; o scan repetido passou. Isso não certifica ausência de vulnerabilidades desconhecidas ou de severidades não abrangidas pelo gate. O CI inicial também revelou duas incompatibilidades nos testes novos: cadastro direto na origem estática sem proxy e expectativa de nome completo em uma saudação que usa somente o primeiro nome. Foram corrigidas no teste sem alterar o contrato do produto; os fluxos posteriores passaram.
+
+QA adicional do painel do fundador: quatro funis e retenção renderizados em 1440/390 px, sem erros de JavaScript ou overflow horizontal do documento; tabelas mantêm rolagem interna em telas estreitas. Base sintética isolada usada somente para QA, sem representar clientes reais. Backup/restore permanece comprovado no ambiente local isolado da seção 19.5.
+
+**Estado final:** código entregue e verificações técnicas aprovadas para homologação/piloto. Os requisitos P0 externos da seção 19.3 continuam obrigatórios antes de lançamento comercial; os runs acima não validam SMTP/TLS/backup remoto, faturamento Live, proteção aplicada de main, operação jurídica ou recrutamento de parceiros.
