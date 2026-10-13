@@ -44,6 +44,10 @@ def registrar(payload: RegistroUsuarioIn, request: Request, response: Response, 
         raise HTTPException(status_code=422, detail=str(exc))
     db.add(usuario)
     db.flush()
+    from services.analytics import registrar_produto, atribuir_cadastro
+    registrar_produto(db, "cadastro_criado", str(usuario.id), {"segmento": "b2c"})
+    if payload.aceite_analytics:
+        atribuir_cadastro(db, usuario, payload.referral_codigo)
     db.add_all([
         ConsentimentoUsuario(usuario_id=usuario.id, tipo="termos", versao=settings.TERMS_VERSION, concedido=True, origem="cadastro"),
         ConsentimentoUsuario(usuario_id=usuario.id, tipo="privacidade", versao=settings.PRIVACY_VERSION, concedido=True, origem="cadastro"),
@@ -52,7 +56,7 @@ def registrar(payload: RegistroUsuarioIn, request: Request, response: Response, 
     registrar_evento(db, tipo="register", chave_hash=chave_rate, sucesso=True)
     token = criar_token_usuario(db, usuario, "verificar_email", 24 * 60)
     link = f"{settings.PUBLIC_APP_URL}/verificar-email.html?token={token}"
-    enviar_email(email, "Verifique seu e-mail no ChurrasPlan", f"Olá, {usuario.nome}!\n\nVerifique seu e-mail: {link}\n")
+    enviar_email(email, "Verifique seu e-mail no ChurrasPlan", f"Olá, {usuario.nome}!\n\nVerifique seu e-mail: {link}\n", db=db)
     # Em produção, quando a verificação é obrigatória, não entregamos uma
     # sessão autenticada antes da confirmação do e-mail. Em desenvolvimento
     # isso pode ficar relaxado por configuração para facilitar testes locais.
@@ -86,6 +90,9 @@ def login(payload: LoginIn, request: Request, response: Response, db: Session = 
         db.commit()
         raise HTTPException(status_code=403, detail="Verifique seu e-mail antes de entrar.")
     registrar_evento(db, tipo="login", chave_hash=chave_rate, sucesso=True)
+    from services.auth import PASSWORD_HASHER
+    if not usuario.senha_hash.startswith("$argon2id$") or PASSWORD_HASHER.check_needs_rehash(usuario.senha_hash):
+        usuario.senha_hash = hash_senha(payload.senha)
     criar_sessao(db, usuario, request, response)
     db.commit()
     return AuthOut(usuario=UsuarioOut.model_validate(usuario), mensagem="Login realizado com sucesso.")
@@ -130,7 +137,7 @@ def esqueci_senha(payload: EsqueciSenhaIn, request: Request, db: Session = Depen
     if usuario and usuario.ativo:
         token = criar_token_usuario(db, usuario, "redefinir_senha", 60)
         link = f"{settings.PUBLIC_APP_URL}/redefinir-senha.html?token={token}"
-        enviar_email(usuario.email, "Redefinição de senha — ChurrasPlan", f"Use este link para redefinir sua senha: {link}\n")
+        enviar_email(usuario.email, "Redefinição de senha — ChurrasPlan", f"Use este link para redefinir sua senha: {link}\n", db=db)
         dev_token = token if settings.APP_ENV != "production" else None
         db.commit()
     registrar_evento(db, tipo="forgot_password", chave_hash=chave_rate, sucesso=True)

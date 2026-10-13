@@ -63,6 +63,31 @@ class Settings:
     SMTP_FROM: str = os.getenv("SMTP_FROM", "ChurrasPlan <no-reply@churrasplan.local>")
     SMTP_TLS: bool = os.getenv("SMTP_TLS", "true").lower() in {"1", "true", "yes"}
 
+    # Fase 3: operação apenas no ambiente TEST do Stripe. Nenhum modo live.
+    BILLING_ENABLED: bool = os.getenv("BILLING_ENABLED", "false").lower() in {"1", "true", "yes"}
+    STRIPE_SECRET_KEY: str = os.getenv("STRIPE_SECRET_KEY", "")
+    STRIPE_API_VERSION: str = os.getenv("STRIPE_API_VERSION", "2026-08-26.dahlia")
+    BILLING_WEBHOOK_ASYNC: bool = os.getenv("BILLING_WEBHOOK_ASYNC", "true" if APP_ENV == "production" else "false").lower() in {"1", "true", "yes"}
+    STRIPE_WEBHOOK_SECRET: str = os.getenv("STRIPE_WEBHOOK_SECRET", "")
+    STRIPE_PRICE_PRO: str = os.getenv("STRIPE_PRICE_PRO", "")
+    STRIPE_PRICE_BUSINESS: str = os.getenv("STRIPE_PRICE_BUSINESS", "")
+    STRIPE_PRICE_PRO_YEARLY: str = os.getenv("STRIPE_PRICE_PRO_YEARLY", "")
+    STRIPE_PRICE_BUSINESS_YEARLY: str = os.getenv("STRIPE_PRICE_BUSINESS_YEARLY", "")
+    BILLING_GRACE_DAYS: int = int(os.getenv("BILLING_GRACE_DAYS", "3"))
+    # Valores comerciais aprovados em centavos. Se um Price ID do Sandbox
+    # apontar para outro valor, falhar fechado antes de abrir Checkout.
+    # Anuais ficam sem valor presumido (0) até aprovação comercial específica.
+    STRIPE_EXPECTED_PREMIUM_MONTHLY_CENTS: int = int(os.getenv("STRIPE_EXPECTED_PREMIUM_MONTHLY_CENTS", "990"))
+    STRIPE_EXPECTED_PRO_MONTHLY_CENTS: int = int(os.getenv("STRIPE_EXPECTED_PRO_MONTHLY_CENTS", "4990"))
+    STRIPE_EXPECTED_BUSINESS_MONTHLY_CENTS: int = int(os.getenv("STRIPE_EXPECTED_BUSINESS_MONTHLY_CENTS", "9990"))
+    STRIPE_EXPECTED_PREMIUM_YEARLY_CENTS: int = int(os.getenv("STRIPE_EXPECTED_PREMIUM_YEARLY_CENTS", "0"))
+    STRIPE_EXPECTED_PRO_YEARLY_CENTS: int = int(os.getenv("STRIPE_EXPECTED_PRO_YEARLY_CENTS", "0"))
+    STRIPE_EXPECTED_BUSINESS_YEARLY_CENTS: int = int(os.getenv("STRIPE_EXPECTED_BUSINESS_YEARLY_CENTS", "0"))
+
+    # Produtos B2C test-only: ambos opcionais; configure os Price IDs do sandbox.
+    STRIPE_PRICE_USER_PREMIUM_MONTHLY: str = os.getenv("STRIPE_PRICE_USER_PREMIUM_MONTHLY", "")
+    STRIPE_PRICE_USER_PREMIUM_YEARLY: str = os.getenv("STRIPE_PRICE_USER_PREMIUM_YEARLY", "")
+
     # Geoapify. Separe a chave de servidor (Places/Autocomplete) da chave
     # pública usada somente para tiles do mapa no navegador.
     GEOAPIFY_SERVER_API_KEY: str | None = os.getenv("GEOAPIFY_SERVER_API_KEY")
@@ -93,6 +118,19 @@ class Settings:
     # Documentos legais versionados. Mudanças materiais devem gerar nova versão.
     TERMS_VERSION: str = os.getenv("TERMS_VERSION", "2026-09-18")
     PRIVACY_VERSION: str = os.getenv("PRIVACY_VERSION", "2026-09-21")
+    DATA_ENCRYPTION_KEY: str = os.getenv("DATA_ENCRYPTION_KEY", "")
+    MFA_REQUIRED_ADMIN: bool = os.getenv("MFA_REQUIRED_ADMIN", "true" if APP_ENV == "production" else "false").lower() in {"1", "true", "yes"}
+    MFA_SESSION_HOURS: int = 12
+    RATE_LIMIT_READ_PER_MINUTE: int = int(os.getenv("RATE_LIMIT_READ_PER_MINUTE", "360"))
+    RATE_LIMIT_WRITE_PER_MINUTE: int = int(os.getenv("RATE_LIMIT_WRITE_PER_MINUTE", "120"))
+    RATE_LIMIT_AUTH_PER_MINUTE: int = int(os.getenv("RATE_LIMIT_AUTH_PER_MINUTE", "15"))
+    RATE_LIMIT_SENSITIVE_PER_MINUTE: int = int(os.getenv("RATE_LIMIT_SENSITIVE_PER_MINUTE", "30"))
+    OUTBOX_MAX_ATTEMPTS: int = 5
+    OUTBOX_LEASE_SECONDS: int = 120
+    WORKER_REQUIRED: bool = os.getenv("WORKER_REQUIRED", "true" if APP_ENV == "production" else "false").lower() in {"1", "true", "yes"}
+    ANALYTICS_ENABLED: bool = os.getenv("ANALYTICS_ENABLED", "true").lower() in {"1", "true", "yes"}
+    ANALYTICS_RETENTION_DAYS: int = 90
+    LEAD_RETENTION_DAYS: int = 180
 
 
 @lru_cache
@@ -278,6 +316,15 @@ def validar_configuracao_producao(configuracao: Settings = settings) -> None:
         erros.append("SECURITY_PEPPER deve possuir pelo menos 32 caracteres aleatórios em produção")
     if not configuracao.FORCE_HTTPS:
         erros.append("FORCE_HTTPS deve ser true em produção")
+    if not getattr(configuracao, "MFA_REQUIRED_ADMIN", False):
+        erros.append("MFA_REQUIRED_ADMIN deve ser true em produção")
+    try:
+        from cryptography.fernet import Fernet
+        Fernet(getattr(configuracao, "DATA_ENCRYPTION_KEY", "").encode())
+    except (ValueError, TypeError):
+        erros.append("DATA_ENCRYPTION_KEY deve ser uma chave Fernet válida em produção")
+    if not getattr(configuracao, "RATE_LIMIT_ENABLED", False):
+        erros.append("RATE_LIMIT_ENABLED deve ser true em produção")
     if not configuracao.DATABASE_URL.lower().startswith("mysql+pymysql://"):
         erros.append("DATABASE_URL deve apontar para MySQL via PyMySQL em produção")
     if not configuracao.DATABASE_URL_OVERRIDE and not configuracao.DB_PASSWORD:

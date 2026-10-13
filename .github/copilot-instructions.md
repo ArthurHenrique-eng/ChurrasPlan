@@ -1,0 +1,1 @@
+Siga AGENTS.md e docs/ChurrasPlanSaaS.md. Revise especialmente semântica de quantidades/preços, CSRF, MFA, isolamento multi-tenant, locks de cotas e webhooks. Exija Alembic/schema/testes sincronizados. Sugestões de IA não alteram o motor determinístico. Nunca aceite dados fictícios de venda, aprovação ou receita de sandbox como evidência comercial.

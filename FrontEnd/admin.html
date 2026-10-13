@@ -13,12 +13,14 @@
   <meta name="mobile-web-app-capable" content="yes">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="assets/pwa/icon-192.png">
+<link rel="stylesheet" href="css/saas.css">
+<meta name="robots" content="noindex,nofollow">
 </head>
 <body class="account-page admin-page">
   <a class="skip-link" href="#main">Pular para o conteúdo</a>
   <main id="main" class="account-shell">
     <header class="simple-topbar"><a class="home-brand" href="index.html"><img class="home-logo-icon" src="assets/logo-icon.png" alt=""><img class="home-wordmark" src="assets/logo-wordmark.png" alt="ChurrasPlan"></a><a class="text-button" href="minha-conta.html">Minha conta</a></header>
-    <section class="account-hero"><div><span class="eyebrow"><span></span>ADMINISTRAÇÃO</span><h1>Operação do ChurrasPlan.</h1><p>Usuários, parceiros, moderação e auditoria de ações privilegiadas.</p></div></section>
+    <section class="account-hero"><div><span class="eyebrow"><span></span>ADMINISTRAÇÃO</span><h1>Operação do ChurrasPlan.</h1><a href="operacao.html">Abrir indicadores SaaS, leads e alertas</a><p>Usuários, parceiros, moderação e auditoria de ações privilegiadas.</p></div></section>
     <div class="mensagem" id="admin-mensagem" hidden></div>
     <section class="admin-metrics" id="admin-metrics"><div class="empty-state">Carregando indicadores...</div></section>
     <section class="account-section admin-section">
@@ -35,8 +37,8 @@
         <label>CEP<input id="admin-est-cep" maxlength="12"></label>
         <label class="full">Endereço<input id="admin-est-endereco" maxlength="255" placeholder="Rua, número e bairro"></label>
         <button class="botao botao--secundario full" id="admin-est-localizar" type="button">Localizar endereço e preencher coordenadas</button>
-        <label>Latitude<input id="admin-est-lat" type="number" min="-90" max="90" step="any" inputmode="decimal" placeholder="-19.959383"></label>
-        <label>Longitude<input id="admin-est-lng" type="number" min="-180" max="180" step="any" inputmode="decimal" placeholder="-44.011870"></label>
+        <label>Latitude<input id="admin-est-lat" type="text" inputmode="decimal" autocomplete="off" placeholder="-19,959383"></label>
+        <label>Longitude<input id="admin-est-lng" type="text" inputmode="decimal" autocomplete="off" placeholder="-44,011870"></label>
         <button class="botao botao--primario full" type="submit">Cadastrar e verificar estabelecimento</button>
       </form>
     </section>
@@ -44,8 +46,14 @@
       <div class="admin-section-head"><div><h2>Estabelecimentos</h2><p>Somente parceiros verificados entram nas recomendações públicas.</p></div><label class="legal-check"><input id="admin-somente-pendentes" type="checkbox"><span>Somente pendentes</span></label></div>
       <div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Estabelecimento</th><th>Local</th><th>Verificado</th><th>Ativo</th><th>Ações</th></tr></thead><tbody id="admin-estabelecimentos"></tbody></table></div>
     </section>
+    <section class="account-section admin-section" aria-labelledby="admin-campanhas-titulo">
+      <h2 id="admin-campanhas-titulo">Revisão de campanhas comerciais</h2>
+      <p class="texto-suave">Aprovação exige oferta válida e estabelecimento verificado. Nenhuma aprovação ativa cobrança ou gera receita.</p>
+      <div id="admin-campanhas-pendentes" class="basket-table" aria-live="polite"></div>
+    </section>
     <section class="account-section admin-section"><h2>Auditoria recente</h2><div class="audit-list" id="admin-auditoria"></div></section>
   </main>
-  <script src="js/config.js"></script><script src="js/api.js"></script><script src="js/script.js"></script><script src="js/auth-ui.js"></script><script src="js/admin.js"></script><script src="js/pwa.js"></script>
+  <script src="js/config.js"></script><script src="js/api.js"></script><script src="js/telemetria.js"></script><script src="js/script.js"></script><script src="js/auth-ui.js"></script><script src="js/admin.js"></script><script src="js/admin-campanhas.js"></script><script src="js/pwa.js"></script>
+<script src="js/analytics.js"></script>
 </body>
 </html>

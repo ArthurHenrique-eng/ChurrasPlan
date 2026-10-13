@@ -1,4 +1,4 @@
-from sqlalchemy import Boolean, Column, ForeignKey, Integer, Numeric, String, Text
+from sqlalchemy import Boolean, Column, ForeignKey, Integer, Numeric, String, Text, UniqueConstraint
 from sqlalchemy.orm import relationship
 
 from database.connection import Base
@@ -6,17 +6,19 @@ from database.connection import Base
 
 class Produto(Base):
     __tablename__ = "produtos"
+    __table_args__ = (UniqueConstraint("organizacao_id", "ean", name="uq_produto_org_ean"),)
 
     id = Column(Integer, primary_key=True, index=True)
     categoria_id = Column(Integer, ForeignKey("categorias.id", ondelete="RESTRICT"), nullable=False, index=True)
     produto_pai_id = Column(Integer, ForeignKey("produtos.id", ondelete="SET NULL"), nullable=True, index=True)
     tipo_produto = Column(String(20), nullable=False, default="generico", server_default="generico", index=True)  # generico | comercial
+    organizacao_id = Column(Integer, ForeignKey("organizacoes.id", ondelete="SET NULL", name="fk_produtos_organizacao_id"), nullable=True, index=True)
     slug = Column(String(140), nullable=False, unique=True, index=True)
     nome = Column(String(120), nullable=False)
     marca = Column(String(100), nullable=True, index=True)
     variante = Column(String(120), nullable=True)
     fabricante = Column(String(120), nullable=True)
-    ean = Column(String(32), nullable=True, unique=True, index=True)
+    ean = Column(String(32), nullable=True, index=True)
     sku = Column(String(80), nullable=True, index=True)
 
     unidade_consumo = Column(String(30), nullable=False)
@@ -31,6 +33,7 @@ class Produto(Base):
     descricao = Column(Text, nullable=True)
 
     categoria = relationship("Categoria")
+    organizacao = relationship("Organizacao", back_populates="produtos")
     produto_pai = relationship("Produto", remote_side=[id], back_populates="variantes")
     variantes = relationship("Produto", back_populates="produto_pai")
     precos = relationship("Preco", back_populates="produto", cascade="all, delete-orphan")

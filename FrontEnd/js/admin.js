@@ -16,13 +16,10 @@ function coordenadaAdmin(id, limite) {
     const campo = document.getElementById(id);
     const bruto = campo.value.trim();
     if (!bruto) return null;
-    let valor = Number(bruto.replace(",", "."));
-    if (!Number.isFinite(valor)) throw new Error("Informe uma coordenada válida.");
-    if (Math.abs(valor) >= 1000000 && Math.abs(valor) <= limite * 1000000 && Number.isInteger(valor)) {
-        valor /= 1000000;
-    }
+    const valor = Number(bruto.replace(",", "."));
+    if (!Number.isFinite(valor)) throw new Error("Coordenada inválida. Informe graus decimais.");
     if (Math.abs(valor) > limite) {
-        throw new Error(`Coordenada fora do intervalo permitido (-${limite} a ${limite}).`);
+        throw new Error(`Coordenada fora do intervalo permitido (-${limite} a ${limite}). Use graus decimais, como -19,959383.`);
     }
     campo.value = String(valor);
     return valor;

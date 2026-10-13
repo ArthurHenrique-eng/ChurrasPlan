@@ -4,14 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#9e3b25">
-<title>ChurrasPlan — Menos conta. Mais churrasco.</title>
-<meta name="description" content="Planeje seu churrasco: convidados, carnes, bebidas, extras, quantidades de compra e lista final em um só fluxo.">
+<title>ChurrasPlan — Planejamento e compra de churrascos</title>
+
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="css/unified-core.css">
 <link rel="stylesheet" href="css/unified-home.css">
 <link rel="stylesheet" href="css/integracao-v3.css">
   <link rel="stylesheet" href="css/production-v63.css">
-</head>
+<link rel="stylesheet" href="css/saas.css">
+<!-- SEO_INICIO --><meta name="description" content="Planeje quantidades, listas e orçamento; conecte seu churrasco a mercados, açougues e profissionais locais."><link rel="canonical" href="http://localhost:8080/index.html"><meta property="og:title" content="ChurrasPlan — Planejamento e compra de churrascos"><meta property="og:description" content="Planeje quantidades, listas e orçamento; conecte seu churrasco a mercados, açougues e profissionais locais."><meta property="og:url" content="http://localhost:8080/index.html"><meta property="og:type" content="website"><meta name="twitter:card" content="summary"><meta name="robots" content="noindex,nofollow"><script type="application/ld+json">{"@context": "https://schema.org", "@type": "WebSite", "name": "ChurrasPlan", "url": "http://localhost:8080/"}</script><!-- SEO_FIM --></head>
 <body class="home-body pagina-inicial">
 <a class="skip-link" href="#main">Ir para o conteúdo</a>
 <header class="home-header">
@@ -22,6 +23,7 @@
     </a>
     <nav aria-label="Navegação principal">
       <a href="#como-funciona">Como funciona</a>
+      <a href="planos.html">Planos</a>
       <a href="#seu-cardapio">Seu cardápio</a>
       <a href="#lista-compras">Lista de compras</a>
       <a href="planejamento.html" class="primary-button">Planejar agora<span data-icon="arrow"></span></a>
@@ -36,6 +38,7 @@
       <span class="eyebrow"><span></span>O MELHOR DO CHURRASCO É ESTAR JUNTO</span>
       <h1>Menos conta.<br>Mais <em>churrasco.</em></h1>
       <p>Da primeira brasa à última conversa. Escolha seu cardápio e descubra quanto comprar para reunir a sua turma, do seu jeito.</p>
+      <a href="planos.html" class="continue-link" style="display:inline-flex;margin-right:16px">Conhecer planos</a>
       <a href="planejamento.html" class="primary-button hero-cta">Planejar meu churrasco<span data-icon="arrow"></span></a>
       <a id="link-continuar" class="continue-link" href="planejamento.html" style="display:none"></a>
       <div class="hero-promises"><span><i data-icon="check"></i>Porções ajustáveis</span><span><i data-icon="check"></i>Lista pronta para levar</span></div>
@@ -80,7 +83,7 @@
     <div class="possibilities-copy">
       <span class="eyebrow">O SEU CHURRASCO, NOS DETALHES</span><h2>Um bom plano.<br>Do seu jeito.</h2>
       <div class="benefit"><span data-icon="sliders"></span><div><h3>A conta é transparente</h3><p>Ajuste o perfil, veja necessidade e compra separadas e mantenha a divisão das carnes em 100%.</p></div></div>
-      <div class="benefit"><span data-icon="store"></span><div><h3>Preço continua sendo dado real</h3><p>Quando existe oferta cadastrada, o resultado usa preço e estabelecimento. Quando não existe, o item fica claramente sem preço.</p></div></div>
+      <div class="benefit"><span data-icon="store"></span><div><h3>Estimativas e ofertas com origem clara</h3><p>O resultado distingue ofertas elegíveis de lojas, referências datadas de orçamento e itens sem preço. Assim você sabe a origem de cada estimativa.</p></div></div>
       <details><summary>Preciso preencher tudo de uma vez?</summary><p>Não. O planejamento em andamento fica salvo no navegador e você pode continuar depois.</p></details>
       <details><summary>O resultado usa quantidade de compra?</summary><p>Sim. Necessidade física, embalagem comercial e quantidade para comprar são tratadas separadamente.</p></details>
       <a href="planejamento.html" class="primary-button">Começar meu planejamento<span data-icon="arrow"></span></a>
@@ -103,7 +106,8 @@
   </div>
 </section>
 </main>
-<footer class="home-footer"><div class="home-container"><a class="home-brand" href="#inicio"><img class="home-wordmark" src="assets/logo-wordmark.png" alt="ChurrasPlan"></a><p>Bom de planejar. Melhor de compartilhar à mesa.</p><div class="private-badge"><span data-icon="flame"></span>ChurrasPlan</div><nav class="legal-footer-links" aria-label="Informações legais"><a href="privacidade.html">Privacidade</a><a href="termos.html">Termos</a><a href="cookies.html">Cookies</a></nav></div></footer>
-<script src="js/config.js"></script><script src="js/state.js"></script><script src="js/api.js"></script><script src="js/script.js"></script><script src="js/auth-ui.js"></script><script src="js/index.js"></script><script src="js/icons.js"></script><script src="js/home-unificado.js"></script>
+<footer class="home-footer"><div class="home-container"><a class="home-brand" href="#inicio"><img class="home-wordmark" src="assets/logo-wordmark.png" alt="ChurrasPlan"></a><p>A plataforma de planejamento e compra de churrascos que conecta consumidores, churrasqueiros e mercados locais.</p><div class="private-badge"><span data-icon="flame"></span>ChurrasPlan</div><nav class="legal-footer-links" aria-label="Informações legais"><a href="parceiros.html">ChurrasPlan Parceiros</a><a href="guias/index.html">Guias de churrasco</a><a href="privacidade.html">Privacidade</a><a href="termos.html">Termos</a><a href="cookies.html">Cookies</a></nav></div></footer>
+<script src="js/config.js"></script><script src="js/state.js"></script><script src="js/api.js"></script><script src="js/telemetria.js"></script><script src="js/script.js"></script><script src="js/auth-ui.js"></script><script src="js/index.js"></script><script src="js/icons.js"></script><script src="js/home-unificado.js"></script>
 <script src="js/pwa.js"></script>
+<script src="js/analytics.js"></script>
 </body></html>

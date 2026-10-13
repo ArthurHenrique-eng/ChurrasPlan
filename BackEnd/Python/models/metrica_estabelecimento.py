@@ -28,6 +28,7 @@ class MetricaEstabelecimento(Base):
     )
     tipo = Column(String(20), nullable=False, index=True)
     contexto = Column(String(40), nullable=False, default="onde_comprar", server_default="onde_comprar")
+    dedup_hash = Column(String(64), nullable=True, unique=True)
     criado_em = Column(DateTime, nullable=False, server_default=func.now(), index=True)
 
     estabelecimento = relationship("Estabelecimento")

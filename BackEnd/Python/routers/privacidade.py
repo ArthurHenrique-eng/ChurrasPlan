@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from urllib.parse import quote
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, Response
@@ -9,11 +10,12 @@ from sqlalchemy.orm import Session, joinedload
 from config import settings
 from database.connection import get_db
 from models import (
-    AssinaturaUsuario, Churrasco, ConsentimentoUsuario, Estabelecimento, Preco,
+    AssinaturaUsuario, AssinaturaStripeUsuario, Churrasco, ConsentimentoUsuario, Estabelecimento, Preco,
     Usuario,
 )
 from schemas.privacidade import ExclusaoContaIn, PreferenciaMarketingIn
 from services.auth import limpar_cookies, usuario_atual, usuario_atual_com_csrf, verificar_senha
+from services.billing import stripe_request
 
 router = APIRouter(prefix="/api/privacidade", tags=["privacidade-lgpd"])
 
@@ -85,6 +87,9 @@ def atualizar_marketing(
     else:
         registro.concedido = payload.concedido
         registro.origem = "minha_conta"
+    from models import LeadComercial
+    from services.auth import agora
+    db.query(LeadComercial).filter_by(email=usuario.email).update({"marketing_concedido": payload.concedido, "marketing_revogado_em": None if payload.concedido else agora()})
     db.commit()
     return {"mensagem": "Preferência atualizada.", "concedido": payload.concedido}
 
@@ -119,6 +124,8 @@ def exportar_meus_dados(usuario: Usuario = Depends(usuario_atual), db: Session =
     estabelecimentos = db.query(Estabelecimento).filter(Estabelecimento.usuario_responsavel_id == usuario.id).all()
     consentimentos = db.query(ConsentimentoUsuario).filter(ConsentimentoUsuario.usuario_id == usuario.id).all()
     assinatura = db.query(AssinaturaUsuario).filter(AssinaturaUsuario.usuario_id == usuario.id).all()
+    assinatura_stripe = db.get(AssinaturaStripeUsuario, usuario.id)
+    from models import ClienteProfissional, PropostaProfissional, LembreteEvento, FavoritoEstabelecimento
 
     return {
         "formato": "ChurrasPlan-LGPD-export-v1",
@@ -127,6 +134,11 @@ def exportar_meus_dados(usuario: Usuario = Depends(usuario_atual), db: Session =
         "churrascos": dados_churrascos,
         "estabelecimentos_responsavel": [_modelo_dict(e) for e in estabelecimentos],
         "assinaturas": [_modelo_dict(a) for a in assinatura],
+        "assinatura_stripe_teste": _modelo_dict(assinatura_stripe) if assinatura_stripe else None,
+        "clientes_profissionais": [_modelo_dict(x) for x in db.query(ClienteProfissional).filter_by(usuario_id=usuario.id)],
+        "propostas_profissionais": [_modelo_dict(x) for x in db.query(PropostaProfissional).filter_by(usuario_id=usuario.id)],
+        "lembretes": [_modelo_dict(x) for x in db.query(LembreteEvento).filter_by(usuario_id=usuario.id)],
+        "favoritos": [_modelo_dict(x) for x in db.query(FavoritoEstabelecimento).filter_by(usuario_id=usuario.id)],
         "observacao": "Tokens de autenticação, hashes de senha e segredos de sessão não fazem parte da exportação.",
     }
 
@@ -143,8 +155,33 @@ def excluir_minha_conta(
     if not verificar_senha(payload.senha, usuario.senha_hash):
         raise HTTPException(status_code=403, detail="Senha incorreta.")
 
+    # Remover o usuário antes de encerrar a assinatura remota poderia deixar
+    # cobrança em aberto e perder a referência de titularidade. Falhe fechado.
+    assinatura_stripe = db.get(AssinaturaStripeUsuario, usuario.id)
+    if assinatura_stripe and assinatura_stripe.stripe_subscription_id:
+        sid = assinatura_stripe.stripe_subscription_id
+        remoto = stripe_request("GET", "/v1/subscriptions/" + quote(sid, safe=""))
+        if remoto.get("id") != sid:
+            raise HTTPException(status_code=502, detail="Assinatura Stripe inconsistente.")
+        if remoto.get("status") not in {"canceled", "incomplete_expired"}:
+            raise HTTPException(status_code=409, detail={
+                "codigo": "ASSINATURA_DEVE_SER_ENCERRADA",
+                "mensagem": "Encerre a assinatura Stripe no portal e aguarde confirmação do término antes de excluir a conta.",
+            })
     # Eventos privados pertencem ao usuário e são removidos. Registros de negócio
     # (estabelecimentos/ofertas) permanecem apenas de forma desvinculada da pessoa.
+    from models import (OrganizacaoMembro, Organizacao, TarefaOutbox, ClienteProfissional, PropostaProfissional,
+                        LembreteEvento, FavoritoEstabelecimento, ConsumoAssistente, IndicacaoUsuario, AtribuicaoCadastro, CredencialMFA, RecuperacaoMFA, LeadComercial)
+    dono = db.query(OrganizacaoMembro).join(Organizacao).filter(OrganizacaoMembro.usuario_id == usuario.id,
+        OrganizacaoMembro.papel == "proprietario", OrganizacaoMembro.ativo.is_(True), Organizacao.ativo.is_(True)).first()
+    if dono:
+        raise HTTPException(409, detail="Transfira a propriedade ou encerre a organização antes de excluir a conta.")
+    db.query(OrganizacaoMembro).filter_by(usuario_id=usuario.id).delete(synchronize_session=False)
+    for modelo in (LembreteEvento, PropostaProfissional, ClienteProfissional, FavoritoEstabelecimento, ConsumoAssistente,
+                   IndicacaoUsuario, AtribuicaoCadastro, RecuperacaoMFA, CredencialMFA, TarefaOutbox):
+        db.query(modelo).filter_by(usuario_id=usuario.id).delete(synchronize_session=False)
+    db.query(AtribuicaoCadastro).filter_by(indicador_id=usuario.id).update({"indicador_id": None})
+    db.query(LeadComercial).filter_by(email=usuario.email).update({"marketing_concedido": False})
     for churrasco in list(usuario.churrascos):
         db.delete(churrasco)
     db.query(Estabelecimento).filter(Estabelecimento.usuario_responsavel_id == usuario.id).update(

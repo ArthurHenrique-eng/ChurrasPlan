@@ -101,7 +101,7 @@ def test_area_parceiro_produto_comercial_preco(client):
     assert a.status_code==200 and a.json()["papel"]=="parceiro"
     est=client.post("/api/parceiro/estabelecimentos",headers=h,json={
         "nome":"Mercado Teste","tipo":"supermercado",
-        "latitude":-19959383,"longitude":-44011870,
+        "latitude":"-19,959383","longitude":"-44,011870",
     })
     assert est.status_code==201, est.text
     assert est.json()["latitude"] == pytest.approx(-19.959383)
@@ -394,7 +394,7 @@ def test_geoapify_places_e_autocomplete(monkeypatch):
             self.payload = payload
         def __enter__(self): return self
         def __exit__(self, *args): return False
-        def read(self): return json.dumps(self.payload).encode("utf-8")
+        def read(self, size=-1): return json.dumps(self.payload).encode("utf-8")[:size if size >= 0 else None]
 
     def fake_urlopen(*args, **kwargs):
         return Resposta(respostas.pop(0))
@@ -508,5 +508,5 @@ def test_metricas_parceiro_registram_visualizacao_e_clique_sem_identificador_pes
     # O modelo não possui campos de identificação pessoal para a métrica.
     from models import MetricaEstabelecimento
     colunas = set(MetricaEstabelecimento.__table__.columns.keys())
-    assert colunas == {"id", "estabelecimento_id", "tipo", "contexto", "criado_em"}
+    assert colunas == {"id", "estabelecimento_id", "tipo", "contexto", "criado_em", "dedup_hash"}
     assert "usuario_id" not in colunas and "churrasco_id" not in colunas and "ip" not in colunas and "latitude" not in colunas

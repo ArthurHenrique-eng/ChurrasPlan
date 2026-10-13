@@ -14,6 +14,7 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="assets/pwa/icon-192.png">
   <link rel="stylesheet" href="css/production-v63.css">
+<link rel="stylesheet" href="css/saas.css">
 </head>
 <body class="app-page">
 <a class="skip-link" href="#main">Ir para o planejamento</a>
@@ -37,6 +38,7 @@
 <div class="page-intro"><div><div class="eyebrow"><span></span>GENTE REUNIDA. TUDO NA MEDIDA.</div><h1 class="pagina-fluxo__titulo">Vamos planejar seu churrasco</h1><p class="pagina-fluxo__subtitulo">Comece pelo essencial. Os detalhes dos convidados ficam disponíveis sem deixar a tela pesada.</p></div></div>
 <ol class="steps" id="stepper"></ol>
 <div class="mensagem" id="mensagem-erro" style="display:none;"></div>
+<section class="cartao"><details><summary>Descrever meu churrasco em uma frase</summary><p>Informe participantes, crianças, duração e orçamento. A interpretação local precisa da sua revisão; você pode seguir preenchendo os campos abaixo.</p><form id="assistente-form"><label for="assistente-texto">Descrição (sem nomes ou contatos)</label><textarea id="assistente-texto" maxlength="1000" placeholder="25 pessoas, incluindo 6 crianças, 4 horas, orçamento de R$ 800" required></textarea><button type="submit" class="primary-button">Preparar sugestão</button></form><p id="assistente-msg" role="status"></p><div id="assistente-preview" hidden><p id="assistente-parametros"></p><button type="button" id="assistente-aplicar" class="primary-button">Revisei. Aplicar ao formulário</button></div></details></section>
 <form id="form-planejamento">
   <div class="cartao">
     <div class="cartao__titulo"><span class="section-icon" data-icon="gift"></span><h2>Seu encontro</h2></div>
@@ -110,7 +112,8 @@
 </main>
 <footer class="app-footer"><span class="footer-brand">churrasplan</span><span>Bom de planejar. Melhor de compartilhar à mesa.</span><span>Feito para bons encontros.</span></footer>
 </div>
-<script src="js/config.js"></script><script src="js/state.js"></script><script src="js/api.js"></script><script src="js/script.js"></script><script src="js/auth-ui.js"></script><script src="js/icons.js"></script><script src="js/planejamento.js"></script>
+<script src="js/config.js"></script><script src="js/state.js"></script><script src="js/api.js"></script><script src="js/telemetria.js"></script><script src="js/script.js"></script><script src="js/auth-ui.js"></script><script src="js/icons.js"></script><script src="js/planejamento.js"></script>
 <script src="js/pwa.js"></script>
-</body>
+<script src="js/analytics.js"></script>
+<script src="js/assistente.js"></script></body>
 </html>

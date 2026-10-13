@@ -1,0 +1,10 @@
+User-agent: *
+Disallow: /
+Disallow: /api/
+Disallow: /admin.html
+Disallow: /operacao.html
+Disallow: /minha-conta.html
+Disallow: /parceiro.html
+Disallow: /resultado.html
+Disallow: /convite.html
+Sitemap: http://localhost:8080/sitemap.xml

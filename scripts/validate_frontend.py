@@ -10,7 +10,7 @@ class IDs(HTMLParser):
         d=dict(attrs)
         if "id" in d: self.ids.append(d["id"])
 
-for html in root.glob("*.html"):
+for html in root.rglob("*.html"):
     text=html.read_text(encoding="utf-8")
     p=IDs(); p.feed(text)
     dup={x for x in p.ids if p.ids.count(x)>1}
@@ -23,4 +23,4 @@ for html in root.glob("*.html"):
             if not target.exists(): errors.append(f"{html}: referência ausente {val}")
 if errors:
     print("\n".join(errors)); sys.exit(1)
-print(f"OK: {len(list(root.glob('*.html')))} HTML verificados")
+print(f"OK: {len(list(root.rglob('*.html')))} HTML verificados")

@@ -14,6 +14,8 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="assets/pwa/icon-192.png">
   <link rel="stylesheet" href="css/production-v63.css">
+<link rel="stylesheet" href="css/saas.css">
+<meta name="robots" content="noindex,nofollow">
 </head>
   <body class="account-page">
   <a class="skip-link" href="#main">Pular para o conteúdo</a>
@@ -75,6 +77,7 @@
           <div class="plan-card" id="conta-plano" style="margin-top:14px">
           </div>
           <div class="account-menu">
+            <a href="planos.html">Conhecer e assinar planos</a>
             <a href="planejamento.html">
               Criar novo planejamento
             </a>
@@ -89,6 +92,22 @@
             </button>
           </div>
         </aside>
+      </section>
+      <section class="account-section" id="conta-billing-fase2" aria-labelledby="conta-billing-titulo">
+        <div class="cartao__titulo"><span class="section-icon" data-icon="credit-card"></span>
+          <h2 id="conta-billing-titulo">Assinaturas e pagamentos de teste</h2></div>
+        <p class="texto-suave">Acesse faturas, acompanhe renovações, agende cancelamentos e gerencie o período da assinatura pelo Stripe Sandbox.</p>
+        <div id="conta-billing-pessoal" aria-live="polite">Carregando assinatura pessoal...</div>
+        <div id="conta-billing-mercado" aria-live="polite"></div>
+      </section>
+      <section class="account-section" id="conta-beneficios-secao" aria-labelledby="titulo-beneficios">
+        <div class="cartao__titulo"><span class="section-icon" data-icon="star"></span>
+          <h2 id="titulo-beneficios">Meu plano e ferramentas Premium</h2></div>
+        <p class="texto-suave" id="conta-beneficios">Carregando benefícios da sua conta...</p>
+        <div id="conta-resultado-premium" class="texto-suave" aria-live="polite"></div>
+        <h3>Meus modelos de eventos</h3>
+        <p class="texto-suave">Crie modelos a partir de churrascos salvos e reutilize suas preferências no Premium.</p>
+        <div class="history-list" id="conta-modelos">Carregando modelos...</div>
       </section>
       <section class="account-section privacy-center">
         <div class="cartao__titulo">
@@ -108,7 +127,7 @@
     </script>
     <script src="js/state.js">
     </script>
-    <script src="js/api.js">
+    <script src="js/api.js?v=20261009-billing2">
     </script>
     <script src="js/script.js">
     </script>
@@ -116,8 +135,12 @@
     </script>
     <script src="js/icons.js">
     </script>
-    <script src="js/minha-conta.js">
+    <script src="js/minha-conta.js?v=20261009-billing2">
     </script>
+  <script src="js/b2c-fase1.js?v=20261009-fase1"></script>
+  <script src="js/billing-conta-fase2.js?v=20261009-billing2"></script>
   <script src="js/pwa.js"></script>
+<script src="js/analytics.js"></script>
+<script src="js/conta-retencao.js"></script>
 </body>
 </html>

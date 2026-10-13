@@ -7,13 +7,80 @@ from __future__ import annotations
 
 import json
 import logging
+import hashlib
+import math
+import time
+from collections import OrderedDict, deque
+from threading import BoundedSemaphore, Lock
 import urllib.error
 import urllib.parse
 import urllib.request
 
 from config import settings
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("churrasplan.geoapify")
+_lock = Lock()
+_concorrencia = BoundedSemaphore(4)
+_cache = OrderedDict()
+_falhas = 0
+_aberto_ate = 0.0
+_consumo = deque()
+
+
+def _consultar(url: str, *, tile=False):
+    global _falhas, _aberto_ate
+    chave = hashlib.sha256(url.encode()).hexdigest()
+    momento = time.monotonic()
+    with _lock:
+        entrada = _cache.get(chave)
+        if entrada and entrada[0] > momento:
+            _cache.move_to_end(chave)
+            return entrada[1]
+        while _consumo and _consumo[0] < momento - 60:
+            _consumo.popleft()
+        if momento < _aberto_ate or len(_consumo) >= 300:
+            return None
+        _consumo.append(momento)
+    if not _concorrencia.acquire(blocking=False):
+        return None
+    try:
+        for tentativa in range(2):
+            req = urllib.request.Request(url, headers={"Accept": "image/png" if tile else "application/json", "User-Agent": "ChurrasPlan/Geoapify"})
+            try:
+                with urllib.request.urlopen(req, timeout=4) as resp:
+                    corpo = resp.read(1024 * 1024 + 1)
+                    if len(corpo) > 1024 * 1024:
+                        raise ValueError("Resposta excede limite")
+                    dado = (corpo, "image/png") if tile else json.loads(corpo)
+                    if not tile and not isinstance(dado, dict):
+                        raise ValueError("JSON inválido")
+                with _lock:
+                    _falhas = 0
+                    _cache[chave] = (momento + (900 if tile else 120), dado)
+                    while len(_cache) > 64:
+                        _cache.popitem(last=False)
+                return dado
+            except (urllib.error.URLError, TimeoutError, ValueError, OSError) as exc:
+                codigo = getattr(exc, "code", None)
+                logger.warning("geoapify_falha", extra={"evento": "geoapify_falha", "tipo_erro": type(exc).__name__})
+                if codigo and codigo not in {429, 500, 502, 503, 504}:
+                    break
+                if tentativa == 0:
+                    time.sleep(.1)
+        with _lock:
+            _falhas += 1
+            if _falhas >= 3:
+                _aberto_ate = time.monotonic() + 30
+        return None
+    finally:
+        _concorrencia.release()
+
+
+def _coordenadas_validas(lat, lon):
+    try:
+        return math.isfinite(float(lat)) and math.isfinite(float(lon)) and -90 <= float(lat) <= 90 and -180 <= float(lon) <= 180
+    except (TypeError, ValueError):
+        return False
 
 CATEGORIAS_COMPRAS_CHURRASCO = [
     "commercial.supermarket",
@@ -25,25 +92,7 @@ CATEGORIAS_COMPRAS_CHURRASCO = [
 
 
 def _get_json(url: str) -> dict:
-    req = urllib.request.Request(
-        url,
-        method="GET",
-        headers={
-            "Accept": "application/json",
-            "User-Agent": "ChurrasPlan/Geoapify",
-        },
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=8) as resp:
-            return json.loads(resp.read().decode("utf-8"))
-    except urllib.error.HTTPError as exc:
-        logger.warning("Geoapify respondeu HTTP %s", exc.code)
-    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, OSError) as exc:
-        logger.warning(
-            "Falha temporária ao consultar Geoapify: %s",
-            exc.__class__.__name__,
-        )
-    return {}
+    return _consultar(url) or {}
 
 
 
@@ -78,25 +127,7 @@ def buscar_tile_mapa(
         f"https://maps.geoapify.com/v1/tile/{estilo}/{z}/{x}/{y}.png"
         f"?apiKey={chave}"
     )
-    req = urllib.request.Request(
-        url,
-        method="GET",
-        headers={
-            "Accept": "image/png",
-            "User-Agent": "ChurrasPlan/Geoapify",
-        },
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=8) as resp:
-            return resp.read(), resp.headers.get_content_type() or "image/png"
-    except urllib.error.HTTPError as exc:
-        logger.warning("Geoapify Map Tiles respondeu HTTP %s", exc.code)
-    except (urllib.error.URLError, TimeoutError, OSError) as exc:
-        logger.warning(
-            "Falha temporária ao consultar Geoapify Map Tiles: %s",
-            exc.__class__.__name__,
-        )
-    return None
+    return _consultar(url, tile=True)
 
 def buscar_proximos(
     latitude: float,
@@ -105,6 +136,8 @@ def buscar_proximos(
     max_resultados: int = 20,
 ) -> list[dict]:
     if not settings.GEOAPIFY_ENABLED or not settings.GEOAPIFY_SERVER_API_KEY:
+        return []
+    if not _coordenadas_validas(latitude, longitude):
         return []
 
     raio = min(50000.0, max(100.0, float(raio_m)))
@@ -129,6 +162,8 @@ def buscar_proximos(
             continue
 
         lon, lat = coords[0], coords[1]
+        if not _coordenadas_validas(lat, lon):
+            continue
         categorias = props.get("categories") or []
         tipo = next(
             (c for c in reversed(categorias) if c.startswith("commercial.")),
@@ -182,6 +217,8 @@ def autocomplete_enderecos(
         lat = item.get("lat")
         lon = item.get("lon")
         if lat is None or lon is None:
+            continue
+        if not _coordenadas_validas(lat, lon):
             continue
         saida.append(
             {

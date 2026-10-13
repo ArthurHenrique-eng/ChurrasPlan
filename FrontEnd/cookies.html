@@ -17,13 +17,13 @@
     <header class="simple-topbar"><a class="home-brand" href="index.html"><img class="home-logo-icon" src="assets/logo-icon.png" alt=""><img class="home-wordmark" src="assets/logo-wordmark.png" alt="ChurrasPlan"></a><a class="text-button" href="index.html">Voltar ao site</a></header>
     <article class="legal-document">
       <span class="eyebrow"><span></span>COOKIES E ARMAZENAMENTO</span><h1>Política de Cookies</h1>
-      <p class="legal-lead">O ChurrasPlan v6.4 usa apenas armazenamento necessário à funcionalidade, salvo se integrações adicionais forem habilitadas futuramente.</p>
+      <p class="legal-lead">O ChurrasPlan usa armazenamento essencial e oferece métricas opcionais mediante escolha explícita.</p>
       <h2>Cookies essenciais</h2><p><code>churrasplan_session</code> mantém a sessão autenticada e é HttpOnly. <code>churrasplan_csrf</code> permite a proteção contra falsificação de requisições e precisa ser lido pelo frontend para compor o cabeçalho CSRF.</p>
       <h2>Armazenamento local</h2><p>O planejamento em andamento pode ser mantido no navegador para que o usuário continue depois. A PWA também mantém arquivos estáticos em cache para melhorar abertura e resiliência de navegação.</p>
-      <h2>O que não usamos por padrão</h2><p>Esta versão não instala cookies de publicidade ou analytics por padrão. Se ferramentas desse tipo forem adicionadas, a política e o mecanismo de consentimento deverão ser atualizados antes da ativação.</p>
+      <h2>O que não usamos por padrão</h2><p>Não instalamos cookies publicitários. As métricas opcionais contam etapas do produto e usam um identificador aleatório por aba somente após consentimento. Os eventos são deduplicados por dia e retidos por até 90 dias; não incluem nomes, e-mails, localização, texto livre ou dados do evento.</p>
       <div class="legal-links"><a href="privacidade.html">Política de Privacidade</a><a href="termos.html">Termos de Uso</a></div>
     </article>
-  </main>
+  <section class="saas-card"><h2>Métricas opcionais</h2><p>Visitas e etapas do planejamento são registradas somente se você permitir. Você pode mudar a escolha a qualquer momento.</p><button id="cookies-preferencias" type="button">Alterar preferências</button></section></main>
   <script src="js/pwa.js"></script>
-</body>
+<script src="js/config.js"></script><script src="js/analytics.js"></script></body>
 </html>

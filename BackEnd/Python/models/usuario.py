@@ -23,4 +23,5 @@ class Usuario(Base):
     sessoes = relationship("SessaoUsuario", back_populates="usuario", cascade="all, delete-orphan")
     tokens = relationship("TokenUsuario", back_populates="usuario", cascade="all, delete-orphan")
     estabelecimentos = relationship("Estabelecimento", back_populates="usuario_responsavel")
+    organizacoes_membro = relationship("OrganizacaoMembro", back_populates="usuario")
     consentimentos = relationship("ConsentimentoUsuario", back_populates="usuario", cascade="all, delete-orphan")

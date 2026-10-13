@@ -72,10 +72,70 @@ async function repetirHistorico(id, botao) {
 
 document.addEventListener("DOMContentLoaded", async () => {
     const usuario = await ChurrasPlanAuth.usuarioAtual().catch(() => null);
-    if (!usuario) { irPara(ChurrasPlanAuth.urlLogin("minha-conta.html")); return; }
+    if (!usuario) { irPara(ChurrasPlanAuth.urlLogin("minha-conta.html" + location.search)); return; }
     document.getElementById("conta-saudacao").textContent = `Olá, ${usuario.nome.split(" ")[0]}.`;
     document.getElementById("conta-perfil").innerHTML = `<strong>${escaparHTML(usuario.nome)}</strong><p class="texto-suave">${escaparHTML(usuario.email)}</p><div class="restriction-chips" style="margin-top:10px"><span>${escaparHTML(usuario.papel)}</span>${usuario.email_verificado_em ? '<span>e-mail verificado</span>' : '<span>verificação pendente</span>'}</div>`;
-    try { const assinatura = await ChurrasPlanAPI.minhaAssinatura(); document.getElementById("conta-plano").innerHTML = `<strong>Plano ${escaparHTML(assinatura.plano || usuario.plano)}</strong><p>${assinatura.pagamentos_habilitados ? "Assinatura ativa." : "Pagamentos ainda não estão habilitados nesta versão."}</p>`; } catch { document.getElementById("conta-plano").textContent = `Plano ${usuario.plano}`; }
+
+    try {
+        let assinatura = await ChurrasPlanAPI.minhaAssinatura();
+        // O retorno do Checkout não concede direitos: consulta a Stripe pelo
+        // backend e só mostra Premium após verificar pagamento e titularidade.
+        if (new URLSearchParams(location.search).get("assinatura") === "retorno") {
+            try {
+                // O webhook pode chegar segundos depois do redirecionamento.
+                // Consulte novamente por um período limitado, mas só exiba
+                // Premium quando o servidor confirmar pagamento e titularidade.
+                for (let tentativa = 0; tentativa < 5; tentativa++) {
+                    assinatura = await ChurrasPlanAPI.billingUsuarioSincronizar();
+                    if (assinatura.beneficios_ativos === true) break;
+                    if (tentativa < 4) await new Promise(resolve => setTimeout(resolve, 2000));
+                }
+                if (assinatura.beneficios_ativos) {
+                    mostrarMensagem(document.getElementById("conta-mensagem"), "Sua assinatura Premium de teste foi confirmada.", "sucesso");
+                    history.replaceState(null, "", "minha-conta.html");
+                } else {
+                    mostrarMensagem(document.getElementById("conta-mensagem"),
+                        "Pagamento ainda não confirmado na conta. Confira o webhook Stripe Test e atualize esta página.", "aviso");
+                }
+            } catch (erro) {
+                mostrarMensagem(document.getElementById("conta-mensagem"),
+                    "Não foi possível confirmar a assinatura: " + erro.message, "erro");
+            }
+        }
+        const premiumAtivo = assinatura.beneficios_ativos === true;
+        const status = assinatura.status || "sem_assinatura";
+        document.getElementById("conta-plano").innerHTML =
+            `<strong>Plano pessoal: ${escaparHTML(premiumAtivo ? "Premium" : "Gratuito")}</strong>
+            <p>${premiumAtivo ? "Premium de teste ativo, confirmado pela Stripe." : "Você pode conhecer o Premium e os planos comerciais."}</p>
+            <small>Status: ${escaparHTML(status)} · Pagamentos reais desativados.</small>
+            <div style="margin-top:12px"><a class="botao botao--secundario" href="planos.html">Ver planos</a>
+            ${premiumAtivo ? '<button type="button" id="conta-portal-stripe" class="botao botao--secundario">Gerenciar assinatura</button>' : '<button type="button" id="conta-sincronizar-stripe" class="botao botao--secundario">Verificar pagamento de teste</button>'}</div>`;
+        const sincronizar = document.getElementById("conta-sincronizar-stripe");
+        if (sincronizar) sincronizar.onclick = async () => {
+            sincronizar.disabled = true;
+            try {
+                const atualizado = await ChurrasPlanAPI.billingUsuarioSincronizar();
+                if (atualizado.beneficios_ativos) {
+                    location.reload();
+                } else {
+                    mostrarMensagem(document.getElementById("conta-mensagem"),
+                        "A Stripe ainda não confirmou uma assinatura Premium paga para esta conta.", "aviso");
+                }
+            } catch (erro) {
+                mostrarMensagem(document.getElementById("conta-mensagem"), erro.message, "erro");
+            } finally {
+                sincronizar.disabled = false;
+            }
+        };
+        const portal = document.getElementById("conta-portal-stripe");
+        if (portal) portal.onclick = async () => {
+            portal.disabled = true;
+            try { const dados = await ChurrasPlanAPI.billingUsuarioPortal(); irPara(dados.portal_url); }
+            catch (erro) { mostrarMensagem(document.getElementById("conta-mensagem"), erro.message, "erro"); portal.disabled = false; }
+        };
+    } catch {
+        document.getElementById("conta-plano").innerHTML = '<a href="planos.html">Conhecer planos ChurrasPlan</a>';
+    }
     await configurarPrivacidadeConta(usuario);
     try {
         const historico = await ChurrasPlanAPI.meusChurrascos(); const lista = document.getElementById("historico-lista");

@@ -1,13 +1,13 @@
 let parceiroUsuario = null, parceiroEstabelecimentos = [], parceiroProdutos = [], genericos = [];
+let falhaCatalogoGenerico = false;
 function isoInput(id) { const v = document.getElementById(id).value; return v ? new Date(v).toISOString() : null; }
 function mensagemParceiro(t, tipo="sucesso") { mostrarMensagem(document.getElementById("parceiro-mensagem"), t, tipo); }
 function coordenadaFormulario(id, limite) {
     const campo = document.getElementById(id), bruto = campo.value.trim();
     if (!bruto) return null;
-    let valor = Number(bruto.replace(",", "."));
-    if (!Number.isFinite(valor)) throw new Error("Informe uma coordenada válida.");
-    if (Math.abs(valor) >= 1000000 && Math.abs(valor) <= limite * 1000000 && Number.isInteger(valor)) valor /= 1000000;
-    if (Math.abs(valor) > limite) throw new Error(`Coordenada fora do intervalo permitido (-${limite} a ${limite}).`);
+    const valor = Number(bruto.replace(",", "."));
+    if (!Number.isFinite(valor)) throw new Error("Coordenada inválida. Informe graus decimais.");
+    if (Math.abs(valor) > limite) throw new Error(`Coordenada fora do intervalo permitido (-${limite} a ${limite}). Use graus decimais, como -19,959383.`);
     campo.value = String(valor);
     return valor;
 }
@@ -36,9 +36,18 @@ function renderProdutosGenericos() {
     const itens = genericos
         .filter((p) => nomeCategoriaGenerico(p) === categoria)
         .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
-    select.disabled = false;
-    select.innerHTML = '<option value="">Selecione...</option>'
-        + itens.map((p) => `<option value="${p.id}">${escaparHTML(p.nome)}</option>`).join("");
+    select.disabled = itens.length === 0;
+    select.innerHTML = itens.length ? '<option value="">Selecione...</option>'
+        + itens.map((p) => {
+            const embalagem = !p.venda_fracionada && p.quantidade_embalagem != null && p.unidade_embalagem
+                ? ` de ${Number(p.quantidade_embalagem).toLocaleString("pt-BR")} ${escaparHTML(p.unidade_embalagem)}`
+                : "";
+            const referencia = p.preco_referencia != null && p.preco_referencia_unidade
+                ? ` — ref. estimada R$ ${Number(p.preco_referencia).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/${escaparHTML(p.preco_referencia_unidade)}${embalagem}`
+                : "";
+            return `<option value="${p.id}">${escaparHTML(p.nome)}${referencia}</option>`;
+        }).join("")
+        : '<option value="">Nenhum produto disponível nesta categoria</option>';
 }
 function renderCatalogoGenerico() {
     const categorias = [...new Set(genericos.map(nomeCategoriaGenerico))]
@@ -49,28 +58,78 @@ function renderCatalogoGenerico() {
     renderProdutosGenericos();
 
     const ajuda = document.getElementById("prod-catalogo-ajuda");
-    if (!genericos.length) {
-        ajuda.textContent = "O catálogo genérico ainda não foi carregado no banco. Aplique as migrations do backend e recarregue esta página.";
+    if (falhaCatalogoGenerico) {
+        ajuda.textContent = "Falha ao consultar o catálogo. Confira a conexão e atualize a página; não é necessário recriar produtos.";
+    } else if (!genericos.length) {
+        ajuda.textContent = "Nenhum produto genérico ativo encontrado. Verifique as migrations do catálogo.";
     } else {
-        ajuda.textContent = `${genericos.length} tipos de produto disponíveis em ${categorias.length} categorias.`;
+        ajuda.textContent = `${genericos.length} tipos em ${categorias.length} categorias. Referências de set/2026 são estimativas de planejamento, não ofertas reais.`;
     }
 }
 async function carregarParceiro() {
-    const [dash, ests, prods, gens] = await Promise.all([ChurrasPlanAPI.dashboardParceiro(), ChurrasPlanAPI.estabelecimentosParceiro(), ChurrasPlanAPI.produtosParceiro(), ChurrasPlanAPI.listarProdutos({ tipo_produto:"generico" })]);
+    // Uma falha em métricas/ofertas não pode esvaziar o seletor de produtos.
+    const [dashResult, estsResult, prodsResult, gensResult] = await Promise.allSettled([
+        ChurrasPlanAPI.dashboardParceiro(), ChurrasPlanAPI.estabelecimentosParceiro(),
+        ChurrasPlanAPI.produtosParceiro(), ChurrasPlanAPI.listarGenericos(),
+    ]);
+    const dash = dashResult.status === "fulfilled" ? dashResult.value : null;
+    const ests = estsResult.status === "fulfilled" ? estsResult.value : [];
+    const prods = prodsResult.status === "fulfilled" ? prodsResult.value : [];
+    const gens = gensResult.status === "fulfilled" ? gensResult.value : [];
+    falhaCatalogoGenerico = gensResult.status === "rejected";
     parceiroEstabelecimentos=ests; parceiroProdutos=prods; genericos=gens;
-    document.getElementById("parceiro-stats").innerHTML = `<div class="partner-stat"><strong>${dash.estabelecimentos}</strong><span>estabelecimentos</span></div><div class="partner-stat"><strong>${dash.estabelecimentos_verificados}</strong><span>verificados</span></div><div class="partner-stat"><strong>${dash.ofertas_cadastradas}</strong><span>ofertas cadastradas</span></div><div class="partner-stat"><strong>${dash.visualizacoes || 0}</strong><span>visualizações</span></div><div class="partner-stat"><strong>${dash.cliques || 0}</strong><span>cliques em rota</span></div>`;
-    document.getElementById("parceiro-note").textContent = dash.mensagem_verificacao;
-    document.getElementById("lista-estabelecimentos").innerHTML = ests.length ? ests.map(e=>`<div class="basket-row"><strong>${escaparHTML(e.nome)}</strong><br><small>${escaparHTML(e.cidade||e.endereco||e.tipo)} · ${e.parceiro_verificado?'verificado':'aguardando verificação'}</small></div>`).join('') : '<div class="empty-state">Cadastre seu primeiro estabelecimento.</div>';
-    document.getElementById("lista-produtos").innerHTML = prods.length ? prods.map(p=>`<div class="basket-row"><strong>${escaparHTML([p.marca,p.nome].filter(Boolean).join(' — '))}</strong><br><small>${p.quantidade_embalagem||''} ${escaparHTML(p.unidade_embalagem||'')} · ${escaparHTML(p.ean||'sem EAN')}</small></div>`).join('') : '<div class="empty-state">Nenhum SKU comercial cadastrado.</div>';
+    const falhas = ["métricas", "estabelecimentos", "produtos comerciais", "catálogo genérico"]
+        .filter((_, i) => [dashResult, estsResult, prodsResult, gensResult][i].status === "rejected");
+    if (falhas.length) mensagemParceiro(`Falha ao carregar: ${falhas.join(", ")}. Atualize a página para tentar novamente.`, "erro");
+    document.getElementById("parceiro-stats").innerHTML = dash ? `<div class="partner-stat"><strong>${dash.estabelecimentos}</strong><span>estabelecimentos</span></div><div class="partner-stat"><strong>${dash.estabelecimentos_verificados}</strong><span>verificados</span></div><div class="partner-stat"><strong>${dash.ofertas_cadastradas}</strong><span>ofertas cadastradas</span></div><div class="partner-stat"><strong>${dash.visualizacoes || 0}</strong><span>visualizações</span></div><div class="partner-stat"><strong>${dash.cliques || 0}</strong><span>cliques em rota</span></div>` : '<div class="empty-state">Falha ao carregar métricas.</div>';
+    document.getElementById("parceiro-note").textContent = dash ? dash.mensagem_verificacao : "";
+    document.getElementById("lista-estabelecimentos").innerHTML = estsResult.status === "rejected" ? '<div class="empty-state">Falha ao carregar estabelecimentos.</div>' : ests.length ? ests.map(e=>`<div class="basket-row"><strong>${escaparHTML(e.nome)}</strong><br><small>${escaparHTML(e.cidade||e.endereco||e.tipo)} · ${e.parceiro_verificado?'verificado':'aguardando verificação'}</small></div>`).join('') : '<div class="empty-state">Cadastre seu primeiro estabelecimento.</div>';
+    document.getElementById("lista-produtos").innerHTML = prodsResult.status === "rejected" ? '<div class="empty-state">Falha ao carregar produtos comerciais.</div>' : prods.length ? prods.map(p=>`<div class="basket-row"><strong>${escaparHTML([p.marca,p.nome].filter(Boolean).join(' — '))}</strong><br><small>${p.quantidade_embalagem||''} ${escaparHTML(p.unidade_embalagem||'')} · ${escaparHTML(p.ean||'sem EAN')}</small></div>`).join('') : '<div class="empty-state">Nenhum SKU comercial cadastrado.</div>';
     const optionsEst = '<option value="">Selecione...</option>'+ests.map(e=>`<option value="${e.id}">${escaparHTML(e.nome)}</option>`).join(''); document.getElementById("preco-est").innerHTML=optionsEst;
     renderCatalogoGenerico();
     document.getElementById("preco-prod").innerHTML='<option value="">Selecione...</option>'+prods.map(p=>`<option value="${p.id}">${escaparHTML([p.marca,p.nome].filter(Boolean).join(' — '))}</option>`).join('');
 }
 document.addEventListener("DOMContentLoaded", async()=>{
-    parceiroUsuario=await ChurrasPlanAuth.usuarioAtual().catch(()=>null); if(!parceiroUsuario){irPara(ChurrasPlanAuth.urlLogin("parceiro.html"));return;}
+    parceiroUsuario=await ChurrasPlanAuth.usuarioAtual().catch(()=>null);
+    if(!parceiroUsuario){irPara(ChurrasPlanAuth.urlLogin("parceiro.html"+window.location.search));return;}
+    // O token somente existe no link enviado ao destinatário. Não salvar em storage.
+    const tokenConvite = new URLSearchParams(window.location.search).get("convite");
+    if(tokenConvite){
+        // Limpa antes de chamar API para reduzir exposição do segredo no Referer.
+        window.history.replaceState({}, "", window.location.pathname);
+        try {
+            const aceite = await ChurrasPlanAPI.aceitarConviteOrganizacao(tokenConvite);
+            ChurrasPlanAuth.limparCache();
+            parceiroUsuario = await ChurrasPlanAuth.usuarioAtual(true);
+            try { sessionStorage.setItem("churrasplan_organizacao_id", String(aceite.organizacao_id)); } catch { /* opcional */ }
+            mensagemParceiro("Convite aceito. Sua organização já está disponível.");
+        } catch(e) { mensagemParceiro(e.message,"erro"); }
+
+    }
     const ativar=document.getElementById("ativar-parceiro"), conteudo=document.getElementById("parceiro-conteudo");
-    if(!["parceiro","admin"].includes(parceiroUsuario.papel)){ativar.hidden=false;ativar.onclick=async()=>{ativar.disabled=true;try{await ChurrasPlanAPI.ativarParceiro();ChurrasPlanAuth.limparCache();location.reload();}catch(e){mensagemParceiro(e.message,"erro");ativar.disabled=false;}};return;}
-    conteudo.hidden=false; try{await carregarParceiro();}catch(e){mensagemParceiro(e.message,"erro");}
+    if(!["parceiro","admin"].includes(parceiroUsuario.papel)){
+        ativar.hidden=false;
+        ativar.onclick=async()=>{ativar.disabled=true;try{await ChurrasPlanAPI.ativarParceiro();ChurrasPlanAuth.limparCache();location.reload();}catch(e){mensagemParceiro(e.message,"erro");ativar.disabled=false;}};
+        return;
+    }
+    try {
+        ChurrasPlanOperacao.iniciar();
+        ChurrasPlanComercial.iniciar();
+        ChurrasPlanBilling.iniciar();
+        await ChurrasPlanEquipe.iniciar(parceiroUsuario, async () => {
+            await carregarParceiro();
+            try { await ChurrasPlanComercial.carregar(); } catch (erro) { mensagemParceiro(erro.message, "erro"); }
+            try { await ChurrasPlanBilling.carregar(); } catch (erro) { mensagemParceiro(erro.message, "erro"); }
+            try { await ChurrasPlanOperacao.carregar(); }
+            catch (erro) { mensagemParceiro(`Falha ao carregar a operação B2B: ${erro.message}`, "erro"); }
+        });
+        conteudo.hidden=false;
+        const desejado = new URLSearchParams(location.search).get("assinar");
+        if (["pro", "business"].includes(desejado)) {
+            mensagemParceiro("Escolha o plano " + desejado.toUpperCase() + " na seção Assinatura comercial para abrir o Stripe Test.");
+            document.getElementById("billing-painel").scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+    } catch(e) { conteudo.hidden=true; mensagemParceiro(e.message,"erro"); return; }
     document.getElementById("prod-categoria").addEventListener("change", renderProdutosGenericos);
     document.getElementById("est-localizar-endereco").onclick=async()=>{const b=document.getElementById("est-localizar-endereco");b.disabled=true;try{await localizarEnderecoEstabelecimento();mensagemParceiro("Endereço localizado e coordenadas preenchidas.");}catch(er){mensagemParceiro(er.message,"erro");}finally{b.disabled=false;}};
     document.getElementById("form-estabelecimento").onsubmit=async(e)=>{e.preventDefault();try{

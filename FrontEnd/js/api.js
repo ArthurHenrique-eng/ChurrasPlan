@@ -1,4 +1,11 @@
 const TEMPO_LIMITE_API_MS = 15000;
+const CAMPOS_DATA_UTC = new Set(["criado_em", "atualizado_em", "ultimo_login_em", "email_verificado_em", "data_evento", "periodo_fim_em", "sincronizado_em", "expira_em", "verificado_em", "inicio_em", "fim_em", "tolerancia_ate", "quando"]);
+function normalizarDatasServidor(valor, chave = "") {
+    if (typeof valor === "string" && CAMPOS_DATA_UTC.has(chave) && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?$/.test(valor)) return valor + "Z";
+    if (Array.isArray(valor)) return valor.map(item => normalizarDatasServidor(item));
+    if (valor && typeof valor === "object") return Object.fromEntries(Object.entries(valor).map(([k, v]) => [k, normalizarDatasServidor(v, k)]));
+    return valor;
+}
 
 function lerCookie(nome) {
     const prefixo = `${encodeURIComponent(nome)}=`;
@@ -40,13 +47,18 @@ async function requisitar(caminho, opcoes = {}) {
 
         if (!resposta.ok) {
             const detalhe = corpo && corpo.detail ? corpo.detail : `Erro ${resposta.status}`;
+            if (detalhe?.codigo === "MFA_NECESSARIO" && window.location && !window.location.pathname.endsWith("seguranca.html")) {
+                const next = window.location.pathname.split("/").pop() + window.location.search;
+                window.location.assign("seguranca.html?next=" + encodeURIComponent(next));
+            }
             const erro = new Error(typeof detalhe === "string" ? detalhe : JSON.stringify(detalhe));
             erro.status = resposta.status;
             erro.body = corpo;
             throw erro;
         }
-        return corpo;
+        return normalizarDatasServidor(corpo);
     } catch (erro) {
+        if (typeof ChurrasPlanTelemetria !== "undefined" && (erro.status >= 500 || erro.name === "AbortError" || erro instanceof TypeError)) ChurrasPlanTelemetria.registrar(erro.name === "AbortError" ? "timeout_api" : "falha_api");
         if (erro.name === "AbortError") {
             const timeout = new Error("A API demorou demais para responder. Tente novamente.");
             timeout.status = 408;
@@ -72,6 +84,25 @@ function queryString(parametros = {}) {
     return texto ? `?${texto}` : "";
 }
 
+
+/** Contexto de organização por aba; fallback em memória se storage estiver bloqueado. */
+let organizacaoAtivaMemoria = null;
+function definirOrganizacaoAtiva(id) {
+    organizacaoAtivaMemoria = id ? String(id) : null;
+}
+function opcoesOrganizacao(opcoes = {}) {
+    // O retorno autenticado do Checkout pode se referir a uma organização
+    // diferente da selecionada na aba anterior. A escolha explícita prevalece;
+    // o backend valida a titularidade, nunca confia no valor do navegador.
+    if (opcoes.headers?.["X-Organizacao-ID"]) return opcoes;
+    let id = organizacaoAtivaMemoria;
+    if (!id) {
+        try { id = sessionStorage.getItem("churrasplan_organizacao_id"); } catch { /* fallback */ }
+    }
+    if (!id || !/^[1-9][0-9]*$/.test(id)) return opcoes;
+    return { ...opcoes, headers: { ...(opcoes.headers || {}), "X-Organizacao-ID": id } };
+}
+
 const ChurrasPlanAPI = {
     calcularCarnes(payload, opcoes = {}) { return requisitar("/api/calculadora/carnes", { ...opcoes, method: "POST", body: JSON.stringify(payload) }); },
     calcularBebidas(payload, opcoes = {}) { return requisitar("/api/calculadora/bebidas", { ...opcoes, method: "POST", body: JSON.stringify(payload) }); },
@@ -81,6 +112,27 @@ const ChurrasPlanAPI = {
     obterChurrasco(id, opcoes = {}) { return requisitar(`/api/churrascos/${id}`, opcoes); },
     atualizarChurrasco(id, payload, opcoes = {}) { return requisitar(`/api/churrascos/${id}`, { ...opcoes, method: "PUT", body: JSON.stringify(payload) }); },
     meusChurrascos(opcoes = {}) { return requisitar("/api/churrascos/meus", opcoes); },
+    meusBeneficios(opcoes = {}) { return requisitar("/api/planos/meus-beneficios", opcoes); },
+    analiseCustosPremium(id, opcoes = {}) { return requisitar(`/api/churrascos/${id}/analise-custos`, opcoes); },
+    comparacaoAvancadaPremium(id, opcoes = {}) {
+        return requisitar(`/api/onde-comprar/churrasco/${id}/comparacao-avancada`, {
+            ...opcoes, method: "POST", body: JSON.stringify({ modo: "equilibrio" }),
+        });
+    },
+    listarModelosEvento(opcoes = {}) { return requisitar("/api/modelos-evento", opcoes); },
+    criarModeloEvento(id, nome, opcoes = {}) {
+        return requisitar("/api/modelos-evento", {
+            ...opcoes, method: "POST", body: JSON.stringify({ churrasco_id: id, nome }),
+        });
+    },
+    usarModeloEvento(id, opcoes = {}) {
+        return requisitar(`/api/modelos-evento/${id}/usar`, {
+            ...opcoes, method: "POST", body: JSON.stringify({}),
+        });
+    },
+    excluirModeloEvento(id, opcoes = {}) {
+        return requisitar(`/api/modelos-evento/${id}`, { ...opcoes, method: "DELETE" });
+    },
     repetirChurrasco(id, payload = {}, opcoes = {}) { return requisitar(`/api/churrascos/${id}/repetir`, { ...opcoes, method: "POST", body: JSON.stringify(payload) }); },
     vincularChurrasco(id, chaveCliente, opcoes = {}) { return requisitar(`/api/churrascos/${id}/vincular`, { ...opcoes, method: "POST", body: JSON.stringify({ chave_cliente: chaveCliente }) }); },
     atualizarDivisao(id, dividirEntre, opcoes = {}) { return requisitar(`/api/churrascos/${id}/divisao`, { ...opcoes, method: "PATCH", body: JSON.stringify({ dividir_entre: dividirEntre }) }); },
@@ -107,14 +159,59 @@ const ChurrasPlanAPI = {
     responderConvite(codigo, payload, opcoes = {}) { return requisitar(`/api/convites/publico/${encodeURIComponent(codigo)}/responder`, { ...opcoes, method: "POST", body: JSON.stringify(payload) }); },
 
     listarProdutos(parametros = {}, opcoes = {}) { return requisitar(`/api/produtos${queryString(parametros)}`, opcoes); },
+    listarGenericos(opcoes = {}) { return requisitar("/api/produtos/genericos", opcoes); },
 
+    definirOrganizacaoAtiva,
     ativarParceiro(opcoes = {}) { return requisitar("/api/parceiro/ativar", { ...opcoes, method: "POST" }); },
-    dashboardParceiro(opcoes = {}) { return requisitar("/api/parceiro/dashboard", opcoes); },
-    estabelecimentosParceiro(opcoes = {}) { return requisitar("/api/parceiro/estabelecimentos", opcoes); },
-    criarEstabelecimento(payload, opcoes = {}) { return requisitar("/api/parceiro/estabelecimentos", { ...opcoes, method: "POST", body: JSON.stringify(payload) }); },
-    produtosParceiro(opcoes = {}) { return requisitar("/api/parceiro/produtos", opcoes); },
-    criarProdutoComercial(payload, opcoes = {}) { return requisitar("/api/parceiro/produtos", { ...opcoes, method: "POST", body: JSON.stringify(payload) }); },
-    cadastrarPrecoParceiro(payload, opcoes = {}) { return requisitar("/api/parceiro/precos", { ...opcoes, method: "POST", body: JSON.stringify(payload) }); },
+    organizacoesParceiro(opcoes = {}) { return requisitar("/api/parceiro/organizacoes", opcoes); },
+    entitlementsParceiro(opcoes = {}) { return requisitar("/api/parceiro/entitlements", opcoesOrganizacao(opcoes)); },
+    membrosOrganizacao(opcoes = {}) { return requisitar("/api/parceiro/equipe/membros", opcoesOrganizacao(opcoes)); },
+    convitesOrganizacao(opcoes = {}) { return requisitar("/api/parceiro/equipe/convites", opcoesOrganizacao(opcoes)); },
+    enviarConviteOrganizacao(payload, opcoes = {}) { return requisitar("/api/parceiro/equipe/convites", { ...opcoesOrganizacao(opcoes), method: "POST", body: JSON.stringify(payload) }); },
+    revogarConviteOrganizacao(id, opcoes = {}) { return requisitar(`/api/parceiro/equipe/convites/${id}`, { ...opcoesOrganizacao(opcoes), method: "DELETE" }); },
+    aceitarConviteOrganizacao(token, opcoes = {}) { return requisitar("/api/parceiro/convites/aceitar", { ...opcoes, method: "POST", body: JSON.stringify({ token }) }); },
+    alterarPapelMembro(id, papel, opcoes = {}) { return requisitar(`/api/parceiro/equipe/membros/${id}`, { ...opcoesOrganizacao(opcoes), method: "PATCH", body: JSON.stringify({ papel }) }); },
+    removerMembroOrganizacao(id, opcoes = {}) { return requisitar(`/api/parceiro/equipe/membros/${id}`, { ...opcoesOrganizacao(opcoes), method: "DELETE" }); },
+    dashboardParceiro(opcoes = {}) { return requisitar("/api/parceiro/dashboard", opcoesOrganizacao(opcoes)); },
+    estabelecimentosParceiro(opcoes = {}) { return requisitar("/api/parceiro/estabelecimentos", opcoesOrganizacao(opcoes)); },
+    criarEstabelecimento(payload, opcoes = {}) { return requisitar("/api/parceiro/estabelecimentos", { ...opcoesOrganizacao(opcoes), method: "POST", body: JSON.stringify(payload) }); },
+    produtosParceiro(opcoes = {}) { return requisitar("/api/parceiro/produtos", opcoesOrganizacao(opcoes)); },
+    criarProdutoComercial(payload, opcoes = {}) { return requisitar("/api/parceiro/produtos", { ...opcoesOrganizacao(opcoes), method: "POST", body: JSON.stringify(payload) }); },
+    cadastrarPrecoParceiro(payload, opcoes = {}) { return requisitar("/api/parceiro/precos", { ...opcoesOrganizacao(opcoes), method: "POST", body: JSON.stringify(payload) }); },
+    filiaisParceiro(opcoes = {}) { return requisitar("/api/parceiro/filiais", opcoesOrganizacao(opcoes)); },
+    alterarFilial(id, payload, opcoes = {}) { return requisitar(`/api/parceiro/filiais/${id}`, { ...opcoesOrganizacao(opcoes), method: "PATCH", body: JSON.stringify(payload) }); },
+    onboardingParceiro(opcoes = {}) { return requisitar("/api/parceiro/onboarding", opcoesOrganizacao(opcoes)); },
+    relatorioComercialParceiro(dias = 30, opcoes = {}) { return requisitar(`/api/parceiro/relatorios/comercial?periodo_dias=${Number(dias)}`, opcoesOrganizacao(opcoes)); },
+    importarOfertasCSV(payload, opcoes = {}) { return requisitar("/api/parceiro/importacoes/ofertas", { ...opcoesOrganizacao(opcoes), method: "POST", body: JSON.stringify(payload) }); },
+    importarCatalogoCSV(payload, opcoes = {}) { return requisitar("/api/parceiro/importacoes/catalogo", { ...opcoesOrganizacao(opcoes), method: "POST", body: JSON.stringify(payload) }); },
+    billingUsuarioCatalogo(opcoes = {}) { return requisitar("/api/billing/usuario/catalogo", opcoes); },
+    billingUsuarioAssinatura(opcoes = {}) { return requisitar("/api/billing/usuario/assinatura", opcoes); },
+    billingUsuarioCheckout(payload, opcoes = {}) { return requisitar("/api/billing/usuario/checkout", { ...opcoes, method: "POST", body: JSON.stringify(payload) }); },
+    billingUsuarioSincronizar(opcoes = {}) { return requisitar("/api/billing/usuario/sincronizar", { ...opcoes, method: "POST" }); },
+    billingUsuarioPortal(opcoes = {}) { return requisitar("/api/billing/usuario/portal", { ...opcoes, method: "POST" }); },
+    billingUsuarioFaturas(opcoes = {}) { return requisitar("/api/billing/usuario/faturas", opcoes); },
+    billingUsuarioCancelar(opcoes = {}) { return requisitar("/api/billing/usuario/cancelar", { ...opcoes, method: "POST" }); },
+    billingUsuarioReativar(opcoes = {}) { return requisitar("/api/billing/usuario/reativar", { ...opcoes, method: "POST" }); },
+    billingUsuarioTrocarPeriodo(payload, opcoes = {}) { return requisitar("/api/billing/usuario/trocar-periodo", { ...opcoes, method: "POST", body: JSON.stringify(payload) }); },
+    billingPlanosPublicos(opcoes = {}) { return requisitar("/api/billing/planos-publicos", opcoes); },
+    billingAssinatura(opcoes = {}) { return requisitar("/api/billing/assinatura", opcoesOrganizacao(opcoes)); },
+    billingCatalogo(opcoes = {}) { return requisitar("/api/billing/catalogo", opcoesOrganizacao(opcoes)); },
+    billingFaturas(opcoes = {}) { return requisitar("/api/billing/faturas", opcoesOrganizacao(opcoes)); },
+    billingCheckout(payload, opcoes = {}) { return requisitar("/api/billing/checkout", { ...opcoesOrganizacao(opcoes), method: "POST", body: JSON.stringify(payload) }); },
+    billingTrocarPlano(payload, opcoes = {}) { return requisitar("/api/billing/trocar-plano", { ...opcoesOrganizacao(opcoes), method: "POST", body: JSON.stringify(payload) }); },
+    billingCancelar(opcoes = {}) { return requisitar("/api/billing/cancelar", { ...opcoesOrganizacao(opcoes), method: "POST" }); },
+    billingReativar(opcoes = {}) { return requisitar("/api/billing/reativar", { ...opcoesOrganizacao(opcoes), method: "POST" }); },
+    billingSincronizar(opcoes = {}) { return requisitar("/api/billing/sincronizar", { ...opcoesOrganizacao(opcoes), method: "POST" }); },
+    billingPortal(opcoes = {}) { return requisitar("/api/billing/portal", { ...opcoesOrganizacao(opcoes), method: "POST" }); },
+    ofertasCampanhaParceiro(opcoes = {}) { return requisitar("/api/parceiro/ofertas/campanhas", opcoesOrganizacao(opcoes)); },
+    campanhasParceiro(opcoes = {}) { return requisitar("/api/parceiro/campanhas", opcoesOrganizacao(opcoes)); },
+    criarCampanhaParceiro(payload, opcoes = {}) { return requisitar("/api/parceiro/campanhas", { ...opcoesOrganizacao(opcoes), method: "POST", body: JSON.stringify(payload) }); },
+    atualizarCampanhaParceiro(id, payload, opcoes = {}) { return requisitar(`/api/parceiro/campanhas/${id}`, { ...opcoesOrganizacao(opcoes), method: "PUT", body: JSON.stringify(payload) }); },
+    enviarCampanhaParceiro(id, opcoes = {}) { return requisitar(`/api/parceiro/campanhas/${id}/enviar`, { ...opcoesOrganizacao(opcoes), method: "POST" }); },
+    cancelarCampanhaParceiro(id, opcoes = {}) { return requisitar(`/api/parceiro/campanhas/${id}/cancelar`, { ...opcoesOrganizacao(opcoes), method: "POST" }); },
+    adminCampanhasPendentes(opcoes = {}) { return requisitar("/api/admin/campanhas/pendentes", opcoes); },
+    adminRevisarCampanha(id, payload, opcoes = {}) { return requisitar(`/api/admin/campanhas/${id}/revisar`, { ...opcoes, method: "POST", body: JSON.stringify(payload) }); },
+    campanhasPublicas(opcoes = {}) { return requisitar("/api/campanhas/ativas", opcoes); },
 
     configOndeComprar(opcoes = {}) { return requisitar("/api/onde-comprar/config", opcoes); },
     autocompleteEndereco(texto, latitude = null, longitude = null, limite = 6, opcoes = {}) {

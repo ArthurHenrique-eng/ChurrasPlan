@@ -1,0 +1,12 @@
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import vm from 'node:vm';
+const context={console,Date,Set,Object,Array,document:{cookie:''},window:{},URLSearchParams,AbortController};
+vm.createContext(context);vm.runInContext(readFileSync('FrontEnd/js/api.js','utf8'),context);
+const dados=vm.runInContext(`normalizarDatasServidor({periodo_fim_em:'2026-10-12T00:00:00',quando:'2026-10-12T10:00:00-03:00',nome:'2026-10-12T00:00:00',itens:[{data_evento:'2026-10-12T18:00:00'}]})`,context);
+assert.equal(dados.periodo_fim_em,'2026-10-12T00:00:00Z');
+assert.equal(new Date(dados.periodo_fim_em).getTime(),Date.UTC(2026,9,12));
+assert.equal(dados.quando,'2026-10-12T10:00:00-03:00');
+assert.equal(dados.nome,'2026-10-12T00:00:00');
+assert.equal(dados.itens[0].data_evento,'2026-10-12T18:00:00Z');
+console.log('Datas UTC de API, offsets explícitos e campos textuais: OK');

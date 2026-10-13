@@ -28,13 +28,43 @@ def test_mysql_schema_head_e_utf8mb4():
     esperadas = {
         "usuarios", "churrascos", "produtos", "precos", "estabelecimentos",
         "consentimentos_usuario", "eventos_seguranca", "auditoria_admin",
+        "organizacoes", "organizacao_membros", "importacoes_ofertas", "importacoes_catalogo", "campanhas_comerciais", "campanhas_comerciais_itens", "assinaturas_organizacao", "tentativas_checkout", "eventos_billing", "concessoes_organizacao", "convites_organizacao", "auditoria_organizacao", "modelos_evento_usuario",
     }
     assert esperadas.issubset(set(insp.get_table_names()))
+    assert {"contexto_hash", "contexto_tipo"}.issubset({c["name"] for c in insp.get_columns("eventos_produto")})
+    assert any(i["name"] == "ix_eventos_produto_funil" for i in insp.get_indexes("eventos_produto"))
     with engine.connect() as conn:
         head = conn.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
         charset = conn.execute(text("SELECT @@character_set_database")).scalar_one()
-    assert head == "20260925_0008"
+    assert head == "20261012_0024"
     assert str(charset).lower() == "utf8mb4"
+
+
+def test_mysql_funis_agregados_preservam_ordem_e_contexto(monkeypatch):
+    _setup_url()
+    from datetime import datetime, timedelta
+    from sqlalchemy.orm import Session
+    from database.connection import engine
+    from models import EventoProduto
+    from services.analytics import registrar_produto
+    from services import analytics_dashboard
+    instante = datetime(2040, 1, 1, 12)
+    monkeypatch.setattr(analytics_dashboard, "agora", lambda: instante + timedelta(hours=1))
+    contexto = "teste-mysql-funil-" + uuid.uuid4().hex
+    with Session(engine) as db:
+        try:
+            for n, evento in enumerate(["landing_visualizada", "planejamento_iniciado", "planejamento_concluido", "resultado_visualizado"]):
+                registrar_produto(db, evento, contexto + evento, {"segmento": "b2c"}, contexto=contexto, contexto_tipo="sessao_dia")
+                registro = db.query(EventoProduto).filter_by(evento=evento).order_by(EventoProduto.id.desc()).first()
+                registro.criado_em = instante + timedelta(minutes=n);db.flush()
+            dados = analytics_dashboard.funis_produto(db, instante)["resultados"]["planejamento_b2c"]["etapas"]
+            assert [e["quantidade"] for e in dados] == [1, 1, 1, 1]
+            assert dados[-1]["conversao_inicio_pct"] == 100
+            registro.criado_em = instante + timedelta(seconds=30);db.flush()
+            dados = analytics_dashboard.funis_produto(db, instante)["resultados"]["planejamento_b2c"]["etapas"]
+            assert [e["quantidade"] for e in dados] == [1, 1, 1, 0]
+        finally:
+            db.rollback()
 
 
 def test_mysql_fk_json_decimal_e_cascade():
@@ -107,3 +137,396 @@ def test_mysql_todas_as_tabelas_usam_innodb():
     assert rows
     incorretas = [dict(r) for r in rows if str(r["ENGINE"]).lower() != "innodb"]
     assert incorretas == []
+
+def test_mysql_catalogo_generico_aplicado_por_migrations_sem_seed_demo():
+    _setup_url()
+    from config import CATALOGO_PRODUTOS_PADRAO
+    from database.connection import SessionLocal
+    from models import Categoria, Produto
+
+    db = SessionLocal()
+    try:
+        categorias = {
+            c.nome for c in db.query(Categoria).all()
+        }
+        esperadas = {
+            "Carnes", "Bebidas", "Mercearia e alimentos", "Laticínios e frios",
+            "Padaria", "Hortifruti", "Congelados", "Limpeza",
+            "Higiene pessoal", "Descartáveis e utilidades",
+        }
+        assert esperadas.issubset(categorias)
+        slugs = {
+            p.slug for p in db.query(Produto)
+            .filter(Produto.tipo_produto == "generico", Produto.ativo.is_(True)).all()
+        }
+        assert set(CATALOGO_PRODUTOS_PADRAO).issubset(slugs)
+        assert {"detergente", "outro-produto-limpeza", "papel-higienico", "arroz", "agua"}.issubset(slugs)
+        assert db.query(Produto).filter(
+            Produto.slug == "detergente", Produto.tipo_produto == "generico"
+        ).count() == 1
+    finally:
+        db.close()
+
+
+
+def test_mysql_tenant_migration_backfill_preserva_dados():
+    _setup_url()
+    from database.connection import SessionLocal, engine
+    from models import Estabelecimento, Organizacao, OrganizacaoMembro, Preco, Produto, Usuario
+
+    insp = inspect(engine)
+    assert {"organizacoes", "organizacao_membros", "importacoes_ofertas", "importacoes_catalogo", "campanhas_comerciais", "campanhas_comerciais_itens", "concessoes_organizacao", "convites_organizacao", "auditoria_organizacao"}.issubset(insp.get_table_names())
+    assert "organizacao_id" in {c["name"] for c in insp.get_columns("estabelecimentos")}
+    assert "organizacao_id" in {c["name"] for c in insp.get_columns("produtos")}
+    fk_est = {fk["name"] for fk in insp.get_foreign_keys("estabelecimentos")}
+    fk_prod = {fk["name"] for fk in insp.get_foreign_keys("produtos")}
+    assert "fk_estabelecimentos_organizacao_id" in fk_est
+    assert "fk_produtos_organizacao_id" in fk_prod
+
+    db = SessionLocal()
+    try:
+        usuario = db.query(Usuario).filter_by(email="saas-legado-migracao@example.invalid").one()
+        loja = db.query(Estabelecimento).filter_by(slug="saas-loja-legada-ci").one()
+        sku = db.query(Produto).filter_by(slug="saas-produto-legado-ci").one()
+        org = db.query(Organizacao).filter_by(slug=f"legado-parceiro-{usuario.id}").one()
+        membro = db.query(OrganizacaoMembro).filter_by(
+            organizacao_id=org.id, usuario_id=usuario.id
+        ).one()
+        assert membro.papel == "proprietario" and membro.ativo is True
+        assert loja.usuario_responsavel_id == usuario.id
+        assert loja.organizacao_id == org.id
+        assert sku.organizacao_id == org.id
+        compartilhado = db.query(Produto).filter_by(slug="saas-sku-ambiguo-ci").one()
+        assert compartilhado.organizacao_id is None
+        loja_sem_dono = db.query(Estabelecimento).filter_by(slug="saas-loja-sem-dono-ci").one()
+        assert loja_sem_dono.organizacao_id is None
+        assert db.query(Preco).filter_by(produto_id=compartilhado.id).count() == 2
+        assert float(db.query(Preco).filter_by(
+            produto_id=sku.id, estabelecimento_id=loja.id
+        ).one().preco) == pytest.approx(3.79)
+        assert db.query(OrganizacaoMembro).filter_by(
+            organizacao_id=org.id, usuario_id=usuario.id
+        ).count() == 1
+    finally:
+        db.close()
+
+
+
+def test_mysql_cota_concorrente_mesma_organizacao(monkeypatch):
+    """Dois escritores simultâneos não ultrapassam o limite da organização."""
+    from concurrent.futures import ThreadPoolExecutor
+    from threading import Barrier
+
+    from fastapi import HTTPException
+    from database.connection import SessionLocal
+    from models import Estabelecimento, Organizacao, Usuario
+    from services.entitlements import LIMITES_PLANOS, exigir_cota_criacao
+
+    db = SessionLocal()
+    try:
+        usuario = db.query(Usuario).filter_by(email="saas-legado-migracao@example.invalid").one()
+        org = db.query(Organizacao).filter_by(slug=f"legado-parceiro-{usuario.id}").one()
+        org_id, uid = org.id, usuario.id
+        existentes = db.query(Estabelecimento).filter_by(organizacao_id=org_id).count()
+    finally:
+        db.close()
+    monkeypatch.setitem(LIMITES_PLANOS["free"], "estabelecimentos", existentes + 1)
+    inicio = Barrier(2)
+
+    def criar(i):
+        sessao = SessionLocal()
+        try:
+            u = sessao.get(Usuario, uid)
+            o = sessao.get(Organizacao, org_id)
+            inicio.wait(timeout=20)
+            exigir_cota_criacao(sessao, o, u, "estabelecimentos")
+            sessao.add(Estabelecimento(
+                usuario_responsavel_id=uid, organizacao_id=org_id,
+                nome=f"Loja quota concorrente {i}", slug=f"quota-ci-{uuid.uuid4().hex}",
+                tipo="mercado", parceiro_verificado=False, ativo=True,
+            ))
+            sessao.commit()
+            return 201
+        except HTTPException as exc:
+            sessao.rollback()
+            return exc.status_code
+        finally:
+            sessao.close()
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        resultados = list(executor.map(criar, (1, 2)))
+    assert sorted(resultados) == [201, 409]
+    db = SessionLocal()
+    try:
+        assert db.query(Estabelecimento).filter_by(organizacao_id=org_id).count() == existentes + 1
+    finally:
+        db.close()
+
+
+
+def test_mysql_convites_concorrentes_respeitam_lotacao(monkeypatch):
+    """Com a última vaga, duas transações concorrentes não geram dois convites."""
+    from concurrent.futures import ThreadPoolExecutor
+    from datetime import timedelta
+    from threading import Barrier
+
+    from fastapi import HTTPException
+    from database.connection import SessionLocal
+    from models import ConviteOrganizacao, Organizacao, OrganizacaoMembro, Usuario
+    from services.auth import agora
+    from services.equipe_organizacao import LIMITES_MEMBROS, bloquear_organizacao, garantir_vaga
+
+    db = SessionLocal()
+    try:
+        u = db.query(Usuario).filter_by(email="saas-legado-migracao@example.invalid").one()
+        org = db.query(Organizacao).filter_by(slug=f"legado-parceiro-{u.id}").one()
+        org_id, uid = org.id, u.id
+        ativos = db.query(OrganizacaoMembro).filter_by(organizacao_id=org_id, ativo=True).count()
+    finally:
+        db.close()
+
+    monkeypatch.setitem(LIMITES_MEMBROS, "free", ativos + 1)
+    inicio = Barrier(2)
+
+    def criar(i):
+        db = SessionLocal()
+        try:
+            inicio.wait(timeout=25)
+            org = bloquear_organizacao(db, org_id)
+            garantir_vaga(db, org)
+            db.add(ConviteOrganizacao(
+                organizacao_id=org_id, email=f"convite-ci-{uuid.uuid4().hex}@example.invalid",
+                papel="leitor", token_hash=uuid.uuid4().hex + uuid.uuid4().hex,
+                criado_por_usuario_id=uid, expira_em=agora() + timedelta(days=7),
+            ))
+            db.commit()
+            return 201
+        except HTTPException as err:
+            db.rollback()
+            return err.status_code
+        finally:
+            db.close()
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        resultados = list(executor.map(criar, (1, 2)))
+    assert sorted(resultados) == [201, 409]
+    db = SessionLocal()
+    try:
+        assert db.query(ConviteOrganizacao).filter_by(organizacao_id=org_id).count() == 1
+    finally:
+        db.close()
+
+
+def test_mysql_importacao_csv_idempotente_concorrente():
+    """Reenvios da mesma chave geram uma só oferta no MySQL real."""
+    from concurrent.futures import ThreadPoolExecutor
+    from threading import Barrier
+
+    from database.connection import SessionLocal
+    from models import Estabelecimento, ImportacaoOfertas, Preco, Produto, Usuario
+    from routers.operacao_b2b import importar_ofertas_csv
+    from schemas.operacao_b2b import ImportacaoOfertasCSV
+
+    db = SessionLocal()
+    try:
+        u = db.query(Usuario).filter_by(email="saas-legado-migracao@example.invalid").one()
+        loja = db.query(Estabelecimento).filter_by(slug="saas-loja-legada-ci").one()
+        # SKU genérico compartilhado evita interferir com preço legado cujo teste exige unicidade.
+        produto = db.query(Produto).filter_by(slug="agua", tipo_produto="generico").one()
+        org_id, uid, loja_id, produto_id = loja.organizacao_id, u.id, loja.id, produto.id
+        antes = db.query(Preco).filter_by(estabelecimento_id=loja_id, produto_id=produto_id).count()
+    finally:
+        db.close()
+    csv_texto = ("estabelecimento_id;produto_id;preco;estoque_status\n"
+                 f"{loja_id};{produto_id};5,50;disponivel\n")
+    payload = ImportacaoOfertasCSV(chave_idempotencia="mysql-idempotencia-lote", csv_texto=csv_texto)
+    barreira = Barrier(2)
+
+    def worker():
+        db = SessionLocal()
+        try:
+            usuario = db.get(Usuario, uid)
+            barreira.wait(timeout=25)
+            return importar_ofertas_csv(payload, usuario, db, org_id)
+        finally:
+            db.close()
+
+    with ThreadPoolExecutor(max_workers=2) as ex:
+        resultados = list(ex.map(lambda _: worker(), (1, 2)))
+    assert sorted(x["repetida"] for x in resultados) == [False, True]
+    assert all(x["criadas"] == 1 for x in resultados)
+    db = SessionLocal()
+    try:
+        assert db.query(Preco).filter_by(estabelecimento_id=loja_id, produto_id=produto_id).count() == antes + 1
+        assert db.query(ImportacaoOfertas).filter_by(organizacao_id=org_id).count() == 1
+    finally:
+        db.close()
+
+
+def test_mysql_catalogo_idempotente_com_duas_importacoes_concorrentes():
+    """Lotes paralelos com mesma chave não duplicam SKUs no MySQL/InnoDB."""
+    from concurrent.futures import ThreadPoolExecutor
+    from threading import Barrier
+
+    from database.connection import SessionLocal
+    from models import Estabelecimento, ImportacaoCatalogo, Produto, Usuario
+    from routers.comercial_b2b import importar_catalogo
+    from schemas.comercial_b2b import CatalogoCSV
+
+    db = SessionLocal()
+    try:
+        usuario = db.query(Usuario).filter_by(email="saas-legado-migracao@example.invalid").one()
+        loja = db.query(Estabelecimento).filter_by(slug="saas-loja-legada-ci").one()
+        pai = db.query(Produto).filter_by(slug="agua", tipo_produto="generico").one()
+        uid, org_id, pai_id = usuario.id, loja.organizacao_id, pai.id
+    finally:
+        db.close()
+    codigo = "SKU-FASE4A-" + uuid.uuid4().hex[:12]
+    chave = "catalogo-mysql-" + uuid.uuid4().hex[:16]
+    csv_texto = ("sku;produto_pai_id;nome;marca;unidade_venda;quantidade_embalagem;unidade_embalagem\n"
+                 f"{codigo};{pai_id};Água em Lote;Marca Real;garrafa;1,5;litro\n")
+    payload = CatalogoCSV(chave_idempotencia=chave, csv_texto=csv_texto)
+    inicio = Barrier(2)
+
+    def worker():
+        sessao = SessionLocal()
+        try:
+            usuario = sessao.get(Usuario, uid)
+            inicio.wait(timeout=25)
+            return importar_catalogo(payload, usuario, sessao, org_id)
+        finally:
+            sessao.close()
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        resultados = list(executor.map(lambda _: worker(), (1, 2)))
+    assert sorted(x["repetida"] for x in resultados) == [False, True]
+    assert all(x["criados"] == 1 for x in resultados)
+    db = SessionLocal()
+    try:
+        assert db.query(Produto).filter_by(organizacao_id=org_id, sku=codigo).count() == 1
+        assert db.query(ImportacaoCatalogo).filter_by(organizacao_id=org_id, chave_idempotencia=chave).count() == 1
+    finally:
+        db.close()
+
+
+def test_mysql_checkout_idempotente_com_duas_transacoes_concorrentes(monkeypatch):
+    """Lock da organização + chave única impedem dois checkouts para a mesma ação."""
+    from concurrent.futures import ThreadPoolExecutor
+    from threading import Barrier
+    from database.connection import SessionLocal
+    from models import OrganizacaoMembro, TentativaCheckout, Usuario
+    from routers.billing import CheckoutBody, criar_checkout
+    from config import settings
+
+    db = SessionLocal()
+    try:
+        usuario = db.query(Usuario).filter_by(email="saas-legado-migracao@example.invalid").one()
+        membro = db.query(OrganizacaoMembro).filter_by(usuario_id=usuario.id, ativo=True).first()
+        assert membro is not None and membro.papel == "proprietario"
+        uid, oid = usuario.id, membro.organizacao_id
+    finally:
+        db.close()
+    monkeypatch.setattr(settings, "BILLING_ENABLED", True)
+    monkeypatch.setattr(settings, "STRIPE_SECRET_KEY", "sk_test_mysql_mock")
+    monkeypatch.setattr(settings, "STRIPE_WEBHOOK_SECRET", "whsec_mysql_mock")
+    monkeypatch.setattr(settings, "STRIPE_PRICE_PRO", "price_mysql_pro")
+    monkeypatch.setattr(settings, "STRIPE_PRICE_BUSINESS", "price_mysql_business")
+    requests = []
+    def provider(method, path, campos=None, *, idempotency=None):
+        requests.append((method, path, idempotency))
+        if path.startswith("/v1/prices/"):
+            price = path.rsplit("/", 1)[-1]
+            return {"id": price, "currency": "brl", "active": True,
+                    "unit_amount": 1000, "recurring": {"interval": "month", "interval_count": 1}}
+        if method == "POST" and path == "/v1/checkout/sessions":
+            return {"id": "cs_test_mysql_unique", "status": "open",
+                    "url": "https://checkout.stripe.com/c/pay/mysql"}
+        if method == "GET" and path.startswith("/v1/checkout/sessions/"):
+            return {"id": "cs_test_mysql_unique", "status": "open",
+                    "url": "https://checkout.stripe.com/c/pay/mysql"}
+        raise AssertionError(path)
+    monkeypatch.setattr("routers.billing.stripe_request", provider)
+    monkeypatch.setattr("routers.billing.preco_mensal_validado",
+                        lambda plano, periodicidade="mensal": {"plano": plano, "centavos": 1000, "periodicidade": periodicidade})
+    barrier = Barrier(2)
+    chave = "checkout-mysql-2026-unique"
+
+    def executar():
+        db = SessionLocal()
+        try:
+            usuario = db.get(Usuario, uid)
+            barrier.wait(timeout=20)
+            return criar_checkout(CheckoutBody(plano="pro", chave_idempotencia=chave),
+                                 usuario, db, oid)
+        finally:
+            db.close()
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        resultados = list(pool.map(lambda _: executar(), [0, 1]))
+    assert sorted(r["repetida"] for r in resultados) == [False, True]
+    assert len([x for x in requests if x[0] == "POST" and x[1] == "/v1/checkout/sessions"]) == 1
+    db = SessionLocal()
+    try:
+        assert db.query(TentativaCheckout).filter_by(organizacao_id=oid,
+            chave_idempotencia=chave).count() == 1
+    finally:
+        db.close()
+
+
+def test_mysql_free_quota_concorrente_nao_passa_de_cinco():
+    """Simula duas novas criações concorrentes após quatro eventos Free."""
+    _setup_url()
+    from concurrent.futures import ThreadPoolExecutor
+    from threading import Barrier
+    from fastapi import HTTPException
+    from database.connection import SessionLocal
+    from models import Churrasco, Usuario
+    from services.auth import hash_senha
+    from services.entitlements_usuario import exigir_vaga_planejamento
+
+    email = f"quota-b2c-{uuid.uuid4().hex}@example.com"
+    db = SessionLocal()
+    try:
+        user = Usuario(nome="Cota Concorrente", email=email,
+                       senha_hash=hash_senha("SenhaForteTeste123"), papel="usuario", ativo=True)
+        db.add(user)
+        db.flush()
+        user_id = user.id
+        for n in range(4):
+            db.add(Churrasco(usuario_id=user_id, tipo_evento="almoco", duracao_horas=4,
+                             perfil_consumo="normal", chave_cliente=f"b2c-base-{uuid.uuid4().hex}-{n}"))
+        db.commit()
+    finally:
+        db.close()
+    barreira = Barrier(2)
+
+    def tentar_salvar():
+        sessao = SessionLocal()
+        try:
+            user = sessao.get(Usuario, user_id)
+            barreira.wait(timeout=20)
+            try:
+                exigir_vaga_planejamento(sessao, user)
+                sessao.add(Churrasco(usuario_id=user_id, tipo_evento="almoco", duracao_horas=4,
+                                     perfil_consumo="normal", chave_cliente=f"b2c-conc-{uuid.uuid4().hex}"))
+                sessao.commit()
+                return "criado"
+            except HTTPException as exc:
+                sessao.rollback()
+                assert exc.status_code == 409
+                assert exc.detail["codigo"] == "LIMITE_PLANEJAMENTOS_FREE"
+                return "negado"
+        finally:
+            sessao.close()
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        resultados = list(pool.map(lambda _: tentar_salvar(), range(2)))
+    assert sorted(resultados) == ["criado", "negado"]
+    db = SessionLocal()
+    try:
+        assert db.query(Churrasco).filter_by(usuario_id=user_id).count() == 5
+        db.query(Churrasco).filter_by(usuario_id=user_id).delete()
+        db.query(Usuario).filter_by(id=user_id).delete()
+        db.commit()
+    finally:
+        db.close()

@@ -1,10 +1,9 @@
-# ChurrasPlan SaaS — Memória técnica mestra
+# ChurrasPlan SaaS B2B2C — Memória técnica mestra
 
-> **Documento canônico:** docs/ChurrasPlanSaaS.md  
-> **Atualizado em:** 11/10/2026 (America/Sao_Paulo)  
-> **Base inspecionada:** GitHub ArthurHenrique-eng/ChurrasPlan, branch main, commit 2afa7b0a0780d2c6090b2d2677b6e1b799958d90.  
-> **Estado do código nessa referência:** API FastAPI v6.5.0; Alembic head 20260925_0008.  
-> **Escopo:** memória operacional para humanos e IAs, consolidando os 21 documentos Markdown históricos que existiam em docs/. O README da raiz permanece uma apresentação pública resumida.
+> **Documento canônico:** `docs/ChurrasPlanSaaS.md`. **Branch:** `Saas-ChurrasPlan`, nunca confundir com `main`.
+> **Atualizado:** 12/10/2026 (UTC). **Base histórica auditada:** commit `208f34954033dc7bb280bdaa72194ba1e37d854c`. **Revisão de lançamento:** API v6.10.0, Alembic head `20261012_0024`; implementação/evidências/gates na seção 19.
+> **Revisão funcional comprovada:** commit `8b3112a48bd7d271a858a1925e59c982043d6434`, [CI 38195317834](https://github.com/ArthurHenrique-eng/ChurrasPlan/actions/runs/38195317834), [CodeQL 38195317935](https://github.com/ArthurHenrique-eng/ChurrasPlan/actions/runs/38195317935) e [Container security 38195317810](https://github.com/ArthurHenrique-eng/ChurrasPlan/actions/runs/38195317810), todos success em 12/10/2026. Atualizações documentais posteriores não substituem essa identificação exata.
+> **Objetivo:** consolidar as **35 notas Markdown** pré-existentes em `docs/` num único contexto de leitura. Os originais permanecem recuperáveis por links imutáveis no Git, listados na seção de histórico, sem manter arquivos obsoletos concorrentes. O README e imagens de `docs/assets/` são preservados.
 
 ## 0. Como uma IA deve usar e manter este documento
 
@@ -27,23 +26,23 @@
 
 Princípio central: o backend é a fonte de verdade de cálculos, persistência, identidade e autorização; o frontend coleta entradas, apresenta resultados e administra a interação. Preços de referência e ofertas reais têm semânticas diferentes.
 
-## 2. Stack, estrutura e pontos de entrada
+## 2. Stack e organização na branch SaaS
 
-| Camada | Implementação na main inspecionada | Caminho de referência |
-|---|---|---|
-| Frontend | HTML/CSS/JavaScript modular, multipágina, responsivo; PWA | FrontEnd/, FrontEnd/js/, FrontEnd/css/, FrontEnd/sw.js |
-| Backend/API | Python, FastAPI, Pydantic, SQLAlchemy | BackEnd/Python/main.py, routers/, schemas/, services/ |
-| Banco | MySQL 8.x em produção; MySQL 8.4 em Docker/CI; SQLite para parte dos testes | BackEnd/Python/database/, models/, alembic/ |
-| Migrations | Alembic, fonte oficial do schema | BackEnd/Python/alembic/versions/ |
-| Infraestrutura | Docker Compose dev/prod, Nginx estático, Caddy/HTTPS na produção | docker-compose.dev.yml, docker-compose.production.yml, deploy/Caddyfile |
-| CI | GitHub Actions: backend, MySQL, frontend, auditoria, Docker e Playwright | .github/workflows/ci.yml |
-| Mapas | Geoapify Places/Autocomplete/Tiles via backend; MapLibre GL no navegador | services/geoapify.py, routers/onde_comprar.py, FrontEnd/js/onde-comprar.js |
-| Preços de referência | Tabela de preços nacionais estimados, versão BR-2026-09 | services/precos_referencia.py |
-| Identidade visual | Logos e recursos públicos da aplicação | FrontEnd/assets/ e docs/assets/ |
+| Camada | Stack e responsabilidades atuais |
+|---|---|
+| Frontend | HTML/CSS/JavaScript modular e PWA em `FrontEnd/`, SW e MapLibre GL |
+| API | FastAPI, API v6.10.0, Pydantic, SQLAlchemy; `BackEnd/Python/main.py`, `routers/`, `schemas/`, `services/` |
+| Persistência | MySQL 8.4 em Docker/CI, SQLite para unidade; Alembic até `20261012_0024` |
+| Tenant B2B | `models/organizacao.py`, `routers/parceiros.py`, `equipe.py`, `operacao_b2b.py`, `comercial_b2b.py` |
+| Direitos | `services/entitlements.py` (B2B) e `entitlements_usuario.py` (B2C) |
+| Stripe TEST | `routers/billing.py`, `billing_usuario.py`, `services/billing.py`, `billing_usuario.py` |
+| Infra | `docker-compose.dev.yml`, `docker-compose.production.yml`, Nginx, Caddy, CI, CodeQL e Dependabot |
 
-**Rotas de entrada:** /api/health (liveness); /api/health/ready (readiness com banco); /docs e /openapi.json quando expostos pelo ambiente. A versão retornada pela API na main inspecionada é **6.5.0**. Os agrupamentos FastAPI confirmados são: auth, calculadora, churrascos, convites, produtos, estabelecimentos, preços, lista_compras, parceiros, onde_comprar, planos, privacidade e admin.
+**B2C:** Home → planejamento → carnes/bebidas/extras → resultado/checklist → histórico/convites/RSVP → Onde comprar → conta/planos/benefícios. Calculadora física e comercial é determinística no backend, não no frontend.
 
-**Fluxo web típico:** Home → Planejamento → Carnes → Bebidas → Extras → Resultado/Central do Churrasco → Checklist/Divisão → Histórico/Convites/Onde comprar. A home pode apresentar simulação demonstrativa, mas **não** constitui motor alternativo de cálculos.
+**B2B:** parceiro → organização/membros → seleciona tenant → filiais → genéricos/SKU → ofertas/CSV → campanhas moderadas → relatórios e cobrança Test organizacional. Admin global é distinto de proprietário/gestor local.
+
+**Contratos base:** `GET /api/health` e `GET /api/health/ready`; documentação OpenAPI em `/docs` quando exposta. Monólito modular, preferível a microserviços sem necessidade comprovada.
 
 ## 3. Modelo de domínio e regras matemáticas invariantes
 
@@ -138,7 +137,7 @@ O subsistema combina **estabelecimentos e preços próprios/verificados** com **
 
 ## 7. Autenticação, segurança, LGPD e limites do PWA
 
-**Controles implementados na base v6.3+:** PBKDF2-HMAC-SHA256 com salt para senhas; segredos de sessão e tokens opacos persistidos somente por hash; cookie churrasplan_session HttpOnly, SameSite=Lax e Secure em produção; cookie churrasplan_csrf para o frontend; checagem CSRF em mutações autenticadas; rate limiting com identificadores HMAC; headers de segurança/HSTS; CORS e Trusted Hosts explícitos; limite de payload; auditoria admin; validação de configuração de produção; pip-audit e bandit em CI.
+**Controles implementados:** senhas novas em Argon2id e migração de hashes PBKDF2 legados no login; segredos de sessão e tokens opacos persistidos somente por hash; cookie churrasplan_session HttpOnly, SameSite=Lax e Secure em produção; cookie churrasplan_csrf para o frontend; checagem CSRF em mutações autenticadas; rate limiting com identificadores HMAC; headers de segurança/HSTS; CORS e Trusted Hosts explícitos; limite de payload; auditoria admin; validação de configuração de produção; pip-audit e bandit em CI.
 
 **LGPD técnica:** termos/privacidade versionados, aceite de documentos, marketing opcional e separado, exportação JSON e exclusão autenticada/reconfirmada da conta. Dados pessoais envolvidos: cadastro, churrascos salvos, respostas de convidados, restrições voluntárias, dados comerciais e registros técnicos mínimos. Sem cookies de publicidade/analytics habilitados por padrão na base documentada.
 
@@ -146,30 +145,64 @@ O subsistema combina **estabelecimentos e preços próprios/verificados** com **
 
 **Pendências legais/operacionais para produção comercial:** definir controlador/razão social/CNPJ, canal de privacidade e encarregado quando aplicável; bases legais e prazos de retenção; subprocessadores reais e acordos; resposta a incidentes e titulares; backups/retenção; política pública revisada juridicamente. Controles técnicos não equivalem a conformidade organizacional concluída.
 
-## 8. Planos, Stripe e distinção entre repositório e ambiente local
+## 8. SaaS Stripe TEST e direitos dos planos
 
-**Fato verificável na main de 11/10/2026:** routers/planos.py lista planos e consulta assinatura, mas retorna pagamentos_habilitados: false; main.py registra API v6.5.0. Na árvore desta branch não há implementação Stripe de checkout/webhook/billing sob routers/services. Portanto **não marcar faturamento em produção ou Stripe homologado no GitHub main**.
+**No código SaaS (não na main):** estão implementados Checkout, portal, webhook, reconciliação, faturas e assinaturas Stripe **Test/Sandbox** para usuário Premium e organizações Pro/Business. **Não** há cobrança Stripe Live habilitada. O backend recusa `sk_live_`; `BILLING_ENABLED` é desligado por padrão. A configuração aceita `STRIPE_SECRET_KEY=sk_test_...` ou uma chave restrita Test `rk_test_...`, `STRIPE_WEBHOOK_SECRET=whsec_...` e Price IDs do sandbox, sem versionar segredos.
 
-**Contexto de desenvolvimento relatado em 08/10/2026:** houve trabalho em integração Stripe/Billing, criação/validação de três preços e conclusão informada de uma homologação Sandbox Premium, incluindo conciliação, benefícios e redirecionamento após correção de PUBLIC_APP_URL. Isso é **RELATADO LOCALMENTE**, e pode estar em checkout local, branch não mesclada ou versão ainda não publicada. Exigir comparação de commit/branch, migrations, webhooks, testes e fluxos reais antes de promover para IMPLEMENTADO/VALIDADO no repositório.
+### Planos mensais configurados e verificados contra Price IDs
 
-A direção SaaS B2B2C prevê verificar, quando o código de billing estiver disponível: clientes e assinaturas Stripe, Checkout/Portal, ciclo de vida e estados, eventos por webhook com assinatura/idempotência, reconciliação, benefícios por plano, cancelamento/renovação/falhas, testes Sandbox e passagem segura para produção. Não presumir Stripe Connect, Tax ou Invoicing operantes só porque são objetivos comerciais.
+| Público | Plano interno | Preço mensal alvo aprovado | Configuração Stripe Test |
+|---|---|---:|---|
+| Consumidor Premium | `premium` | R$ 9,90 | `STRIPE_PRICE_USER_PREMIUM_MONTHLY` e `STRIPE_EXPECTED_PREMIUM_MONTHLY_CENTS=990` |
+| Mercado Básico | `pro` | R$ 49,90 | `STRIPE_PRICE_PRO` e `STRIPE_EXPECTED_PRO_MONTHLY_CENTS=4990` |
+| Mercado Pro | `business` | R$ 99,90 | `STRIPE_PRICE_BUSINESS` e `STRIPE_EXPECTED_BUSINESS_MONTHLY_CENTS=9990` |
 
-## 9. Schema e histórico Alembic
+Preço vem do Stripe Test e é validado no servidor: modo teste, moeda BRL, Price `price_` ativo, recorrência/intervalo compatível e valor esperado; conflito entre IDs ou Price divergente resulta em HTTP 503. Anuais ficam indisponíveis até configurar IDs e `STRIPE_EXPECTED_*_YEARLY_CENTS` positivos, comercialmente aprovados. `prod_` não é Price ID.
 
-**Alembic é a fonte da verdade.** Na main inspecionada, a revisão head está em **20260925_0008**. Nunca aplicar sql/schema.sql manualmente por cima de banco já versionado. Histórico:
+**Entitlements pessoais:** `assinaturas_stripe_usuario` reconciliada com status `active` e período futuro é a única fonte de Premium; `usuarios.plano` e `assinaturas_usuario` legados não dão direito. Free permite até **5 eventos novos salvos**; Premium libera ilimitados, exportação PDF/CSV, modelos reutilizáveis, análise de custos e comparação avançada. Usuário Free após downgrade mantém acesso/edição aos registros anteriores, mas não cria novos acima do limite. Criar, repetir ou vincular consome quota; atualização idempotente não. `GET /api/planos/meus-beneficios` devolve direitos, limites e uso.
 
-| Migration | Resumo |
+**Entitlements B2B:** organizações começam em Free; Pro/Business derivam de assinatura Stripe Test reconciliada e vigente ou cortesia administrativa válida e auditada. `services/entitlements.py` aplica quotas no backend, por tenant, inclusive sob concorrência. Somente `proprietario` local contrata/cancela/troca plano empresarial. Gestor/editor/leitor não acessam faturamento alheio. Ter cartão ou link de checkout não altera o tier; é o estado reconciliado que autoriza.
+
+**B2B APIs:** `GET /api/billing/planos-publicos`, `/catalogo`, `/assinatura`, `/faturas`; `POST /api/billing/checkout`, `/sincronizar`, `/portal`, `/cancelar`, `/reativar`, `/trocar-plano`. **B2C APIs:** `GET /api/billing/usuario/catalogo`, `/assinatura`, `/faturas`; `POST /api/billing/usuario/checkout`, `/sincronizar`, `/portal`, `/cancelar`, `/reativar`, `/trocar-periodo`. Mutações privadas exigem sessão, titularidade e CSRF.
+
+**Webhook único:** `POST /api/billing/webhook` valida assinatura HMAC SHA-256 e timestamp, deduplica ID de evento e consulta snapshot Stripe atual; evita ativação por replay, checkout incompleto, Price estranho, tenant divergente e eventos fora de ordem. `active` e período vigente concedem benefício. `past_due` suspende Premium B2C; B2B pode ter grace period limitado a `BILLING_GRACE_DAYS` (máximo 7). `canceled/unpaid/paused/incomplete` não ativam pagos. Cancelamento ao fim do período mantém benefícios enquanto vigente; renovação, troca e reativação passam pelo Stripe, não por flags frontend.
+
+**Navegação:** Premium redireciona a `minha-conta.html?assinatura=retorno`; parceiro a `minha-conta.html?cobranca=retorno&organizacao_id=ID`. Portal retorna à conta. `PUBLIC_APP_URL` deve ser a origem correta, com fluxo de login que conserva retorno permitido.
+
+**Status de homologação:** as notas de 09/10 documentam testes automatizados com transporte simulado e pedem comprovação externa do sandbox. O mantenedor informou posteriormente que **concluiu** um fluxo Premium real no Sandbox, com benefícios/reconciliação e retorno corrigido via `PUBLIC_APP_URL`. Registre como **CONCLUÍDO CONFORME RELATO DO MANTENEDOR, sem comprovação no código/CI desta inspeção**, e verifique para B2B/novos ambientes antes de declarar gates satisfeitos. Produção, Stripe Connect/Tax/Invoicing e obrigações fiscais/NFS-e não estão validados.
+
+## 9. Schema e Alembic — linha completa até 0024
+
+**Head `20261012_0024` na branch SaaS.** Alembic é fonte de verdade e `BackEnd/Python/sql/schema.sql` referência de instalação nova; não aplicar SQL manualmente em banco versionado.
+
+| Migration | O que evoluiu |
 |---|---|
-| 20260917_0001 | baseline consistente; separação compra/necessidade, idempotência e adequações de schema |
-| 20260918_0002 | contas, orçamento, convidados/RSVP, SKU e parceiros |
-| 20260918_0003 | alinhamento de schema |
-| 20260918_0004 | métricas agregadas de estabelecimentos |
-| 20260918_0005 | LGPD, rate limiting, auditoria e hardening |
-| 20260922_0006 | restauração de defaults de timestamps em usuários |
-| 20260925_0007 | catálogo genérico ampliado para parceiros |
-| 20260925_0008 | catálogo de base do planejador garantido via migration |
+| `20260917_0001` | baseline consistente (unidades, dados e integridade) |
+| `20260918_0002` | contas, orçamento, RSVP, produtos e parceiros |
+| `20260918_0003` | alinhamento do schema |
+| `20260918_0004` | métricas de estabelecimentos |
+| `20260918_0005` | segurança, LGPD, auditoria e rate limiting |
+| `20260922_0006` | timestamps de usuário |
+| `20260925_0007` | catálogo genérico ampliado |
+| `20260925_0008` | catálogo base do planejador |
+| `20261008_0009` | organizações/membros, associação e backfill conservador |
+| `20261008_0010` | concessões administrativas e quotas B2B |
+| `20261008_0011` | convites, equipe e auditoria de tenant |
+| `20261008_0012` | filiais e importações CSV de ofertas |
+| `20261008_0013` | catálogo CSV e campanhas |
+| `20261008_0014` | Stripe TEST B2B e histórico financeiro local |
+| `20261008_0015` | Stripe TEST B2C |
+| `20261008_0016` | periodicidade de plano B2B |
+| `20261009_0017` | modelos pessoais Premium de eventos |
+| `20261012_0018` | MFA, sessões verificadas, rate counters, outbox cifrada e heartbeat |
+| `20261012_0019` | leads/CRM, analytics, referral, feedback e custos operacionais |
+| `20261012_0020` | clientes/propostas profissionais, favoritos e lembretes |
+| `20261012_0021` | cota diária do assistente sem persistir prompts |
+| `20261012_0022` | titularidade da outbox e deduplicação HMAC das interações |
+| `20261012_0023` | GTIN validado e EAN único por organização |
+| `20261012_0024` | contexto pseudônimo e índice para funis agregados |
 
-Histórico antigo apontava heads 0004/0005 por representar releases anteriores; **não usá-los como head atual**. A referência SQL é BackEnd/Python/sql/schema.sql, voltada a instalação nova, mas validar paridade com ORM e migrations. Produção exige MySQL/PyMySQL; os testes SQLite não substituem testes MySQL para FKs, engine InnoDB, charset utf8mb4, JSON e migrations com dados existentes.
+**Migração/rollback:** preservar FKs e dados legados, não atribuir a uma organização SKUs de dono incerto; ensaiar `upgrade head`, `alembic check`, downgrade/upgrade, MySQL real e dados de cópia em staging. Downgrade das migrações SaaS pode apagar grants, convites, auditorias, campanhas, lotes idempotentes, modelos e registros locais de Billing, **mas não cancela assinatura remota no Stripe**. Realizar backup, avaliação de impacto e conciliação externa antes de reverter. Testes SQLite não substituem FK, charset, InnoDB e concorrência MySQL.
 
 ## 10. Desenvolvimento, comandos e ambientes
 
@@ -206,64 +239,42 @@ Frontend local: http://127.0.0.1:5500; API local: http://127.0.0.1:8000. A API n
 
 **Produção Docker:** usar **docker-compose.production.yml**, .env.production.example como modelo, domínio DNS A/AAAA, portas 80/443 e Caddy emitindo TLS; frontend Nginx e API/MySQL na rede interna. Verificar compatibilidade das variáveis no compose/config antes de executar. Configuração insegura deve interromper a inicialização da API. Fazer backup, ensaio em staging, migrations e smoke test /api/health/ready. Criar primeiro admin com helper seguro e manter segredo fora do Git.
 
-## 11. Testes, CI e interpretação de evidências
+## 11. CI, testes e evidências
 
-**Comandos principais:**
-~~~bash
-cd BackEnd/Python
-pytest -q tests
-# Com MYSQL_TEST_URL e DATABASE_URL apontando para banco descartável:
-alembic upgrade head
-alembic check
-pytest -q tests_mysql
-# Na raiz do repositório:
-python scripts/validate_frontend.py
-python scripts/validate_schema.py
-./scripts/test_all.sh
-# Windows: .\scripts\test_all.ps1
-# Playwright: python -m playwright install chromium; pytest -q e2e
-~~~
+A branch SaaS possui seis jobs GitHub Actions: **Backend unit/integration (SQLite)**, **MySQL 8 real + Alembic**, **Frontend static checks**, **Security audit**, **Docker configuration and images**, **E2E Chromium + MySQL**. CodeQL Python/JavaScript e Dependabot estão configurados. [CI do snapshot 208f349, 38004031754](https://github.com/ArthurHenrique-eng/ChurrasPlan/actions/runs/38004031754) e [CodeQL 38004031832](https://github.com/ArthurHenrique-eng/ChurrasPlan/actions/runs/38004031832): **success**. O registro da Fase 2 informa **167 testes SQLite e 12 testes MySQL** na trilha anterior; para precisão do head atual consultar logs específicos. Nenhum destes jobs certifica checkout externo real, deploy live ou backup produtivo.
 
-**Workflow verificado na main:** backend-unit (SQLite), mysql-real (MySQL 8.4 + Alembic), frontend-static (JS, service worker, links), security-static (pip-audit/bandit), docker-build (Compose/config e imagens), e2e (Chromium + MySQL). O CI valida desenvolvimento/qualidade, **não realiza deploy automático**.
+**Comandos:** `cd BackEnd/Python && pytest -q tests`; configurar `MYSQL_TEST_URL` de banco descartável e executar `alembic upgrade head && alembic check && pytest -q tests_mysql`; na raiz `python scripts/validate_frontend.py`, `python scripts/validate_schema.py`, `./scripts/test_all.sh` (Windows: `.\scripts\test_all.ps1`), `pytest -q e2e` após instalar Playwright Chromium.
 
-**Resultados históricos, NÃO garantias de execução atual:**
+**Regressões SaaS:** `test_tenants_saas.py`, `test_entitlements_saas.py`, `test_equipe_organizacao_saas.py`, `test_operacao_b2b_saas.py`, `test_comercial_b2b_fase4a.py`, `test_billing_saas.py`, `test_billing_usuario_stripe.py`, `test_billing_fase2.py`, `test_entitlements_usuario_fase1.py`: isolamento, quotas/concorrência, webhooks, autenticação, CSRF, replay, assinatura, callbacks e compatibilidade. **Histórico, não resultado atual:** 67 testes v0.2, 83 v3, 90 v6.3, 92 v6.3.1, 96 v6.4.
 
-| Marco | Evidência registrada na época |
+## 12. Mapa de maturidade nesta branch
+
+| Entrega | Estado verificável |
 |---|---|
-| v0.2 | 67 testes SQLite, compileall, migração SQLite de vazio/legado, paridade SQL/ORM e 23 carnes |
-| Frontend v2.3 | JavaScript/HTML/CSS, Playwright com API simulada e 67 testes backend |
-| v3.0 (18/09/2026) | 83 testes; migrations até 0004 com preservação de dados; alembic check |
-| v6.3.0 | 90 testes; 21 tabelas; 20 HTML; 58 paths/62 operações OpenAPI; migrations até 0005 |
-| v6.3.1 | 92 testes; seed de 49 itens; custo/divisão parcial; 21 tabelas; 58 paths/62 operações |
-| v6.4.0 | 96 testes; 21 tabelas; 20 HTML; 58 paths/64 operações; MySQL real dependia de CI/staging |
+| Cálculo determinístico, listas, estimativas, convites, LGPD, PWA e Geoapify | Implementado |
+| Coordenadas 1A, genéricos/preços 1B, CSP/Compose/CI 1C | Implementado |
+| Organizações/multi-tenant, equipes, permissões, quotas e convites 2A–2C | Implementado |
+| Filiais, CSV de ofertas, onboarding e relatórios 2D | Implementado; métricas não equivalem a vendas |
+| Importação CSV de SKUs e campanhas moderadas 4A | Implementado |
+| Stripe Test B2B/B2C, Premium, modelos, PDF/CSV e valores mensais guardados | Implementado para sandbox; não live |
+| Pagamento Premium realizado no Sandbox externo | Relatado pelo mantenedor; não verificado no CI/documentação do snapshot |
+| MFA admin, observabilidade e outbox | Implementados; exigem configuração/monitoramento no ambiente produtivo |
+| Restore em ambiente isolado | Comprovado na revisão 6.10; backup remoto/staging produtivo pendentes |
+| Leads/CRM, SEO/referral, analytics e dashboard operacional do fundador | Implementados; métricas financeiras reais dependem de dados comerciais |
+| Assistência local e contrato de IA | Implementados e testados; LLM externo não ativado |
+| Stripe live, impostos/NFS-e, clientes pagantes e operação comercial | Não homologado |
 
-Várias validações históricas ocorreram sem daemon Docker/MySQL ou browser Chromium acessível no ambiente local e **não devem ser descritas como testes reais de produção**. O job CI/staging é responsável por comprovar testes dependentes desses serviços. Nunca inventar aprovação de CI ou implantações posteriores a partir desses números.
+**Critério:** classificar separadamente código implementado, teste automatizado, Sandbox manual, produção e operação comercial. O sistema pode estar bem estruturado sem estar pronto para lançar.
 
-## 12. Resumo funcional e maturidade para comercialização
+## 13. Roadmap, riscos e próximos incrementos
 
-| Capacidade | Estado na main de referência | Observação |
-|---|---|---|
-| Motor de cálculo e lista de compras | IMPLEMENTADO | Backend autoritativo; distinguir compra/necessidade |
-| Conta, sessão, convites/RSVP, histórico | IMPLEMENTADO | Revisar autorização/regressões em cada alteração |
-| Orçamento, referência nacional, checklist/divisão | IMPLEMENTADO | Diferenciar referência, ofertas e dinheiro real |
-| Catálogo genérico, SKU, ofertas e parceiros | IMPLEMENTADO | Verificação e qualidade de cadastro são requisitos operacionais |
-| Admin/moderação/auditoria | IMPLEMENTADO | Operação e segregação de acesso devem ser homologadas |
-| Geoapify e otimização | IMPLEMENTADO, dependente de configuração | Descoberta externa não é preço externo |
-| CI, PWA, Docker/staging | BASE IMPLEMENTADA | CI/deploy/ambiente real exigem confirmação |
-| Cobrança Stripe e entitlements pagos | NÃO PRESENTE na main examinada | Sandbox Premium relatado localmente; verificar branch/merge |
-| Stripe Connect, Tax e Invoicing | NÃO CONFIRMADOS | Planejamento não equivale a entrega |
-| LGPD organizacional, documentos finais, produção comercial | PENDENTE DE VALIDAÇÃO | Responsáveis, políticas, fornecedores, operação |
-| Hospedagem/domínio/SMTP em produção | NÃO CONFIRMADOS | Configuração de deploy existe, operação não demonstrada |
+**Entregas técnicas existentes:** Fase 0 auditoria; 1A coordenadas sem heurística de micrograus; 1B genéricos e BR-2026-09; 1C CSP/infra/CI; 2A–2D organizações, grants, equipe, filiais e ofertas; 4A catálogo CSV/campanhas; 3 Stripe B2B Test; 1 B2C Premium; Fase 2 de homologação contratual Billing. Há **dois esquemas de numeração de fases** em notas diferentes: seguir o domínio e migration, não o número isolado.
 
-Não declarar o SaaS pronto para comercialização apenas por haver controles técnicos. Avaliar faturamento real, governança, observabilidade, suporte, atendimento, antifraude, dados de parceiros e resiliência.
+**Prioridade P0:** regras de negócio e isolamento B2B, gates CI/CodeQL, proteção da branch no GitHub, MFA administrativo, monitoramento/alertas de falhas de integração, backup/restore externo, staging e documentação legal. **Próximos incrementos B2B:** testar onboarding de mercado, filial, SKU/genérico, preços/CSV, campanhas, permissões e métricas; leads/CRM, SEO, referral, analytics e assistência local foram acrescentados na revisão 6.10. Os próximos incrementos dependem de staging e validação comercial real.
 
-## 13. Backlog orientador / riscos
+**Dependências humanas:** chaves/Prices/webhooks sandbox para cada fluxo, preço anual aprovado, domínio/TLS/SMTP, backup real, política jurídica/fiscal, piloto regional e validação de pagamento live. Não inventar vendas por métricas de visualização.
 
-**Alta prioridade:** sincronizar o estado de Billing/Stripe realmente implementado em desenvolvimento com uma branch rastreável e testes; confirmar webhooks e concessão/revogação de benefícios; staging end-to-end; SMTP; CI verde e release documentada. Revisar múltiplos papéis, autorização de parceiro, criação e moderação de mercado, persistência de produtos genéricos/comerciais e preços elegíveis.
-
-**Antes da abertura comercial:** acordos/documentos LGPD definitivos, domínio e HTTPS, gestão de segredos, backups e ensaio de restore, monitoramento/alertas, limites antiabuso, processo de suporte, política de moderação, qualidade da lista de estabelecimentos e observação das taxas/custos de provedores.
-
-**Futuro/opcional:** performance e caching, processos B2B de onboarding e acompanhamento, dados analíticos com privacidade, otimização da cobertura local, alertas meteorológicos/de preço somente se incorporados ao backlog, integração financeira adicional, CI/CD deploy automatizado após provedor escolhido.
+**Política do mantenedor:** evoluir e documentar **Saas-ChurrasPlan**, sem criar novas notas `.md` de fase em `docs/` e sem push/merge na `main` sem pedido expresso. Após cada incremento: revisar código, rodar testes e CI da nova revisão, atualizar a memória central.
 
 ## 14. Decisões arquiteturais que não devem regredir
 
@@ -280,9 +291,32 @@ Não declarar o SaaS pronto para comercialização apenas por haver controles t�
 - PWA não implica que mutações funcionem offline.
 - Releases antigas podem descrever tecnologia substituída; conferir a implementação atual.
 
-## 15. Histórico técnico consolidado dos antigos documentos
+## 15. Contratos operacionais SaaS incorporados das fases
 
-Os 21 Markdown anteriores de docs/ foram consolidados aqui em vez de mantidos como arquivos concorrentes; o histórico Git permite recuperar versões integrais.
+### Organizações (2A, 0009)
+`organizacoes` e `organizacao_membros` com papéis `proprietario`, `gestor`, `editor`, `leitor`. Backfill atribui lojas e SKUs somente quando proprietário inequívoco; mantém `usuario_responsavel_id` e preços legados. `POST /api/parceiro/ativar` cria tenant inicial idempotentemente. `GET /api/parceiro/organizacoes` lista memberships ativas. `X-Organizacao-ID` obrigatório se múltiplas organizações (409 sem seleção, 404 para alheia); ID informado no navegador nunca substitui checagem de membership.
+
+### Entitlements B2B e membros (2B/2C, 0010/0011)
+| Tier | Lojas | SKUs comerciais | Ofertas (histórico incluído) | Equipe/convites válidos |
+|---|---:|---:|---:|---:|
+| Free | 3 | 100 | 2.000 | 3 |
+| Pro | 20 | 1.000 | 20.000 | 15 |
+| Business | 200 | 10.000 | 100.000 | 100 |
+
+Cotas técnicas provisórias e não uma promessa de preço; contam inativos/histórico, bloqueiam criação mas não edição de registros antigos, com bloqueio MySQL `SELECT FOR UPDATE` contra corrida. Admin pode conceder `cortesia_admin` de Pro/Business por até 366 dias, auditada, com CSRF; expira para Free. `GET /api/parceiro/entitlements` devolve uso e limites; `PUT /api/admin/organizacoes/{id}/concessao` controla grants. Convites de equipe usam token aleatório com SHA-256 persistido, validade 7 dias, uso único, e-mail idêntico ao login, revogação e auditoria; `dev_token` só em dev/teste. Proprietário gerencia equipe sem remover a si, gestor só leitores/editores, editor pode gerir ofertas e leitor só consulta. Produção exige SMTP para convites; o painel escolhe tenant em `sessionStorage`.
+
+### Filiais e importação de ofertas (2D, 0012)
+`estabelecimentos` são filiais com `codigo_filial` único por tenant, `unidade_matriz` transacional; só admin global aprova/valida estabelecimento. `POST /api/parceiro/importacoes/ofertas` aceita CSV de até **200 linhas/100 KB**, `estabelecimento_id,produto_id,preco` obrigatórios, status e original opcionais, vírgula/ponto decimal, validação por linha, chave idempotente por organização, hash/resumo persistido, não CSV completo. Chave repetida mesmo conteúdo reproduz retorno; conteúdo diferente gera 409. `GET /api/parceiro/filiais`, `PATCH /filiais/{id}`, `GET /onboarding`, `GET /relatorios/comercial` (até 365 dias) medem cadastro, aprovação, catálogo e interações; `vendas_confirmadas/receita_confirmada` nulos sem dados de transação.
+
+### Catálogo SKU e campanhas (4A, 0013)
+`POST /api/parceiro/importacoes/catalogo`: CSV até **200 linhas/100 KB**, campos obrigatórios `sku,produto_pai_id,nome,marca,unidade_venda,quantidade_embalagem,unidade_embalagem`, opcionais `ean` (GTIN de 8/12/13/14 dígitos, com dígito verificador válido e unicidade por organização), variante/ativo. Produto pai deve ser genérico ativo, upsert preserva ID/histórico e atualizações não gastam quota de novos SKUs. Erros por linha e savepoints; o tenant e autorização são verificados no servidor. Campanha referencia ofertas próprias `precos.id` existentes, não cria cupons ou valores fictícios. Estados `rascunho → em_revisao → aprovada/rejeitada`, cancelamento, até 50 ofertas e 90 dias, aprovação de admin com auditoria; listagem pública revalida vigência, estoque, oferta e verificação da loja.
+
+### Estabilidade inicial (1A/1B/1C)
+1A aceita graus decimais com vírgula/ponto (latitude −90 a 90; longitude −180 a 180), rejeita NaN/infinito e evita converter micrograus ambíguos automaticamente. 1B adiciona `GET /api/produtos/genericos`, `preco_referencia`/data base/unidade explícitos e seletor resiliente; preços BR-2026-09 são orçamento, não ofertas reais. 1C corrige Compose/README, CSP de MapLibre (sem Google antigo), CodeQL e Dependabot; o ruleset `ChurrasPlanProtect` deve ser conferido nas configurações reais do GitHub. Os documentos antigos de 0 e do roadmap registram os 30 blocos de melhoria, dependências e gates; planos/Stripe Test são descritos na seção 8.
+
+## 16. Histórico técnico consolidado dos antigos documentos
+
+Os 21 Markdown de releases antigas e as 14 notas SaaS foram consolidados aqui em vez de mantidos como arquivos concorrentes; o histórico Git permite recuperar versões integrais.
 
 | Documento legado | Informação retida nesta memória |
 |---|---|
@@ -312,7 +346,7 @@ Os 21 Markdown anteriores de docs/ foram consolidados aqui em vez de mantidos co
 
 **Arquivos preservados fora da consolidação:** docs/assets/LogoChurrasPlan.png e docs/assets/LogoTXTChurrasPlan.png são imagens utilizadas pelo README; não são documentos Markdown e não devem ser removidas.
 
-## 16. Protocolo para registrar o próximo avanço
+## 17. Protocolo para registrar o próximo avanço
 
 Em cada entrega, atualizar o cabeçalho com **data, branch, commit, versão API, head Alembic**, e acrescentar sob a seção relevante:
 - **O que mudou:** fluxos, APIs, tabelas e decisões realmente implementados.
@@ -322,3 +356,189 @@ Em cada entrega, atualizar o cabeçalho com **data, branch, commit, versão API,
 - **Próximo passo:** ação objetiva com critério de aceite.
 
 Manter este documento **um único ponto de entrada** para agentes/assistentes; nunca tratar hipóteses, logs de conversa ou notas históricas como prova automática de código entregue.
+
+
+## 18. Índice verificável dos 35 arquivos anteriores (histórico Git)
+
+Estes documentos foram retirados da pasta ativa, mas **não foram perdidos**: os links abaixo apontam para a versão original imutável, antes da consolidação. Leia-os somente quando for necessário auditar uma fase. As seções 0–17 prevalecem para o estado atual.
+
+- [docs/ARQUITETURA_V3.md](https://github.com/ArthurHenrique-eng/ChurrasPlan/blob/208f34954033dc7bb280bdaa72194ba1e37d854c/docs/ARQUITETURA_V3.md)
+- [docs/CORRECAO_CUSTOS_V6.3.1.md](https://github.com/ArthurHenrique-eng/ChurrasPlan/blob/208f34954033dc7bb280bdaa72194ba1e37d854c/docs/CORRECAO_CUSTOS_V6.3.1.md)
+- [docs/DEPLOY_DOCKER_V6.3.md](https://github.com/ArthurHenrique-eng/ChurrasPlan/blob/208f34954033dc7bb280bdaa72194ba1e37d854c/docs/DEPLOY_DOCKER_V6.3.md)
+- [docs/E2E_MYSQL_V6.3.md](https://github.com/ArthurHenrique-eng/ChurrasPlan/blob/208f34954033dc7bb280bdaa72194ba1e37d854c/docs/E2E_MYSQL_V6.3.md)
+- [docs/FRONTEND_V2.1.md](https://github.com/ArthurHenrique-eng/ChurrasPlan/blob/208f34954033dc7bb280bdaa72194ba1e37d854c/docs/FRONTEND_V2.1.md)
+- [docs/FRONTEND_V2.2_UNIFICADO.md](https://github.com/ArthurHenrique-eng/ChurrasPlan/blob/208f34954033dc7bb280bdaa72194ba1e37d854c/docs/FRONTEND_V2.2_UNIFICADO.md)
+- [docs/GEOAPIFY_ADMIN_V6.5.md](https://github.com/ArthurHenrique-eng/ChurrasPlan/blob/208f34954033dc7bb280bdaa72194ba1e37d854c/docs/GEOAPIFY_ADMIN_V6.5.md)
+- [docs/INSTALACAO_DEPLOY_V3.md](https://github.com/ArthurHenrique-eng/ChurrasPlan/blob/208f34954033dc7bb280bdaa72194ba1e37d854c/docs/INSTALACAO_DEPLOY_V3.md)
+- [docs/LGPD_SEGURANCA_V6.3.md](https://github.com/ArthurHenrique-eng/ChurrasPlan/blob/208f34954033dc7bb280bdaa72194ba1e37d854c/docs/LGPD_SEGURANCA_V6.3.md)
+- [docs/PRECOS_REFERENCIA_BRASIL_2026.md](https://github.com/ArthurHenrique-eng/ChurrasPlan/blob/208f34954033dc7bb280bdaa72194ba1e37d854c/docs/PRECOS_REFERENCIA_BRASIL_2026.md)
+- [docs/PRODUCTION_READINESS_V6.3.md](https://github.com/ArthurHenrique-eng/ChurrasPlan/blob/208f34954033dc7bb280bdaa72194ba1e37d854c/docs/PRODUCTION_READINESS_V6.3.md)
+- [docs/RELEASE_NOTES_V6.3.md](https://github.com/ArthurHenrique-eng/ChurrasPlan/blob/208f34954033dc7bb280bdaa72194ba1e37d854c/docs/RELEASE_NOTES_V6.3.md)
+- [docs/RELEASE_NOTES_V6.4.md](https://github.com/ArthurHenrique-eng/ChurrasPlan/blob/208f34954033dc7bb280bdaa72194ba1e37d854c/docs/RELEASE_NOTES_V6.4.md)
+- [docs/RELEASE_NOTES_V6.5.md](https://github.com/ArthurHenrique-eng/ChurrasPlan/blob/208f34954033dc7bb280bdaa72194ba1e37d854c/docs/RELEASE_NOTES_V6.5.md)
+- [docs/REVISAO_FRONTEND_V2.3.md](https://github.com/ArthurHenrique-eng/ChurrasPlan/blob/208f34954033dc7bb280bdaa72194ba1e37d854c/docs/REVISAO_FRONTEND_V2.3.md)
+- [docs/REVISAO_V0.2.md](https://github.com/ArthurHenrique-eng/ChurrasPlan/blob/208f34954033dc7bb280bdaa72194ba1e37d854c/docs/REVISAO_V0.2.md)
+- [docs/SAAS_FASE_0_AUDITORIA_2026-10-08.md](https://github.com/ArthurHenrique-eng/ChurrasPlan/blob/208f34954033dc7bb280bdaa72194ba1e37d854c/docs/SAAS_FASE_0_AUDITORIA_2026-10-08.md)
+- [docs/SAAS_FASE_1_B2C_PREMIUM.md](https://github.com/ArthurHenrique-eng/ChurrasPlan/blob/208f34954033dc7bb280bdaa72194ba1e37d854c/docs/SAAS_FASE_1_B2C_PREMIUM.md)
+- [docs/SAAS_FASE_1A_COORDENADAS.md](https://github.com/ArthurHenrique-eng/ChurrasPlan/blob/208f34954033dc7bb280bdaa72194ba1e37d854c/docs/SAAS_FASE_1A_COORDENADAS.md)
+- [docs/SAAS_FASE_1B_CATALOGO_PRECOS.md](https://github.com/ArthurHenrique-eng/ChurrasPlan/blob/208f34954033dc7bb280bdaa72194ba1e37d854c/docs/SAAS_FASE_1B_CATALOGO_PRECOS.md)
+- [docs/SAAS_FASE_1C_SEGURANCA_INFRA.md](https://github.com/ArthurHenrique-eng/ChurrasPlan/blob/208f34954033dc7bb280bdaa72194ba1e37d854c/docs/SAAS_FASE_1C_SEGURANCA_INFRA.md)
+- [docs/SAAS_FASE_2_HOMOLOGACAO_BILLING.md](https://github.com/ArthurHenrique-eng/ChurrasPlan/blob/208f34954033dc7bb280bdaa72194ba1e37d854c/docs/SAAS_FASE_2_HOMOLOGACAO_BILLING.md)
+- [docs/SAAS_FASE_2A_ORGANIZACOES.md](https://github.com/ArthurHenrique-eng/ChurrasPlan/blob/208f34954033dc7bb280bdaa72194ba1e37d854c/docs/SAAS_FASE_2A_ORGANIZACOES.md)
+- [docs/SAAS_FASE_2B_ENTITLEMENTS.md](https://github.com/ArthurHenrique-eng/ChurrasPlan/blob/208f34954033dc7bb280bdaa72194ba1e37d854c/docs/SAAS_FASE_2B_ENTITLEMENTS.md)
+- [docs/SAAS_FASE_2C_MEMBROS_CONVITES.md](https://github.com/ArthurHenrique-eng/ChurrasPlan/blob/208f34954033dc7bb280bdaa72194ba1e37d854c/docs/SAAS_FASE_2C_MEMBROS_CONVITES.md)
+- [docs/SAAS_FASE_2D_OPERACAO_B2B.md](https://github.com/ArthurHenrique-eng/ChurrasPlan/blob/208f34954033dc7bb280bdaa72194ba1e37d854c/docs/SAAS_FASE_2D_OPERACAO_B2B.md)
+- [docs/SAAS_FASE_3_BILLING_STRIPE_TEST.md](https://github.com/ArthurHenrique-eng/ChurrasPlan/blob/208f34954033dc7bb280bdaa72194ba1e37d854c/docs/SAAS_FASE_3_BILLING_STRIPE_TEST.md)
+- [docs/SAAS_FASE_4A_CATALOGO_CAMPANHAS.md](https://github.com/ArthurHenrique-eng/ChurrasPlan/blob/208f34954033dc7bb280bdaa72194ba1e37d854c/docs/SAAS_FASE_4A_CATALOGO_CAMPANHAS.md)
+- [docs/SAAS_ROADMAP_PRS.md](https://github.com/ArthurHenrique-eng/ChurrasPlan/blob/208f34954033dc7bb280bdaa72194ba1e37d854c/docs/SAAS_ROADMAP_PRS.md)
+- [docs/STRIPE_TEST_B2B2C_SETUP.md](https://github.com/ArthurHenrique-eng/ChurrasPlan/blob/208f34954033dc7bb280bdaa72194ba1e37d854c/docs/STRIPE_TEST_B2B2C_SETUP.md)
+- [docs/VALIDACAO_V0.2.md](https://github.com/ArthurHenrique-eng/ChurrasPlan/blob/208f34954033dc7bb280bdaa72194ba1e37d854c/docs/VALIDACAO_V0.2.md)
+- [docs/VALIDACAO_V3.md](https://github.com/ArthurHenrique-eng/ChurrasPlan/blob/208f34954033dc7bb280bdaa72194ba1e37d854c/docs/VALIDACAO_V3.md)
+- [docs/VALIDACAO_V6.3.1.md](https://github.com/ArthurHenrique-eng/ChurrasPlan/blob/208f34954033dc7bb280bdaa72194ba1e37d854c/docs/VALIDACAO_V6.3.1.md)
+- [docs/VALIDACAO_V6.3.md](https://github.com/ArthurHenrique-eng/ChurrasPlan/blob/208f34954033dc7bb280bdaa72194ba1e37d854c/docs/VALIDACAO_V6.3.md)
+- [docs/VALIDACAO_V6.4.md](https://github.com/ArthurHenrique-eng/ChurrasPlan/blob/208f34954033dc7bb280bdaa72194ba1e37d854c/docs/VALIDACAO_V6.4.md)
+
+## 19. Auditoria dos 30 blocos e evolução de lançamento (11–12/10/2026)
+
+**Base:** `ac039bd`, branch `Saas-ChurrasPlan`. A primeira execução encontrou 166 testes aprovados e um teste de renovação com comparação de datetime UTC sem fuso contra horário local. A comparação foi corrigida com timezone explícito. A numeração abaixo corresponde aos BLOCOS do prompt mestre, não às numerações históricas de fases.
+
+**Critério de conclusão técnica de cada linha:** código integrado, autorização no backend, migration/schema coerentes, teste de aceitação e documentação. Os estados se referem ao escopo descrito na linha. “Implementado e validado” comprova o comportamento técnico na revisão, não prontidão comercial; pendências ampliadas e requisitos externos continuam explícitos. Configuração externa e resultado comercial não são inferidos dos arquivos. P0 bloqueia lançamento; P1 prepara o piloto; P2 é evolução proporcional à demanda.
+
+| Bloco | Estado da entrega | Diagnóstico na base | Evidência e solução na revisão de lançamento | Risco / prioridade | Dependência ou critério adicional |
+|---|---|---|---|---|---|
+| 01 Billing | Implementado, aguardando integração externa | Sandbox implementado | `services/billing*.py`, routers e testes: StripeClient, RAK Test, webhook autenticado e outbox opcional, reconciliação e ciclo de assinatura | Alto / P0 | Live recusado. Homologar ambiente, preços, impostos e pagamento real antes de vender |
+| 02 Entitlements | Implementado e validado | Cotas de lojas/SKUs/ofertas/equipe | `entitlements.py`: helpers centralizados, campanhas e importações mensais, locks; cotas pessoais/profissionais/assistente | Alto / P0 | Confirmar valores comerciais; quotas não são promessa de preço |
+| 03 Posicionamento | Implementado e validado | Home focada em cálculo | Home e `parceiros.html` comunicam consumidores, profissionais e mercados locais | Médio / P1 | Validar mensagem com entrevistas reais |
+| 04 Planos | Parcialmente implementado | Free/Premium pessoal e Free/Pro/Business empresarial | Preservados, sem criar Prices fictícios; ferramentas profissionais com limites gratuitos e benefícios Premium | Médio / P1 | Plano profissional separado e anuais exigem aprovação comercial |
+| 05 Multi-tenant | Implementado e validado | Organizações/equipe/filiais/RBAC | Queries por tenant preservadas; transferência com senha, confirmação e membro ativo, auditada | Alto / P0 | Papéis existentes proprietário/gestor/editor/leitor mantidos; restrição individual por filial depende de necessidade validada |
+| 06 Leads/CRM | Implementado e validado | Ausente | `models/growth.py`, `routers/growth.py`: interesse público, anti-spam, UTM limitada, pipeline, atividades e vínculo com organização | Médio / P1 | Atendimento e recrutamento são humanos; não enviar promoções sem preferência |
+| 07 SEO | Implementado, aguardando integração externa | Incompleto | `build_seo.py`, robots/sitemap, 8 guias originais, canonical/OG/JSON-LD; exemplos derivados do motor | Médio / P1 | Executar build com domínio real; local/staging permanecem noindex |
+| 08 Referral | Implementado e validado | Não instrumentado | Indicações com opt-in, códigos aleatórios, atribuição de cadastro consentida e totais sem identidade dos indicados | Médio / P1 | Não transforma RSVP em contato promocional |
+| 09 Analytics | Implementado e validado | Interações simples | Catálogo allowlist, deduplicação, eventos transacionais, quatro funis agregados por contexto/ordem e retenção de planejamentos salvos | Médio / P1 | Consentimento reduz cobertura; não chamar essas contagens de censo de visitantes |
+| 10 IA na engenharia | Implementado e validado | Sem instrução central | `AGENTS.md`, instruções Copilot, contribuição e templates protegem cálculos, migrations, CSRF, MFA, tenant e preços | Médio / P1 | Revisões humanas permanecem necessárias |
+| 11 Supply chain | Implementado e validado | pip-audit/Bandit/CodeQL/Dependabot | Preservados; actions fixadas por SHA e estratégia de atualização documentada | Alto / P0 | Confirmar scanners e permissões efetivas do GitHub; imagem deve ser auditada no CI |
+| 12 Proteção de branch | Bloqueado | Ruleset sem branches/checks | Leitura real do ruleset 23958344: `include=[]` e `required_status_checks=[]`; candidato preservado em `deploy/github-ruleset.json` | Alto / P0 | Aplicação requer revisão do proprietário; regras de restrição de update/creation e assinaturas podem bloquear merges sem bypass apropriado |
+| 13 Assistência no produto | Parcialmente implementado | Ausente | Extração local, contrato de provedor simulado, schema estrito, fallback, cotas, minimização e confirmação; resultado calculado pelo motor | Médio / P1 | LLM externo não configurado. Selecionar provedor, credencial, timeout e orçamento antes de ativar |
+| 14 Observabilidade | Parcialmente implementado | Headers/request IDs | JSON sem corpos/URLs/segredos, request IDs validados, métricas HTTP p50/95/99 por processo, fila/heartbeat/alertas administrativos | Alto / P0 | Coletor externo/alertas fora do painel exigem infraestrutura; quantis não são distribuídos |
+| 15 Filas | Implementado, aguardando integração externa | E-mails síncronos | Outbox cifrada, transacional, lease, retries/backoff/dead-letter e reprocessamento; webhooks assíncronos em produção | Alto / P0 | SMTP entrega ao menos uma vez; falha após envio pode gerar duplicata, nunca promessa de exactly-once |
+| 16 Geoapify | Implementado, aguardando integração externa | Timeout básico | Cache limitado, orçamento por processo, concorrência limitada, retry GET, circuit breaker, resposta limitada e coordenadas validadas | Médio / P1 | Limites são por processo; configurar quota da conta no provedor |
+| 17 Backup/restore | Parcialmente implementado | Estratégia ausente | `backup_mysql.py`: gzip/AES-256-GCM, chave independente, retenção e restore autenticado antes de importar, somente banco isolado vazio | Alto / P0 | Agendar e copiar para armazenamento independente; restauração real de produção é gate separado |
+| 18 MFA | Implementado e validado | Ausente | TOTP cifrado, replay atômico, códigos de recuperação hashed/uso único, troca com senha+segundo fator, auditoria e revogação | Alto / P0 | MFA admin obrigatório em produção; cofre da chave e recuperação assistida são operação humana |
+| 19 CSP/frontend | Implementado e validado | CSP parcial | Corrigida herança de headers em JS/CSS/imagens/SW/manifest; nenhuma página/API privada em cache; limites reais de body e Origin | Alto / P0 | Validar proxy/TLS/CSP no domínio final |
+| 20 Operação B2B | Implementado e validado | CSV/SKU/campanhas implementados | Acrescentadas prévias sem commit, cotas, feedback e transferência; preservados catálogo/categorias/ofertas/filiais | Médio / P1 | CSV é o formato inicial; XLSX/filas de catálogo somente quando volume justificar |
+| 21 Métricas comerciais | Implementado e validado | Views/cliques sem dedup | HMAC por conta/dia/loja/tipo; parceiro recebe apenas agregados; relatórios por filial preservados | Médio / P1 | Não são métricas aptas a faturamento por clique nem prova de venda |
+| 22 Marketplace | Implementado e validado | Comparação existente | Preservados motor/otimização, elegibilidade de oferta, referência estimativa e histórico | Alto / P0 | Sem e-commerce multi-loja, logística ou split; escopo do piloto é encaminhamento |
+| 23 README/Compose | Implementado e validado | Base corrigida, produção incompleta | Atualizados ambientes/keys/worker, Caddy, comandos e memória; schema SQL acompanha Alembic | Médio / P0 | Nunca executar seed demonstrativo em produção |
+| 24 Deploy | Bloqueado | Docker/TLS, sem staging comprovado | Compose com worker e segredo obrigatório; smoke/carga básica; procedimento de build SEO, migration e rollback | Alto / P0 | Domínio, TLS/SMTP, hosting, cofre, staging e smoke externos permanecem gates |
+| 25 Qualidade SaaS | Implementado e validado | 167 testes na base | Regressões existentes mais MFA, fila, privacy/growth, profissional, assistente, CSV preview, webhook durável; MySQL/Alembic/E2E | Alto / P0 | Resultados finais abaixo devem citar revisão e ambiente exatos |
+| 26 Consentimentos | Implementado, aguardando integração externa | Conta técnica existente | Marketing separado de atendimento; métricas/referral opt-in; exportação/exclusão ampliadas; retenção operacional | Alto / P0 | Bases legais, controlador, subprocessadores e retenções precisam de revisão jurídica real |
+| 27 Piloto regional | Parcialmente implementado | Onboarding existente | Landing, CRM/pipeline, checklist preservado e feedback/disposição a pagar por organização | Médio / P1 | Recrutar cerca de 5 açougues + 5 mercados reais; não cadastrar clientes fictícios |
+| 28 Fundador | Implementado e validado | Dashboard básico | Aquisição/ativação/funis/retenção/leads/assinaturas sandbox/feedback, custos e alertas; MRR/ARR/CAC/LTV/churn reais nulos | Médio / P1 | Receitas/coortes/custos reais são necessários para calcular indicadores financeiros |
+| 29 GitHub | Parcialmente implementado | Manutenção parcial | AGENTS/SECURITY/CONTRIBUTING/CODEOWNERS/PR/issues/Copilot e memória canônica | Médio / P1 | Habilitar private vulnerability reporting e confirmar proprietário/revisão |
+| 30 Arquitetura B2B2C | Implementado e validado | Consumer/Business existentes | Professional integrado com dados próprios, propostas e snapshot; serviços Core compartilhados sem reconstrução | Alto / P0 | Monólito modular mantido; provedores externos opcionais continuam explícitos |
+
+### 19.1 Migrations e reversão
+
+- `0018`: MFA/sessão, recuperação, contadores e fila cifrada; índices de consumo e tarefas prontas. Não altera usuários existentes. Downgrade apaga somente novas credenciais/tarefas e a data MFA; exportar antes de reverter.
+- `0019`: leads/atividades, eventos mínimos, indicações/atribuição, feedback e custos; índices de status/tempo/titularidade e unicidade de dedup. Sem backfill artificial. Downgrade remove os novos dados de growth.
+- `0020`: clientes e propostas pessoais, snapshots imutáveis, favoritos e lembretes; chave idempotente por usuário e FKs de titularidade. Downgrade não remove churrascos/assinaturas.
+- `0021`: consumo diário do assistente, sem persistir prompts. Chave composta por usuário/dia, serializada pelo lock do usuário.
+- `0022`: titularidade nullable na outbox e HMAC nullable único nas métricas. Mantém registros legados; cascata para tarefas pessoais e deduplicação para novas interações. Reversão preserva tarefas/métricas e remove somente as colunas novas.
+- `0023`: EAN deixa de ser globalmente único e passa a ter unicidade por organização; índice global não exclusivo para consulta. Mantém IDs/ofertas e EANs legados. Downgrade recusa duplicatas entre tenants em vez de apagar dados. Testes cobrem compartilhamento entre empresas e colisão dentro do mesmo tenant.
+
+### 19.2 Contratos novos e comportamento
+
+MFA: `GET /api/auth/mfa/status`; `POST /configurar` (senha), `/ativar` (TOTP), `/verificar` (TOTP/recuperação), `/substituir` (senha+segundo fator), `/revogar` (não permitido ao admin quando MFA é obrigatório). As mutações exigem CSRF. As demais APIs falham com `MFA_NECESSARIO` antes da verificação. A UI guia o usuário para `seguranca.html`, inclusive no login privilegiado.
+
+Growth: `POST /api/growth/leads` retorna resposta genérica; honeypot e limites não expõem existência de contato. `POST /api/growth/eventos` aceita somente eventos públicos allowlisted e consentimento explícito. `POST /indicacoes` fornece link de aquisição sem dados privados de eventos. `GET/PATCH /api/admin/growth/leads`, `/dashboard`, `POST /custos` exigem admin e MFA quando aplicável.
+
+Professional: `/api/profissional/clientes`, `/propostas`, `PATCH /propostas/{id}`, `GET /propostas/{id}/pdf`. Cota Free 3 clientes/5 propostas, Premium amplia e autoriza PDF. Proposta exige todos os preços, cliente/evento do mesmo titular e chave idempotente. Margem = `(preco_proposto - custo_estimado) / preco_proposto × 100`; é estimativa, não lucro realizado/documento fiscal. Snapshots não são reescritos ao editar o planejamento.
+
+Retenção: `/api/retencao/favoritos`, `/lembretes`; lembrete somente solicitado, com timezone e data futura até 90 dias, cancelável e sem promoções. Exportação inclui dados profissionais e lembretes. Exclusão cancela/remove tarefas pessoais e exige transferir/encerrar organizações que ainda dependam do proprietário.
+
+Operação: `/api/admin/operacao/metricas`, `/tarefas`, `POST /tarefas/{id}/reprocessar`; nenhuma resposta contém payload da fila. Heartbeat/fila são compartilhados no DB; HTTP/quantis/cache/circuit breaker são por processo. Worker realiza manutenção de retenção: eventos de segurança 7 dias, rate counters 1 dia, analytics/assistente/métricas 90 dias, leads não convertidos 180 dias, lembretes antigos e tarefas concluídas/canceladas 7 dias. Ajustar retenções à operação real e revisar juridicamente.
+
+Prévia CSV: use os endpoints existentes com `?previa=true`; todos os inserts/upserts são revertidos e nenhuma quota mensal/importação é persistida. Os commits normais mantêm compatibilidade e idempotência.
+
+### 19.3 Gates de lançamento e operação
+
+1. **Preparar staging:** banco separado, `AUTO_CREATE_SCHEMA=false`, Alembic, sem seed demonstrativo, domínio/origens/hosts explícitos, HTTPS e secrets fora do Git.
+2. **Gerar metadados:** `python scripts/build_seo.py --base-url https://DOMINIO_REAL`. Por padrão, arquivos locais/staging usam noindex. Depois validar robots/sitemap/canonical e ausência de URLs locais no build produtivo.
+3. **Cofre:** definir `SECURITY_PEPPER`, `DATA_ENCRYPTION_KEY` compartilhada API/worker e `BACKUP_ENCRYPTION_KEY` independente. Nunca perder chaves cifradas em backups. Gerar chaves fora de logs/repositório.
+4. **SMTP/worker/MFA:** verificar cadastro/reset/convite com entrega real, outbox/dead-letter/reprocessamento e segundo fator em todas as contas administrativas. Trocar autenticador exige senha + fator/código de recuperação.
+5. **Gateway:** Caddy encaminha `/api/*` diretamente ao backend e demais rotas ao Nginx. Isso preserva HTTPS no backend e evita o loop causado por reescrever `X-Forwarded-Proto` para HTTP no segundo proxy. Banco/backend não expõem portas públicas no Compose produtivo.
+6. **Billing:** defaults desligados, chaves `sk_test_`/`rk_test_` e webhook Test. Não inserir Live nesta revisão; é um gate explícito de implementação/homologação, com preços, contratos e requisitos fiscais. Sandbox nunca vira receita real no dashboard.
+7. **Backup:** agendar diariamente `python scripts/backup_mysql.py backup --directory CAMINHO_INDEPENDENTE --retention-days 14`, copiar ciphertext+manifest para armazenamento independente e guardar chave em cofre. Meta inicial RPO 24h/RTO 4h é hipótese operacional, não SLA medido. Restaurar em DB vazio `churrasplan_restore_*`, validar tag, Alembic, contagens, app e apenas então planejar recuperação produtiva.
+8. **Smoke/carga:** `python scripts/smoke.py https://DOMINIO_REAL`; carga básica `python scripts/load_smoke.py https://STAGING --requests 30 --concurrency 3`. A carga usa calculadora sem persistência, nunca checkout ou mutações financeiras.
+9. **Entrega:** backup antes da migration; rodar upgrade uma vez sob coordenação; trocar imagens, smoke e monitorar. Rollback de aplicação usa imagens anteriores identificadas por commit. Downgrade de schema que apaga dados exige exportação/plano de reversão; não executá-lo automaticamente em produção.
+10. **GitHub:** revisar `deploy/github-ruleset.json` na interface/API da conta. A configuração inclui main e checks reais, preserva regras existentes; avaliar bypass e restrições de update/creation para evitar bloqueio permanente. Não foi aplicada silenciosamente.
+11. **Legal/comercial:** definir responsável/controlador e contatos, revisar políticas/contratos/LGPD/subprocessadores/tributos, recrutar parceiros reais, conferir ofertas e registrar disposição a pagar. Controles técnicos e testes não substituem essas decisões.
+
+### 19.4 Evidências desta execução
+
+Os resultados locais da revisão estão registrados na seção 19.5. Os resultados do GitHub Actions devem citar o commit exato e o ambiente; não reutilizar um pipeline anterior como comprovação de uma revisão posterior.
+
+`0023` preserva IDs/ofertas e troca unicidade global do EAN por unicidade dentro do tenant; novas entradas validam GTIN e dígito verificador. O downgrade bloqueia quando EANs já são compartilhados entre empresas, sem apagar registros. EANs legados inválidos não são apagados automaticamente.
+
+Cenários financeiros em `/api/admin/growth/cenarios` usam hipóteses fornecidas pelo administrador; custos ficam consultáveis por competência em `/custos`. A simulação não cria clientes, assinaturas ou receita. Leads fornecem ao administrador um link de descadastro para incluir em mensagens autorizadas; o descadastro não é revertido pelo reenvio anônimo do formulário. Alterar a preferência autenticada da conta também atualiza o lead do mesmo e-mail. Não reutilizar os números antigos ou um CI de outro commit como evidência de prontidão. O estado correto até esses gates é **pré-lançamento/piloto**, não produção comercial certificada.
+
+Datas de API sem offset em campos de timestamp conhecidos são UTC e normalizadas com `Z` no cliente. Offsets explícitos e campos textuais são preservados. Isso evita exibir eventos/expiração de assinatura três horas fora do horário no Brasil. MySQL dos ambientes Docker usa `+00:00`.
+
+O proprietário pode encerrar uma organização gratuita com senha+confirmação; isso desativa lojas/ofertas e membros e permite excluir a conta. Organização com assinatura existente exige confirmação do término remoto. Logs de acesso Nginx/Uvicorn produtivos são desativados para não registrar query strings com tokens. Erros frontend usam catálogo técnico mínimo, sem mensagens, stack, URLs ou PII, separado de analytics.
+
+Liveness tem limite em memória por processo para continuar funcionando sem DB. As demais rotas usam limite persistido/atômico; readiness confirma o banco e falha com 503 quando indisponível. Limites mais estritos se aplicam a autenticação e ações sensíveis.
+
+### 19.5 Evidência local fechada e limites de prontidão
+
+Ambiente: Python 3.12, MySQL **8.0.46 real** isolado, Chromium **143.0.7499.4**, Nginx 1.24 usado na QA local. CI utiliza MySQL 8.4 e as imagens versionadas do repositório; são ambientes distintos.
+
+- Backend: **213 aprovados** na suíte completa, incluindo consentimento, propriedade, encerramento, telemetria e transporte Stripe; testes críticos suplementares também aprovados. O CI da entrega permanece o gate da revisão publicada.
+- MySQL: **13 aprovados**, `alembic check` sem operações pendentes, migração do parceiro/loja/oferta legado, downgrade até 0008 e upgrade até 0024, backfill conferido.
+- Navegador: **13 fluxos aprovados**, incluindo os anteriores e mobile/lead, MFA, assistente com confirmação e analytics opt-in.
+- Frontend: **35 HTML** e JavaScript/SW verificados, testes Node de formulários/catálogos/tenants/operação/CSP/billing e datas UTC aprovados.
+- Smoke: health/readiness/home/parceiros/robots/sitemap/manifest aprovados. Carga básica de 30 requests, concorrência 3, sem gravar eventos: mediana aproximada 25 ms e p95 aproximado 40 ms no ambiente isolado, **não um SLA de produção**.
+- Restore: backup gzip/AES-256-GCM restaurado em banco vazio `churrasplan_restore_ci`, tag validada antes do SQL, Alembic e contagens de usuários/eventos/produtos/outbox/versionamento conferidos. Não comprova backup remoto ou recuperação de produção.
+- QA visual: desktop 1440 e mobile 390 sem overflow; heads CSP/nosniff conferidos em JS/CSS/logo/manifest/SW. A QA corrigiu o banner de métricas que cobria o botão do planejador e o autosave que sobrescrevia a aplicação do assistente.
+- Dependências: `pip-audit` não encontrou vulnerabilidades conhecidas; Bandit no nível alto sem achados. CodeQL/imagens/CI exigem a execução da revisão enviada ao GitHub.
+
+**Avaliação:** implementação técnica adequada para homologação/piloto controlado, com gates explícitos. Não atribuir 9–10/10 a faturamento Live, observabilidade externa, staging, backup remoto, proteção efetiva de branch ou operação comercial sem essa evidência. O próximo incremento é aplicar configuração de staging e homologar esses gates com dados e credenciais reais.
+
+### 19.6 Roadmap residual, dependências e decisões
+
+- **P0 — antes de exposição pública:** aplicar proteção efetiva de main após revisar bypass; preparar staging isolado, domínio/TLS, cofre, SMTP/worker/MFA e alertas externos; agendar backup independente e comprovar restore no ambiente; revisar políticas/contatos/requisitos legais. Para venda recorrente, implementar e homologar a ativação Live com preços, contratos e obrigações fiscais aprovados. Não usar chaves Live nesta revisão.
+- **P1 — durante piloto autorizado:** recrutar parceiros reais, medir primeira oferta/ativação/valor percebido, registrar feedback e custos reais; confirmar grade de planos, limites e periodicidade. Funis/coortes financeiras e indicadores SaaS confiáveis dependem de eventos e faturamento reais. Selecionar LLM externo apenas com provedor, credencial, custo máximo e timeout aprovados; a extração local funciona sem essa etapa.
+- **P2 — somente com evidência de demanda:** plano profissional independente e documentos personalizados, segmentação/coortes avançadas, importação XLSX/assíncrona para grandes catálogos, limites individuais por filial e agregação distribuída de métricas/quota Geoapify. Microserviços, checkout multi-loja, split e logística estão descartados nesta etapa por complexidade sem necessidade comprovada.
+
+A revisão não executou contatos comerciais, serviços pagos, alteração da proteção de main, deploy real, transações Live nem transmissão de dados a LLM. O próximo incremento executável fora deste ambiente é homologação de staging com configuração fornecida pelo proprietário. Requisitos externos não são marcados como concluídos por existir um script.
+
+### 19.7 Funis e retenção consultáveis
+
+A migration `0024` adiciona `contexto_tipo`/`contexto_hash` nullable a `eventos_produto`, com índice composto por tipo, timestamp, hash e etapa. Usa HMAC da sessão consentida por dia em B2C e do tenant em B2B; não persiste identificadores brutos nem adiciona vínculo usuário/sessão. Eventos antigos permanecem sem contexto, sem backfill artificial. O downgrade remove somente essas duas colunas e o índice, preservando os eventos. Schema SQL e testes MySQL conferem estrutura, consulta e ordem.
+
+`GET /api/admin/growth/dashboard?dias=30` oferece funis de planejamento e descoberta B2C, ativação e entrega de valor B2B. Cada etapa exige o mesmo contexto e timestamp igual/posterior ao da etapa anterior, dentro de 1–90 dias. Conversão inicial = quantidade na etapa / quantidade na primeira etapa; conversão anterior usa a etapa anterior; abandono observado = quantidade anterior − quantidade atual. Denominador zero produz `null`, não zero percentual. A resposta/painel retornam agregados, sem hashes ou identidades. Primeira impressão/clique B2B são registrados transacionalmente somente para lojas próprias ativas/verificadas; cada tenant gera uma vez por evento na janela de retenção.
+
+B2C conta sessões consentidas por dia, não pessoas. A deduplicação por etapa/dia não distingue vários planejamentos na mesma sessão; entradas diretas, etapas anteriores à janela e jornadas entre dias não entram no mesmo funil. Cadastros, leads e billing são contagens operacionais separadas: não inferir vínculo entre um visitante consentido e uma conta ou empresa. Eventos de trial/upgrade/downgrade são observados no estado remoto reconciliado; billing continua Test, sem inferir receita ou prova de pagamento real.
+
+Retenção de planejamentos salvos = contas atualmente ativas que criaram planejamento em ambas as janelas consecutivas / contas atualmente ativas com planejamento na janela anterior. Retorna base, contas atuais, retornos, percentual e média de planejamentos por conta com evento no período. Contas excluídas não são identificadas. Essa métrica não mede visitas, RSVP, edições, satisfação ou churn financeiro. Coortes financeiras avançadas permanecem dependentes de dados comerciais reais.
+
+### 19.8 Evidência de entrega no GitHub
+
+**Código testado:** commit `8b3112a48bd7d271a858a1925e59c982043d6434`, branch `Saas-ChurrasPlan`, API 6.10.0, Alembic `20261012_0024`.
+
+| Verificação | Resultado | Evidência |
+|---|---|---|
+| CI principal | Success em todos os seis jobs | [Run 38195317834](https://github.com/ArthurHenrique-eng/ChurrasPlan/actions/runs/38195317834) |
+| Backend SQLite | 213 aprovados; 2 avisos de depreciação conhecidos de Starlette/httpx/anyio | Job Backend unit/integration (SQLite), no run acima |
+| MySQL 8.4 real | 13 aprovados; Alembic sem drift; downgrade até 0008/upgrade 0024 e backfill legado aprovados | Job MySQL 8 real + Alembic |
+| Frontend/SEO/schema | Checks Node/HTML/CSP/datas e geração determinística aprovados; 53 tabelas alinhadas ao ORM | Jobs Frontend static checks e Backend unit/integration |
+| Docker/headers | Compose, build de backend/frontend, configuração Nginx e CSP/nosniff nos assets aprovados | Job Docker configuration and images |
+| E2E | Todos os 13 fluxos aprovados em Chromium/MySQL no CI | Job E2E Chromium + MySQL |
+| Segurança estática | pip-audit e Bandit aprovados | Job Security audit |
+| CodeQL | Success em Python e JavaScript/TypeScript | [Run 38195317935](https://github.com/ArthurHenrique-eng/ChurrasPlan/actions/runs/38195317935) |
+| Imagens de aplicação | Success em backend e frontend; bloqueia vulnerabilidades HIGH/CRITICAL com correção disponível | [Run 38195317810](https://github.com/ArthurHenrique-eng/ChurrasPlan/actions/runs/38195317810) |
+
+O primeiro scan encontrou correções Alpine disponíveis para libexpat, pcre2 e tiff na imagem Nginx. `apk upgrade --no-cache` na construção aplica essas atualizações; o scan repetido passou. Isso não certifica ausência de vulnerabilidades desconhecidas ou de severidades não abrangidas pelo gate. O CI inicial também revelou duas incompatibilidades nos testes novos: cadastro direto na origem estática sem proxy e expectativa de nome completo em uma saudação que usa somente o primeiro nome. Foram corrigidas no teste sem alterar o contrato do produto; os fluxos posteriores passaram.
+
+QA adicional do painel do fundador: quatro funis e retenção renderizados em 1440/390 px, sem erros de JavaScript ou overflow horizontal do documento; tabelas mantêm rolagem interna em telas estreitas. Base sintética isolada usada somente para QA, sem representar clientes reais. Backup/restore permanece comprovado no ambiente local isolado da seção 19.5.
+
+**Estado final:** código entregue e verificações técnicas aprovadas para homologação/piloto. Os requisitos P0 externos da seção 19.3 continuam obrigatórios antes de lançamento comercial; os runs acima não validam SMTP/TLS/backup remoto, faturamento Live, proteção aplicada de main, operação jurídica ou recrutamento de parceiros.

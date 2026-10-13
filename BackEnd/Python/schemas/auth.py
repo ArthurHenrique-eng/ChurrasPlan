@@ -9,6 +9,8 @@ class RegistroUsuarioIn(BaseModel):
     aceite_termos: bool = False
     aceite_privacidade: bool = False
     aceite_marketing: bool = False
+    aceite_analytics: bool = False
+    referral_codigo: str | None = Field(None, max_length=48, pattern=r"^[A-Za-z0-9_-]+$")
 
     @field_validator("email")
     @classmethod
@@ -17,8 +19,8 @@ class RegistroUsuarioIn(BaseModel):
 
 
 class LoginIn(BaseModel):
-    email: str
-    senha: str
+    email: str = Field(min_length=5, max_length=160)
+    senha: str = Field(min_length=1, max_length=128)
 
 
 class UsuarioOut(BaseModel):

@@ -5,6 +5,10 @@ function authMensagem(texto, tipo = "aviso") {
 function parametroNext() { return ChurrasPlanAuth.destinoSeguro(new URLSearchParams(location.search).get("next"), "minha-conta.html"); }
 async function aposAutenticar() {
     ChurrasPlanAuth.limparCache();
+    try {
+        const mfa = await requisitar('/api/auth/mfa/status');
+        if (mfa.ativo || mfa.obrigatorio) { irPara('seguranca.html?next=' + encodeURIComponent(parametroNext())); return; }
+    } catch { /* A API continua validando o MFA em cada operação. */ }
     try { await ChurrasPlanAuth.usuarioAtual(true); await ChurrasPlanAuth.vincularPlanejamentoAtual(); } catch { /* vínculo é melhoria, não bloqueio */ }
     irPara(parametroNext());
 }
@@ -30,6 +34,8 @@ document.addEventListener("DOMContentLoaded", async () => {
                 aceite_termos: document.getElementById("aceite-termos")?.checked === true,
                 aceite_privacidade: document.getElementById("aceite-privacidade")?.checked === true,
                 aceite_marketing: document.getElementById("aceite-marketing")?.checked === true,
+                aceite_analytics: typeof ChurrasPlanAnalytics !== 'undefined' && ChurrasPlanAnalytics.permitido(),
+                referral_codigo: (() => { try { return ChurrasPlanAnalytics.permitido() ? sessionStorage.getItem('churrasplan_referral') : null; } catch { return null; } })(),
             });
             ChurrasPlanAuth.limparCache();
             const usuario = await ChurrasPlanAuth.usuarioAtual(true).catch(() => null);

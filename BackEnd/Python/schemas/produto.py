@@ -1,11 +1,12 @@
 from typing import Optional
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator, field_validator
 
 
 class ProdutoOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
     produto_pai_id: Optional[int] = None
+    organizacao_id: Optional[int] = None
     tipo_produto: str = "generico"
     slug: str
     nome: str
@@ -28,9 +29,34 @@ class ProdutoOut(BaseModel):
     descricao: Optional[str] = None
     preco_medio_historico: Optional[float] = None
     preco_minimo_atual: Optional[float] = None
+    preco_referencia: Optional[float] = None
+    preco_referencia_data_base: Optional[str] = None
+    preco_referencia_unidade: Optional[str] = None
+
+
+class ProdutoGenericoOut(BaseModel):
+    """Opção leve do catálogo B2B, sem consultar histórico de ofertas."""
+    id: int
+    slug: str
+    nome: str
+    categoria_id: int
+    categoria_nome: str
+    categoria_tipo: str
+    venda_fracionada: bool
+    quantidade_embalagem: Optional[float] = None
+    unidade_embalagem: Optional[str] = None
+    preco_referencia: Optional[float] = None
+    preco_referencia_data_base: Optional[str] = None
+    preco_referencia_unidade: Optional[str] = None
 
 
 class ProdutoComercialCreate(BaseModel):
+    @field_validator('ean')
+    @classmethod
+    def ean_valido(cls, valor):
+        from utils.validators import validar_ean
+        return validar_ean(valor)
+
     produto_pai_id: int
     nome: str = Field(min_length=2, max_length=120)
     marca: str = Field(min_length=1, max_length=100)
@@ -46,6 +72,12 @@ class ProdutoComercialCreate(BaseModel):
 
 
 class ProdutoComercialUpdate(BaseModel):
+    @field_validator('ean')
+    @classmethod
+    def ean_valido(cls, valor):
+        from utils.validators import validar_ean
+        return validar_ean(valor)
+
     nome: Optional[str] = Field(default=None, min_length=2, max_length=120)
     marca: Optional[str] = Field(default=None, min_length=1, max_length=100)
     variante: Optional[str] = Field(default=None, max_length=120)

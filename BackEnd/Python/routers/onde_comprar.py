@@ -1,3 +1,4 @@
+from datetime import UTC, datetime
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy.orm import Session
 
@@ -11,6 +12,7 @@ from schemas.otimizacao import (
 from services.auth import usuario_atual, usuario_atual_com_csrf
 from services.geoapify import autocomplete_enderecos, buscar_proximos, buscar_tile_mapa
 from services.otimizacao import distancia_km, otimizar_compra
+from services.entitlements_usuario import exigir_premium_usuario
 
 router = APIRouter(prefix="/api/onde-comprar", tags=["onde-comprar"])
 
@@ -145,6 +147,37 @@ def comparar_churrasco_post(
     return OtimizacaoOut(churrasco_id=c.id, modo=payload.modo, **dados)
 
 
+@router.post("/churrasco/{churrasco_id}/comparacao-avancada")
+def comparacao_avancada(
+    churrasco_id: int, payload: OtimizacaoConsultaIn,
+    usuario: Usuario = Depends(usuario_atual), db: Session = Depends(get_db),
+):
+    """Indicadores Premium além do comparador básico, com ofertas verificadas."""
+    exigir_premium_usuario(db, usuario, "comparacao_avancada")
+    churrasco = _churrasco_usuario(db, churrasco_id, usuario)
+    if not churrasco.lista_compras:
+        raise HTTPException(status_code=404, detail="Lista de compras não encontrada.")
+    dados = otimizar_compra(db, churrasco.lista_compras, payload.latitude, payload.longitude, payload.modo)
+    cestas = dados["cestas"]
+    completas = [c for c in cestas if c["cobertura_percentual"] == 100]
+    ordenadas = sorted(completas, key=lambda c: c["total"])
+    custo_unica = ordenadas[0]["total"] if ordenadas else None
+    custo_multiplas = dados["compra_otimizada"]["total"]
+    return {
+        "churrasco_id": churrasco_id, "modo": payload.modo,
+        "lojas_com_ofertas": len(cestas), "lojas_com_cesta_completa": len(completas),
+        "melhor_cesta_completa": ordenadas[0] if ordenadas else None,
+        "alternativas_completas": ordenadas[:5],
+        "compra_por_multiplas_lojas": dados["compra_otimizada"],
+        "economia_potencial": (
+            round(custo_unica - custo_multiplas, 2)
+            if custo_unica is not None and custo_multiplas is not None else None
+        ),
+        "aviso": dados["aviso"],
+        "observacao": "Comparação de ofertas cadastradas; não confirma estoque ou compra realizada.",
+    }
+
+
 @router.post("/interacoes", status_code=204)
 def registrar_interacoes(
     payload: InteracaoEstabelecimentosIn,
@@ -160,13 +193,27 @@ def registrar_interacoes(
     contexto = (payload.contexto or "onde_comprar").strip()[:40] or "onde_comprar"
     if payload.churrasco_id is not None:
         _churrasco_usuario(db, payload.churrasco_id, usuario)
-    existentes = {row[0] for row in db.query(Estabelecimento.id).filter(Estabelecimento.id.in_(ids), Estabelecimento.ativo.is_(True)).all()}
+    existentes = {row.id: row for row in db.query(Estabelecimento.id, Estabelecimento.organizacao_id, Estabelecimento.parceiro_verificado).filter(Estabelecimento.id.in_(ids), Estabelecimento.ativo.is_(True)).all()}
     for estabelecimento_id in ids:
         if estabelecimento_id in existentes:
-            db.add(MetricaEstabelecimento(
-                estabelecimento_id=estabelecimento_id,
-                tipo=tipo,
-                contexto=contexto,
-            ))
+            import hashlib, hmac
+            from config import settings
+            from sqlalchemy.dialects.mysql import insert as mysql_insert
+            from sqlalchemy.dialects.sqlite import insert as sqlite_insert
+            chave = hmac.new(settings.SECURITY_PEPPER.encode(),
+                f"{usuario.id}:{datetime.now(UTC).date()}:{estabelecimento_id}:{tipo}".encode(), hashlib.sha256).hexdigest()
+            campos = dict(estabelecimento_id=estabelecimento_id, tipo=tipo, contexto=contexto, dedup_hash=chave)
+            if db.bind.dialect.name == 'mysql':
+                stmt = mysql_insert(MetricaEstabelecimento).values(**campos)
+                stmt = stmt.on_duplicate_key_update(dedup_hash=stmt.inserted.dedup_hash)
+            else:
+                stmt = sqlite_insert(MetricaEstabelecimento).values(**campos).on_conflict_do_nothing(index_elements=['dedup_hash'])
+            db.execute(stmt)
+            loja = existentes[estabelecimento_id]
+            if loja.organizacao_id and loja.parceiro_verificado:
+                from services.analytics import registrar_produto
+                evento = "primeira_impressao" if tipo == "visualizacao" else "primeiro_clique"
+                registrar_produto(db, evento, str(loja.organizacao_id), {"segmento": "b2b"},
+                    contexto=str(loja.organizacao_id), contexto_tipo="organizacao")
     db.commit()
     return None

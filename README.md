@@ -1,4 +1,4 @@
-# ChurrasPlan v6.5.0 — Geoapify + administração segura
+# ChurrasPlan SaaS B2B2C — API v6.10.0
 
 <p align="center">
   <img src="docs/assets/LogoChurrasPlan.png" alt="Ícone do ChurrasPlan" width="72" />
@@ -8,7 +8,23 @@
 
 O **ChurrasPlan** é uma plataforma Full Stack para planejar churrascos do início ao fim: convidados, quantidades, restrições alimentares, orçamento, lista/checklist de compras, preços, histórico, convites/RSVP, parceiros e otimização de onde comprar.
 
-A v6.5.0 preserva a base production-ready da v6.4 e substitui a integração Google Maps/Places por Geoapify Places, Address Autocomplete e Map Tiles, mantendo o bootstrap seguro do administrador e o pipeline completo de testes.
+A branch SaaS mantém o planejador e Geoapify e implementa organizações, entitlements, filiais, campanhas, Stripe Test para consumidores/mercados e Premium B2C. **Stripe live e comercialização ainda não foram homologados.** Leia [ChurrasPlanSaaS.md](docs/ChurrasPlanSaaS.md).
+
+## Preparação para lançamento
+
+A revisão 6.10 acrescenta MFA/TOTP e Argon2, filas duráveis para e-mails/webhooks, observabilidade, leads/CRM, analytics opcionais, indicações, SEO, ferramentas profissionais, lembretes, prévias CSV e transferência de propriedade. Os cálculos, preços e fluxos SaaS anteriores foram preservados.
+
+- Consumidor: `index.html` e planejador.
+- Parceiros: `parceiros.html` para interesse comercial; `parceiro.html` para operação.
+- Profissional: `profissional.html` para clientes e propostas.
+- Conta: `seguranca.html` para MFA e recuperação.
+- Administrador: `operacao.html` para funis, leads, custos e alertas.
+
+**Estado: pré-lançamento/piloto.** Stripe permanece Test; produção comercial exige homologação Live, domínio/TLS/SMTP, secrets, backup independente, revisão legal e gates GitHub. A auditoria dos 30 blocos, migrations, evidências e runbooks estão na seção 19 da [memória técnica](docs/ChurrasPlanSaaS.md).
+
+Antes do Compose produtivo, configure `DATA_ENCRYPTION_KEY` compartilhada entre API/worker e `BACKUP_ENCRYPTION_KEY` independente, além das variáveis existentes. Configure MFA nas contas administrativas. Gere SEO com `python scripts/build_seo.py --base-url https://SEU_DOMINIO`; a versão local/staging permanece noindex. O worker produtivo sobe automaticamente; em desenvolvimento, use `docker compose --profile worker -f docker-compose.dev.yml up --build` após configurar a chave de dados.
+
+Validação de publicação: `python scripts/smoke.py https://SEU_DOMINIO`; carga básica em staging: `python scripts/load_smoke.py https://STAGING --requests 30 --concurrency 3`. Agende backup cifrado e prove a restauração em banco isolado; não rode seeds demonstrativos em produção.
 
 ## Estado da plataforma
 
@@ -34,6 +50,9 @@ A v6.5.0 preserva a base production-ready da v6.4 e substitui a integração Goo
 - área “Onde comprar”.
 
 ### Produtos, parceiros e compras
+
+A trilha SaaS introduz organizações com papéis locais e isolamento B2B inicial. Consultas do painel usam a organização do membro; para usuários em mais de uma organização, o cabeçalho `X-Organizacao-ID` é obrigatório. **Entitlements, convites e seletor multi-org estão implementados; cobrança real continua desativada.** Veja `docs/ChurrasPlanSaaS.md` para a operação atual.
+
 - produto genérico + SKU comercial;
 - catálogo genérico amplo por categoria para parceiros: carnes, bebidas, mercearia, laticínios, padaria, hortifruti, congelados, limpeza, higiene e descartáveis;
 - marca, variante, fabricante, EAN e embalagem;
@@ -79,32 +98,15 @@ ChurrasPlan/
 ├── docs/
 ├── scripts/
 ├── .github/workflows/ci.yml
-├── docker-compose.yml
-└── docker-compose.production.yml
+├── docker-compose.dev.yml
+├── docker-compose.prod.yml  # override sobre dev; não é a stack independente
+└── docker-compose.production.yml  # stack HTTPS/Caddy independente
 ```
 
 ## Banco e Alembic
 
-O Alembic é a fonte de verdade da evolução do banco.
+O Alembic é a fonte de verdade do schema. Head atual da branch SaaS: **`20261012_0024`**, incluindo as migrations 0009 organizações, 0010 entitlements, 0011 equipe/convites, 0012 filiais/ofertas CSV, 0013 catálogo/campanhas, 0014 Billing B2B, 0015 Billing B2C, 0016 periodicidade B2B, 0017 modelos Premium pessoais, 0018 segurança/MFA/outbox, 0019 growth, 0020 ferramentas profissionais/retenção, 0021 assistente, 0022 privacidade/métricas, 0023 EAN por organização e 0024 contexto mínimo de funis. Veja [a memória técnica mestra](docs/ChurrasPlanSaaS.md) para a matriz integral, rollback e requisitos de validação.
 
-Head atual:
-
-```text
-20260925_0008
-```
-
-Cadeia:
-
-```text
-20260917_0001  baseline consistente
-20260918_0002  contas/orçamento/RSVP/SKUs/parceiros
-20260918_0003  alinhamentos de schema
-20260918_0004  métricas agregadas de estabelecimentos
-20260918_0005  LGPD, rate limiting e auditoria admin
-20260922_0006  restaura defaults de timestamps em usuarios
-20260925_0007  amplia catálogo genérico para cadastro de produtos de parceiros
-20260925_0008  garante catálogo base do planejador em toda instalação
-```
 
 `BackEnd/Python/sql/schema.sql` representa uma **instalação nova** no head atual. Para banco existente, use migrations.
 
@@ -114,7 +116,7 @@ Pré-requisito: Docker + Docker Compose.
 
 ```bash
 cp .env.docker.example .env
-docker compose up --build
+docker compose -f docker-compose.dev.yml up --build
 ```
 
 Abra:
@@ -134,7 +136,7 @@ A stack sobe MySQL 8.4, aplica migrations, garante o catálogo genérico e carre
 Os preços de desenvolvimento existem somente para exercitar orçamento, custo por pessoa e divisão. Para desabilitá-los:
 
 ```bash
-LOAD_DEMO_DATA=false docker compose up --build
+LOAD_DEMO_DATA=false docker compose -f docker-compose.dev.yml up --build
 ```
 
 Os valores de referência servem para estimativa de orçamento. Eles não são ofertas comerciais nem preços garantidos; ofertas reais cadastradas e verificadas sempre têm prioridade no cálculo.
@@ -307,6 +309,8 @@ node --check FrontEnd/sw.js
 5. build das imagens Docker e validação de compose;
 6. E2E Chromium contra MySQL real.
 
+Na trilha SaaS, a branch `Saas-ChurrasPlan` também executa os seis jobs em pushes, além de PRs. A configuração de `CodeQL` faz análise estática de Python e JavaScript; o `Dependabot` propõe atualizações de dependências via PRs direcionados à branch SaaS. As regras de proteção e aprovações obrigatórias ainda devem ser configuradas no GitHub conforme `docs/ChurrasPlanSaaS.md`.
+
 A etapa de **deploy** não está ligada a um provedor específico. Isso é intencional: primeiro deve ser definido onde staging/produção serão hospedados e como os segredos serão gerenciados.
 
 ## Produção com Docker + HTTPS
@@ -315,9 +319,11 @@ A composição recomendada é a independente:
 
 ```bash
 cp .env.production.example .env.production
-# preencha domínio e segredos
-# carregue as variáveis conforme seu ambiente
-docker compose -f docker-compose.production.yml up -d --build
+# preencha domínio, SMTP e segredos reais em .env.production (não comite este arquivo)
+chmod 600 .env.production
+# --env-file é obrigatório: Compose NÃO carrega .env.production por padrão
+docker compose --env-file .env.production -f docker-compose.production.yml config --quiet
+docker compose --env-file .env.production -f docker-compose.production.yml up -d --build
 ```
 
 Ela usa:
@@ -330,7 +336,7 @@ Caddy/HTTPS
 MySQL em rede interna
 ```
 
-Consulte [`docs/ChurrasPlanSaaS.md`](docs/ChurrasPlanSaaS.md), a memória técnica mestra da plataforma.
+Veja `docs/ChurrasPlanSaaS.md`.
 
 ## Geoapify
 
@@ -352,12 +358,14 @@ Sem a chave de servidor, a página continua funcional com os estabelecimentos ca
 Ainda exigem credenciais reais:
 - SMTP para verificação/reset de e-mail;
 - Geoapify conforme configuração acima;
-- eventual provedor de pagamento, ainda não conectado.
+- Stripe TEST configurável no servidor, sem produção live habilitada.
 
 Preços de referência do planejador são **estimativas nacionais de orçamento**, não ofertas comerciais nem preços garantidos. Quando há oferta real/verificada para um item, ela substitui a referência no cálculo.
 
-## Documentação consolidada
+## Documentação centralizada
 
-Toda a memória técnica do projeto (arquitetura, regras de negócio, banco, frontend, segurança, integrações, histórico e roadmap) está centralizada em **[docs/ChurrasPlanSaaS.md](docs/ChurrasPlanSaaS.md)**.
+O arquivo **[docs/ChurrasPlanSaaS.md](docs/ChurrasPlanSaaS.md)** é o único Markdown atual em `docs/`. Ele reúne arquitetura, regras matemáticas, segurança, banco, deploy, SaaS B2B2C, organizações, Stripe TEST, Premium, campanhas, catálogo, evidências, roadmap e links permanentes para as **35 notas históricas**. As imagens `docs/assets/` foram preservadas.
 
-As 21 notas técnicas antigas foram incorporadas ao documento canônico; o histórico das versões originais continua acessível nos commits anteriores do Git. As duas imagens em docs/assets/ foram preservadas.
+Para contribuir, examine o código da branch `Saas-ChurrasPlan`, execute os testes/CI e atualize esse arquivo em vez de criar notas paralelas. Não enviar commits para `main` sem autorização explícita.
+
+**B2C Free:** até 5 eventos novos salvos. **B2C Premium TEST reconciliado:** eventos ilimitados, modelos, relatórios, PDF/CSV e comparação avançada. **Mercados:** Free/Pro/Business com quotas por organização. Valores mensais-alvo do Sandbox: Premium pessoal R$ 9,90, Mercado Básico R$ 49,90, Mercado Pro R$ 99,90. Somente Price Stripe Test validado e webhook reconciliado liberam direito.
