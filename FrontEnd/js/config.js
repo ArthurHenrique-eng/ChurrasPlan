@@ -6,6 +6,11 @@ const API_BASE_URL = (() => {
     const { protocol, hostname, port } = window.location;
     if (protocol === "file:") return "http://127.0.0.1:8000";
 
+    // Produção no Vercel usa a API FastAPI hospedada no Render.
+    // O override global/meta continua disponível para outros ambientes.
+    const isVercelProduction = hostname === "churrasplan.vercel.app" || hostname.endsWith(".vercel.app");
+    if (isVercelProduction) return "https://churrasplan-api.onrender.com";
+
     // Desenvolvimento local: frontend costuma ser servido em 5500/5501 e a
     // API em 8000. Em produção, usa caminho relativo /api no mesmo domínio,
     // permitindo reverse proxy sem editar o JavaScript.
