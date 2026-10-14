@@ -2,7 +2,13 @@ function authMensagem(texto, tipo = "aviso") {
     const el = document.getElementById("auth-message");
     if (el) mostrarMensagem(el, texto, tipo);
 }
-function parametroNext() { return ChurrasPlanAuth.destinoSeguro(new URLSearchParams(location.search).get("next"), "minha-conta.html"); }
+function parametroNext() {
+    const solicitado = new URLSearchParams(location.search).get("next");
+    // Entrar pelo menu público sempre abre a conta; só preservamos destinos
+    // específicos quando uma página protegida os solicitou explicitamente.
+    if (!solicitado || solicitado === "index.html") return "minha-conta.html";
+    return ChurrasPlanAuth.destinoSeguro(solicitado, "minha-conta.html");
+}
 async function aposAutenticar() {
     ChurrasPlanAuth.limparCache();
     try {
