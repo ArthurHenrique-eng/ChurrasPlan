@@ -152,14 +152,18 @@ def criar_sessao(db: Session, usuario: Usuario, request: Request, response: Resp
     db.add(sessao)
     usuario.ultimo_login_em = agora()
     db.flush()
+    # Vercel e Render possuem origens diferentes. Em produção, SameSite=None
+    # é necessário para que o navegador envie o cookie nas chamadas fetch
+    # autenticadas entre os dois domínios; COOKIE_SECURE já exige HTTPS.
+    same_site = "none" if settings.APP_ENV == "production" else "lax"
     response.set_cookie(
         settings.SESSION_COOKIE_NAME, segredo,
-        httponly=True, secure=settings.COOKIE_SECURE, samesite="lax",
+        httponly=True, secure=settings.COOKIE_SECURE, samesite=same_site,
         max_age=settings.SESSION_DAYS * 86400, path="/",
     )
     response.set_cookie(
         settings.CSRF_COOKIE_NAME, csrf,
-        httponly=False, secure=settings.COOKIE_SECURE, samesite="lax",
+        httponly=False, secure=settings.COOKIE_SECURE, samesite=same_site,
         max_age=settings.SESSION_DAYS * 86400, path="/",
     )
 

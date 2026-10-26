@@ -27,7 +27,7 @@ const ChurrasPlanAuth = (() => {
         } catch { return fallback; }
     }
 
-    function urlLogin(next = window.location.pathname.split("/").pop() || "index.html") {
+    function urlLogin(next = "minha-conta.html") {
         return `login.html?next=${encodeURIComponent(destinoSeguro(next, "index.html"))}`;
     }
 
