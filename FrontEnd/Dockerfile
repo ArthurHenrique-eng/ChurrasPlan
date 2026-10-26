@@ -1,4 +1,4 @@
-FROM nginx:1.31.6-alpine
+FROM nginx:1.31.7-alpine
 # Apply Alpine security fixes released after the upstream image was built.
 RUN apk upgrade --no-cache
 COPY security-headers.conf /etc/nginx/snippets/churrasplan-security.conf
