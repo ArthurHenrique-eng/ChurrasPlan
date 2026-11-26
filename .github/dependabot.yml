@@ -1,42 +1,65 @@
 version: 2
+
+# Todas as atualizações abrem PR contra a branch padrão do repositório (main):
+# nenhuma entrada define target-branch.
+#
+# Para reduzir o volume de PRs e branches:
+# - atualizações minor/patch são agrupadas por ecossistema em um único PR;
+# - versões major continuam em PRs individuais, para revisão manual;
+# - imagens Docker são verificadas mensalmente, porque os Dockerfiles já
+#   aplicam as correções de segurança do sistema operacional no build.
 updates:
   - package-ecosystem: pip
     directory: "/BackEnd/Python"
-    target-branch: Saas-ChurrasPlan
     schedule:
       interval: weekly
       day: monday
       time: "09:00"
       timezone: America/Sao_Paulo
     open-pull-requests-limit: 5
+    groups:
+      # O FastAPI fixa a faixa de versões aceitas do Starlette; atualizá-los
+      # separadamente gera PRs que não podem ser mesclados.
+      fastapi-stack:
+        patterns:
+          - "fastapi"
+          - "starlette"
+      python-minor-patch:
+        update-types:
+          - "minor"
+          - "patch"
 
   - package-ecosystem: github-actions
     directory: "/"
-    target-branch: Saas-ChurrasPlan
     schedule:
       interval: weekly
       day: monday
       time: "09:00"
       timezone: America/Sao_Paulo
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 3
+    groups:
+      # Todas as actions em um único PR. Em especial, init e analyze do
+      # github/codeql-action precisam estar sempre na mesma versão.
+      github-actions:
+        patterns:
+          - "*"
 
   - package-ecosystem: docker
-    directory: "/BackEnd/Python"
-    target-branch: Saas-ChurrasPlan
+    directories:
+      - "/BackEnd/Python"
+      - "/FrontEnd"
     schedule:
-      interval: weekly
-    open-pull-requests-limit: 3
-
-  - package-ecosystem: docker
-    directory: "/FrontEnd"
-    target-branch: Saas-ChurrasPlan
-    schedule:
-      interval: weekly
-    open-pull-requests-limit: 3
-
-  - package-ecosystem: docker
-    directory: "/"
-    target-branch: Saas-ChurrasPlan
-    schedule:
-      interval: weekly
-    open-pull-requests-limit: 3
+      interval: monthly
+      timezone: America/Sao_Paulo
+    open-pull-requests-limit: 2
+    groups:
+      docker-images:
+        patterns:
+          - "*"
+    ignore:
+      # Trocar a versão do Python exige validar wheels das dependências
+      # (ex.: pydantic-core não compila no 3.15-slim). Fazer manualmente.
+      - dependency-name: "python"
+        update-types:
+          - "version-update:semver-major"
+          - "version-update:semver-minor"

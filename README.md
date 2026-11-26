@@ -309,7 +309,7 @@ node --check FrontEnd/sw.js
 5. build das imagens Docker e validação de compose;
 6. E2E Chromium contra MySQL real.
 
-Na trilha SaaS, a branch `Saas-ChurrasPlan` também executa os seis jobs em pushes, além de PRs. A configuração de `CodeQL` faz análise estática de Python e JavaScript; o `Dependabot` propõe atualizações de dependências via PRs direcionados à branch SaaS. As regras de proteção e aprovações obrigatórias ainda devem ser configuradas no GitHub conforme `docs/ChurrasPlanSaaS.md`.
+Na trilha SaaS, a branch `Saas-ChurrasPlan` também executa os seis jobs em pushes, além de PRs. A configuração de `CodeQL` faz análise estática de Python e JavaScript; o `Dependabot` propõe atualizações de dependências via PRs direcionados à `main` (minor/patch agrupados por ecossistema, majors em PRs individuais e imagens Docker mensais; veja `.github/dependabot.yml`). As regras de proteção e aprovações obrigatórias ainda devem ser configuradas no GitHub conforme `docs/ChurrasPlanSaaS.md`.
 
 A etapa de **deploy** não está ligada a um provedor específico. Isso é intencional: primeiro deve ser definido onde staging/produção serão hospedados e como os segredos serão gerenciados.
 

@@ -5,6 +5,10 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1
 
 WORKDIR /app
+# Apply Debian security fixes released after the upstream image was built.
+RUN apt-get update \
+    && apt-get upgrade -y --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/*
 RUN addgroup --system churrasplan && adduser --system --ingroup churrasplan churrasplan
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
