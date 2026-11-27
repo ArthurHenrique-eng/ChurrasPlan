@@ -551,7 +551,7 @@ QA adicional do painel do fundador: quatro funis e retenção renderizados em 14
 ### 20.1 Direção visual
 
 - A linguagem vem do próprio churrasco: brasa e carvão, papel kraft de açougue e a comanda de balcão. Os tokens ficam em `css/ds.css`: `--brasa-*` (ação principal, `#a62210`), `--vinho-*`, `--kraft-*` (superfícies quentes), `--carvao-*` (texto e áreas escuras), `--fumaca-*` (texto secundário), `--aco-*` (informação), `--erva-*` (sucesso), `--brilho-*` (atenção) e `--perigo-*` (erro).
-- Uma família tipográfica: Archivo variável (`fonts/archivo-latin-var.woff2`, pesos 400–800, larguras 75–100%, SIL OFL 1.1 em `fonts/Archivo-LICENSE.txt`). Quantidades e preços em destaque usam `.tag-number` (largura 75%, peso 800, algarismos tabulares), como numa etiqueta de balança. Rótulos em caixa de frase, sem caixa alta.
+- Uma família tipográfica: Archivo variável (`fonts/archivo-latin-var.woff2`, pesos 400–800, larguras 75–100%, SIL OFL 1.1 em `fonts/Archivo-LICENSE.txt`). Quantidades e preços em destaque usam `.tag-number` (largura 75%, peso 800, algarismos tabulares), como numa etiqueta de balança. Rótulos em caixa de frase, sem caixa alta. A fonte não é pré-carregada: o primeiro desenho usa as faces `Archivo Fallback` (Arial, Liberation Sans ou Arimo locais com `size-adjust` e métricas medidas no Chromium com o texto real das páginas), e a troca pela Archivo não muda as quebras de linha.
 - Elemento de assinatura: a comanda (`.ticket`, borda serrilhada por máscara; a sombra fica no invólucro `.ticket-shadow`) com listras de grelha (`--grill`). Aparece no resultado, na lista de compras, no convite, nos exemplos dos guias e na página de parceiros; o restante da interface fica sóbrio.
 - Movimento só responde a ações (menu, valor que muda, aviso, impressão da comanda). `@media (prefers-reduced-motion: reduce)` em `ds.css` neutraliza animações e transições.
 
@@ -585,6 +585,11 @@ QA adicional do painel do fundador: quatro funis e retenção renderizados em 14
 
 **Removido:** os 13 CSS anteriores (`style`, `index`, `planejamento`, `carnes`, `bebidas`, `extras`, `resultado`, `planos`, `saas`, `integracao-v3`, `production-v63`, `unified-core`, `unified-home`) e as fontes DM Sans, Lora e Manrope. Nenhum arquivo do repositório as referencia.
 
+**Estabilidade e desempenho (revisão final):**
+- Conteúdo que o script monta depois do primeiro desenho tem espaço reservado: `.steps:empty` (etapas), `.lista-carnes:empty`, vagas `.item-placeholder` no HTML das listas de bebidas e extras (uma por item do catálogo), esqueleto 6 + 1 na grade de indicadores da operação, `#fundador-limitacoes:empty` e `.app-main.workspace { min-height: 100vh }` nos painéis, que mantém o rodapé abaixo da dobra.
+- Até 380 px, `.btn` quebra o rótulo em vez de alargar a página (barra fixa do planejamento em 320 px).
+- Acessibilidade: as áreas roláveis das tabelas da administração têm nomes próprios (`Tabela de usuários`, `Tabela de estabelecimentos`) e as tabelas de funis da operação ganharam `tabindex="0"`, `role="region"` e nome, para rolagem por teclado.
+
 **Service worker `churrasplan-v7.0.0`:** pré-carrega `ds.css`, os CSS das páginas seguras (home, planner, content), a fonte Archivo, os logos WebP e `ui.js`; a ativação apaga os caches `churrasplan-*` anteriores. `scripts/validate_frontend.py` falha quando um caminho de `STATIC_ASSETS` ou `SAFE_PAGES` não existe (um único ausente impede a instalação) e quando um link `pagina.html#ancora` aponta para id inexistente. No CI, a checagem de cabeçalhos do Nginx usa `ds.css`, o logo WebP e a fonte.
 
 ### 20.4 Regras para novas telas
@@ -596,13 +601,18 @@ QA adicional do painel do fundador: quatro funis e retenção renderizados em 14
 5. `ds.css` aplica `li + li { margin-top: .25em }`; listas em grid devem zerar essa margem.
 6. Página nova em `SAFE_PAGES` precisa ter seu CSS em `STATIC_ASSETS`; o validador confere se os arquivos existem.
 7. Conferir 320, 390 e 1440 px sem rolagem horizontal, foco visível por teclado e `prefers-reduced-motion`.
+8. Conteúdo montado por script não pode empurrar o que já está na tela: reservar a altura final (vagas no HTML ou `:empty` com `min-height`).
+9. Não pré-carregar a fonte. As faces `Archivo Fallback` cobrem a troca; um peso ou largura novo precisa caber nas faixas delas.
 
 ### 20.5 Evidências (27/11/2026, ambiente local)
 
 - Checks do job Frontend static checks (`node --check`, datas, origem da API, `validate_frontend.py`, coordenadas, parceiro, CSP): todos aprovados.
 - Páginas redesenhadas conferidas no Chromium em 1440 e 390 px, sem rolagem horizontal até 320 px. Fluxos manuais incluídos: planos com aviso de checkout cancelado; convite com RSVP "talvez", restauração após recarregar e estado sem código; onde comprar sem mapa; páginas legais com menu móvel e preferências de cookies; "Tentar novamente" da página offline.
 - Service worker: instala com 19 entradas; com a rede desligada, `privacidade.html` abre do cache já estilizada e `/guias/index.html` e `/admin.html` caem em `offline.html` estilizada.
-- Limite: o CDN do MapLibre é bloqueado neste ambiente, então mapa, tiles e popups reais não foram verificados; só o estado sem mapa.
+- Acessibilidade: axe-core 4.10.2 (WCAG 2.0/2.1/2.2 A e AA e boas práticas) em 28 páginas, a 1440 e 390 px, com sessão de parceiro e de administrador nas áreas logadas: nenhuma violação depois das correções acima. O banner de consentimento aberto também passou.
+- Responsividade: 28 páginas em 320, 360, 390, 768, 1024 e 1440 px sem rolagem horizontal do documento e sem erro de JavaScript.
+- Desempenho, comparado com a `main` no mesmo servidor com gzip, 390 px, rede de 150 ms e 1,6 Mbit/s e CPU 4x mais lenta (mediana de 5 cargas): imagens de 243–292 KB para 17 KB por página (logos WebP; parceiros tinha 49 KB), fontes de 24–98 KB para 56 KB, CSS de 12–27 KB para 14–18 KB e evento `load` de 1,1–2,6 s para 0,8–1,1 s. O salto de layout (CLS) caiu em carnes (0,694 → 0), extras (0,717 → 0), bebidas (0,207 → 0,016), minha conta (0,140 → 0,005), resultado (0,115 → 0,044) e planejamento (0,028 → 0); as demais páginas ficam abaixo de 0,035. O LCP caiu em resultado (2,25 → 1,06 s), minha conta (1,82 → 0,66 s), parceiro (3,15 → 0,64 s) e carnes (2,02 → 0,66 s). O primeiro desenho (FCP) ficou entre 0,60 e 0,72 s, até 0,12 s acima da `main` em planos, parceiros e profissional; na home, a entrada animada da comanda leva o LCP a cerca de 0,95 s (era 0,69 s).
+- Limite: o CDN do MapLibre é bloqueado neste ambiente, então mapa, tiles e popups reais não foram verificados; só o estado sem mapa. As medições são de laboratório local, não de usuários reais.
 
 ### 20.6 Pendências
 

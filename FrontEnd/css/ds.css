@@ -27,6 +27,55 @@
   src: url("../fonts/archivo-latin-var.woff2") format("woff2");
 }
 
+/* Reserva com métricas da Archivo. Sem pré-carga, o primeiro desenho usa a
+   fonte do sistema; estas faces ajustam largura (size-adjust) e altura para
+   que a troca pela Archivo não quebre as linhas de outro jeito nem empurre o
+   layout. Larguras medidas no Chromium com o texto real das páginas. As
+   alturas repetem as da Archivo (878/210 por 1000) divididas pelo ajuste. */
+@font-face {
+  font-family: "Archivo Fallback";
+  font-weight: 400 549;
+  font-stretch: 90% 100%;
+  src: local("Arial"), local("ArialMT"), local("Liberation Sans"), local("Arimo");
+  size-adjust: 99%;
+  ascent-override: 88.7%;
+  descent-override: 21.2%;
+  line-gap-override: 0%;
+}
+
+@font-face {
+  font-family: "Archivo Fallback";
+  font-weight: 550 800;
+  font-stretch: 90% 100%;
+  src: local("Arial Bold"), local("Arial-BoldMT"), local("Liberation Sans Bold"), local("Arimo Bold");
+  size-adjust: 96.5%;
+  ascent-override: 91%;
+  descent-override: 21.8%;
+  line-gap-override: 0%;
+}
+
+@font-face {
+  font-family: "Archivo Fallback";
+  font-weight: 400 549;
+  font-stretch: 75% 89.9%;
+  src: local("Arial"), local("ArialMT"), local("Liberation Sans"), local("Arimo");
+  size-adjust: 85%;
+  ascent-override: 103.3%;
+  descent-override: 24.7%;
+  line-gap-override: 0%;
+}
+
+@font-face {
+  font-family: "Archivo Fallback";
+  font-weight: 550 800;
+  font-stretch: 75% 89.9%;
+  src: local("Arial Bold"), local("Arial-BoldMT"), local("Liberation Sans Bold"), local("Arimo Bold");
+  size-adjust: 84%;
+  ascent-override: 104.5%;
+  descent-override: 25%;
+  line-gap-override: 0%;
+}
+
 :root {
   /* Marca: brasa (vermelho do logotipo), vinho (ícone) e kraft (papel do açougue) */
   --brasa-50: #fcefeb;
@@ -92,7 +141,7 @@
   --fogo: var(--brasa-600);
 
   /* Tipografia */
-  --font: "Archivo", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  --font: "Archivo", "Archivo Fallback", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
   --fs-12: 0.75rem;
   --fs-13: 0.8125rem;
   --fs-14: 0.875rem;
@@ -1153,6 +1202,16 @@ svg.icon {
   white-space: normal;
 }
 
+/* Em telas de até 380 px o rótulo quebra linha em vez de alargar a página
+   (ex.: "Voltar ao início" + "Continuar para carnes" lado a lado em 320 px). */
+@media (max-width: 380px) {
+  .btn {
+    max-width: 100%;
+    white-space: normal;
+    text-align: center;
+  }
+}
+
 .btn:disabled,
 .botao:disabled,
 .primary-button:disabled,
@@ -2082,6 +2141,12 @@ dialog::backdrop {
   gap: 8px;
   margin: 0 0 var(--s-8);
   padding: 0;
+}
+
+/* A lista nasce vazia e js/script.js a preenche; reservar a altura de uma
+   linha de etapas evita que o cabeçalho da página pule quando ela aparece. */
+.steps:empty {
+  min-height: calc(18px + var(--fs-14) * var(--lh-body));
 }
 
 .steps li {

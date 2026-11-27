@@ -7,6 +7,13 @@
 
 /* 1. Estrutura ============================================================= */
 
+/* Os painéis chegam depois da API. Ocupar a altura da tela desde o início
+   mantém o rodapé abaixo da dobra, então ele não é empurrado na frente do
+   usuário quando o conteúdo aparece. */
+.app-main.workspace {
+  min-height: 100vh;
+}
+
 .workspace .page-header {
   padding-bottom: var(--s-6);
 }
@@ -631,6 +638,17 @@
   height: 96px;
   margin: 0;
   border-radius: var(--r-md);
+}
+
+.admin-metric-skeleton--wide {
+  grid-column: span 2;
+}
+
+/* Funis e retenção chegam depois (mais de 1.700 px no desktop). A reserva
+   mantém as seções seguintes abaixo da dobra até lá, em vez de empurrá-las na
+   frente do usuário; 60vh limita o vazio caso a API falhe. */
+#fundador-limitacoes:empty {
+  min-height: 60vh;
 }
 
 .admin-section-head p {

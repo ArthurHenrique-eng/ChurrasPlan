@@ -487,8 +487,24 @@
   gap: var(--s-2);
 }
 
+/* As 23 carnes são montadas pelo script depois do primeiro desenho. A reserva
+   mantém o cartão de carvão abaixo da dobra até a lista chegar, em vez de
+   empurrá-lo na frente do usuário. */
+.lista-carnes:empty {
+  min-height: 100vh;
+}
+
 .lista-checks {
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr));
+}
+
+/* Vagas que o HTML já traz nas listas montadas pelo script (uma por item do
+   catálogo): o cartão nasce do tamanho final e nada abaixo dele pula. O
+   script troca as vagas pelos itens. */
+.item-placeholder {
+  min-height: 52px;
+  border: 1px dashed var(--border);
+  border-radius: var(--r-sm);
 }
 
 .item-config,
