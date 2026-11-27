@@ -542,3 +542,35 @@ O primeiro scan encontrou correções Alpine disponíveis para libexpat, pcre2 e
 QA adicional do painel do fundador: quatro funis e retenção renderizados em 1440/390 px, sem erros de JavaScript ou overflow horizontal do documento; tabelas mantêm rolagem interna em telas estreitas. Base sintética isolada usada somente para QA, sem representar clientes reais. Backup/restore permanece comprovado no ambiente local isolado da seção 19.5.
 
 **Estado final:** código entregue e verificações técnicas aprovadas para homologação/piloto. Os requisitos P0 externos da seção 19.3 continuam obrigatórios antes de lançamento comercial; os runs acima não validam SMTP/TLS/backup remoto, faturamento Live, proteção aplicada de main, operação jurídica ou recrutamento de parceiros.
+
+## 20. Serviços do Neon (Realtime, Functions, Auth e AI Gateway)
+
+**Estado em 27/11/2026:** fases 1 e 3 do plano de integração IMPLEMENTADAS nesta branch; Auth e AI Gateway PLANEJADOS, aguardando decisões do proprietário (modelo de login e orçamento/privacidade de IA). Pré-requisito: migração MySQL para PostgreSQL/Neon (PR próprio). Projeto Neon `restless-union-65574984`, organização `org-dawn-surf-23799882`.
+
+**Arquitetura que não deve regredir:** a API FastAPI continua dona de sessão, CSRF, MFA, autorização e regras. O navegador nunca recebe segredo do Realtime, nunca escolhe SQL e só assina consultas que a API autorizou.
+
+**O que existe:**
+- `neon/neon.ts`: configuração declarativa (`@neon/config`): Auth e AI Gateway declarados para não serem desligados por `neon deploy`; `preview.realtime.allowedOrigins` com o frontend; Function `selarrt`; branches novos com TTL de 7 dias.
+- `neon/functions/selarrt-handler.ts`: Function que sela consultas de uma lista fechada (hoje só `lista_compras_itens`, filtrada por `lista_compras_id`). Aceita apenas `POST /selar` com corpo até 2 KB, assinado com HMAC-SHA256 de `{timestamp}.{corpo}` (cabeçalhos `x-churrasplan-ts` e `x-churrasplan-assinatura`, janela de 60 s, comparação em tempo constante). Parâmetros inteiros positivos e exatos. Responde a consulta selada (cifrada, cerca de 60 s de validade) com `cache-control: no-store`.
+- `BackEnd/Python/services/realtime_neon.py` e `POST /api/lista-compras/{churrasco_id}/ao-vivo`: exige sessão e CSRF, só o dono do churrasco recebe; chama a Function com timeout de 5 s e devolve `{url, consulta_selada}`. Qualquer falha ou falta de configuração vira 503 sem vazar detalhes; a tela continua usando a lista carregada pela API.
+- Frontend: ainda não consome o endpoint (depende do redesign em revisão). Vai precisar do cliente `@neon/realtime/client` servido localmente, `connect-src` para o host `wss://…rt…neon.tech` na CSP e renovação da consulta selada a cada 45 s.
+
+**Variáveis (nunca no Git):**
+
+| Onde | Variável | Observação |
+|---|---|---|
+| API (Render) | `NEON_REALTIME_URL` | `wss://` do Realtime do branch. |
+| API (Render) | `NEON_SELARRT_URL` | `https://` da Function `selarrt`. |
+| API e Function | `REALTIME_SELO_SEGREDO` | Segredo compartilhado, 32+ caracteres, gerado só para isso. |
+| Function | `NEON_REALTIME_SECRET` | Segredo do Realtime do branch; o Neon não injeta nas Functions. |
+| Function | `NEON_REALTIME_DB` | Opcional, padrão `neondb`. |
+
+Em produção a API recusa iniciar com só parte das três variáveis, com URL sem TLS ou com segredo curto. Sem nenhuma delas o recurso fica desligado.
+
+**Como aplicar (sempre primeiro num branch de testes):** em `neon/`, `npm ci`, exportar `REALTIME_SELO_SEGREDO` e `NEON_REALTIME_SECRET` do branch alvo e rodar `npx neon@latest deploy`. Mudar `allowedOrigins` num branch que já tem Realtime exige `--update-existing`. O branch `production` só recebe deploy com autorização do proprietário. A CLI precisa de `NEON_API_KEY` em ambiente sem navegador.
+
+**Limites conhecidos:** Realtime está em preview; não funciona em tabelas com RLS; só consultas determinísticas de leitura. Functions rodam Node.js 24 e, no plano Free, têm 10 h ativas e 1 milhão de invocações por projeto e mês.
+
+**Comprovação (27/11/2026):** `npm test` em `neon/` com 10 testes aprovados (inclui vetor HMAC conhecido, igual ao teste Python); 15 testes novos em `tests/test_realtime_neon.py` aprovados; suíte backend completa com a correção de compatibilidade aprovada. Prova ponta a ponta no branch `dev` do Neon, banco descartável `prova_realtime`: o mesmo handler da Function selou a consulta da lista 42 a partir de um pedido assinado como a API faz; o cliente Realtime recebeu só os itens da lista 42, recebeu em cerca de 6 s a marcação de compra (`valor_pago_total` 189.90) e o item inserido, não recebeu a mudança na lista 99 e renovou a consulta duas vezes sem cair. **Não comprovado:** a Function hospedada no Neon (o deploy exige `NEON_API_KEY` ou o proprietário rodando `neon deploy`) e a tela consumindo o fluxo.
+
+**Próximo passo:** deploy da Function no branch `dev` com as variáveis acima e repetir a prova chamando a URL hospedada; depois, com o redesign mesclado, ligar a tela da lista de compras ao vivo.

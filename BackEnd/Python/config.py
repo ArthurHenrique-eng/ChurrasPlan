@@ -96,6 +96,13 @@ class Settings:
     GEOAPIFY_MAP_API_KEY: str | None = os.getenv("GEOAPIFY_MAP_API_KEY")
     GEOAPIFY_ENABLED: bool = os.getenv("GEOAPIFY_ENABLED", "false").lower() in {"1", "true", "yes"}
 
+    # Neon Realtime (opcional; lista de compras ao vivo). A API autoriza e pede
+    # à Neon Function `selarrt` que sele a consulta; o navegador recebe apenas a
+    # consulta selada e a URL WSS. Sem as três variáveis, o recurso fica desligado.
+    NEON_REALTIME_URL: str | None = os.getenv("NEON_REALTIME_URL")
+    NEON_SELARRT_URL: str | None = os.getenv("NEON_SELARRT_URL")
+    REALTIME_SELO_SEGREDO: str | None = os.getenv("REALTIME_SELO_SEGREDO")
+
     # Hardening HTTP/rede. Em produção, use o backend atrás de um proxy reverso
     # que encerre TLS e encaminhe X-Forwarded-* apenas pela rede interna.
     TRUSTED_HOSTS: list[str] = [
@@ -310,6 +317,20 @@ def validar_configuracao_producao(configuracao: Settings = settings) -> None:
         erros.append("CORS_ORIGINS deve listar origens explícitas em produção")
     if configuracao.GEOAPIFY_ENABLED and not configuracao.GEOAPIFY_SERVER_API_KEY:
         erros.append("GEOAPIFY_SERVER_API_KEY é obrigatória quando GEOAPIFY_ENABLED=true")
+    url_realtime, url_selarrt, segredo_selo = (
+        getattr(configuracao, chave, None)
+        for chave in ("NEON_REALTIME_URL", "NEON_SELARRT_URL", "REALTIME_SELO_SEGREDO")
+    )
+    if url_realtime or url_selarrt or segredo_selo:
+        if not (url_realtime and url_selarrt and segredo_selo):
+            erros.append("NEON_REALTIME_URL, NEON_SELARRT_URL e REALTIME_SELO_SEGREDO devem ser configuradas juntas")
+        else:
+            if not url_realtime.lower().startswith("wss://"):
+                erros.append("NEON_REALTIME_URL deve usar wss:// em produção")
+            if not url_selarrt.lower().startswith("https://"):
+                erros.append("NEON_SELARRT_URL deve usar HTTPS em produção")
+            if len(segredo_selo) < 32:
+                erros.append("REALTIME_SELO_SEGREDO deve possuir pelo menos 32 caracteres aleatórios")
     if not configuracao.TRUSTED_HOSTS or "*" in configuracao.TRUSTED_HOSTS:
         erros.append("TRUSTED_HOSTS deve listar hosts explícitos em produção")
     if len(configuracao.SECURITY_PEPPER) < 32 or configuracao.SECURITY_PEPPER == "dev-only-change-me":
