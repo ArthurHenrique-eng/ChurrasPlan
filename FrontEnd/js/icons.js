@@ -30,7 +30,11 @@ lightbulb:'M9 18h6m-5 3h4M8.1 14a6 6 0 1 1 7.8 0c-1.2 1-1.9 2-1.9 4h-4c0-2-.7-3-
 copy:'M8 8h13v13H8ZM16 4V3H3v13h1',
 print:'M6 9V3h12v6M6 18H3v-9h18v9h-3M6 14h12v7H6ZM17 12h1',
 download:'M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5',
-store:'M3 9h18l-2-6H5L3 9ZM4 9v12h16V9M9 21v-7h6v7M3 9a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0'
+store:'M3 9h18l-2-6H5L3 9ZM4 9v12h16V9M9 21v-7h6v7M3 9a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0',
+'credit-card':'M3 6h18v12H3ZM3 10h18M7 15h4',
+star:'m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.3l-5.6 2.9 1.1-6.2L3 9.6l6.2-.9L12 3Z',
+shield:'M12 3 4 6v6c0 5 3.4 8.4 8 9 4.6-.6 8-4 8-9V6l-8-3Z',
+mail:'M3 6h18v12H3ZM3 7l9 6 9-6'
 };
 function icon(name){const p=paths[name]||paths.info;const [d,c]=p.split('|circle:');return `<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="${d}"/>${c?`<circle cx="${c.split(',')[0]}" cy="${c.split(',')[1]}" r="${c.split(',')[2]}"/>`:''}</svg>`;}
 function hydrate(root=document){root.querySelectorAll('[data-icon]').forEach(el=>{if(!el.querySelector('svg.icon'))el.innerHTML=icon(el.dataset.icon);});}

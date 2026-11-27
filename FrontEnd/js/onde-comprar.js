@@ -71,7 +71,7 @@ function renderMarcadoresMapa(estabelecimentos) {
     limparMarcadoresMapa();
 
     const voce = new maplibregl.Marker({
-        color: "#2f80ed",
+        color: "#2b5f86",
         scale: 0.82,
     })
         .setLngLat([posicaoAtual.lng, posicaoAtual.lat])
@@ -91,7 +91,7 @@ function renderMarcadoresMapa(estabelecimentos) {
         );
 
         const marcador = new maplibregl.Marker({
-            color: e.fonte === "geoapify" ? "#647050" : "#a84027",
+            color: e.fonte === "geoapify" ? "#6f665f" : "#a62210",
             scale: 0.72,
         })
             .setLngLat([e.longitude, e.latitude])
@@ -336,7 +336,7 @@ function renderOtimizacao(dados) {
 
     if (otimizada.total != null) {
         html += `<div class="optimized-box">
-            <span class="eyebrow"><span></span>COMPRA OTIMIZADA</span>
+            <span class="eyebrow"><span></span>Compra otimizada</span>
             <strong>${formatarMoeda(otimizada.total)}</strong>
             <p class="texto-suave">${otimizada.estabelecimentos_usados} estabelecimento(s)${otimizada.economia_vs_melhor_loja != null ? ` · economia de ${formatarMoeda(otimizada.economia_vs_melhor_loja)} contra a melhor loja única completa` : ""}</p>
             <div class="basket-items">${(otimizada.itens || []).map((i) => `${escaparHTML(i.descricao)} → ${escaparHTML(i.estabelecimento_nome)} · ${formatarMoeda(i.subtotal)}`).join("<br>")}</div>
@@ -532,9 +532,13 @@ document.addEventListener("DOMContentLoaded", async () => {
         b.onclick = async () => {
             document
                 .querySelectorAll("#ranking-modos [data-modo]")
-                .forEach((x) => x.classList.remove("active"));
+                .forEach((x) => {
+                    x.classList.remove("active");
+                    x.setAttribute("aria-pressed", "false");
+                });
 
             b.classList.add("active");
+            b.setAttribute("aria-pressed", "true");
             modoAtual = b.dataset.modo;
 
             await atualizarTudo();

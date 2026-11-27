@@ -22,8 +22,17 @@ document.addEventListener("DOMContentLoaded", async () => {
         return b;
     };
     const brl = n => (Number(n) / 100).toLocaleString("pt-BR", {style:"currency", currency:"BRL"});
-    const resumo = r => "Plano: " + (r.plano || "free") + " · Status: " +
-        (r.status || "sem_assinatura") + " · Benefícios " + (r.beneficios_ativos ? "ativos" : "inativos") +
+    // Rótulos de exibição para valores internos (a API continua sendo a fonte da verdade).
+    const ROTULOS_PLANO = {free: "Gratuito", premium: "Premium", pro: "Pro", business: "Business"};
+    const ROTULOS_STATUS = {
+        sem_assinatura: "sem assinatura", active: "ativa", trialing: "em período de teste",
+        past_due: "pagamento pendente", canceled: "cancelada", unpaid: "não paga",
+        incomplete: "incompleta", incomplete_expired: "expirada", paused: "pausada",
+    };
+    const ROTULOS_FATURA = {draft: "rascunho", open: "em aberto", paid: "paga", uncollectible: "incobrável", void: "anulada"};
+    const rotulo = (mapa, valor) => mapa[valor] || String(valor || "").replace(/_/g, " ");
+    const resumo = r => "Plano: " + rotulo(ROTULOS_PLANO, r.plano || "free") + " · Status: " +
+        rotulo(ROTULOS_STATUS, r.status || "sem_assinatura") + " · Benefícios " + (r.beneficios_ativos ? "ativos" : "inativos") +
         (r.cancelamento_agendado ? " · Cancelamento agendado" : "") +
         (r.tolerancia_ate ? " · Inadimplência: tolerância limitada" : "");
     function renderFaturas(el, faturas) {
@@ -31,8 +40,14 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (!faturas.length) { el.appendChild(element("p", "Nenhuma fatura encontrada.")); return; }
         const ul = element("ul");
         for (const f of faturas) {
-            ul.appendChild(element("li", f.id + " · " + f.status + " · " +
-                brl(f.total_centavos || 0) + " · pago " + brl(f.pago_centavos || 0)));
+            const li = element("li");
+            li.append(
+                element("span", f.id, "invoice-id"),
+                element("span", rotulo(ROTULOS_FATURA, f.status), "invoice-status"),
+                element("span", brl(f.total_centavos || 0), "invoice-total"),
+                element("span", "pago " + brl(f.pago_centavos || 0), "invoice-paid"),
+            );
+            ul.appendChild(li);
         }
         el.appendChild(ul);
     }

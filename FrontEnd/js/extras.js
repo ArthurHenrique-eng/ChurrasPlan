@@ -12,10 +12,10 @@ let timerPreview = null;
 function renderizarLista(container, catalogo, ativos) {
     const setAtivos = new Set(ativos || []);
     container.innerHTML = catalogo.map((item) => `
-        <div class="item-config">
+        <label class="item-config">
             <input type="checkbox" data-item="${item.chave}" ${setAtivos.has(item.chave) ? "checked" : ""}>
             <span class="item-config__nome">${escaparHTML(item.nome)}</span>
-        </div>
+        </label>
     `).join("");
 }
 

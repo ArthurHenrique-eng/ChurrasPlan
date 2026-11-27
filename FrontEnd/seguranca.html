@@ -1,15 +1,124 @@
 <!DOCTYPE html>
-<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Segurança da conta — ChurrasPlan</title><meta name="robots" content="noindex,nofollow"><meta name="theme-color" content="#6f7c59"><meta name="mobile-web-app-capable" content="yes">
-<link rel="icon" href="favicon.svg"><link rel="manifest" href="manifest.webmanifest"><link rel="stylesheet" href="css/unified-core.css"><link rel="stylesheet" href="css/production-v63.css"><link rel="stylesheet" href="css/saas.css"></head>
-<body class="account-page"><a class="skip-link" href="#main">Pular para o conteúdo</a><main id="main" class="saas-shell">
-<header class="simple-topbar"><a class="home-brand" href="index.html"><img class="home-wordmark" src="assets/logo-wordmark.png" alt="ChurrasPlan"></a><nav aria-label="Navegação"><a href="planejamento.html">Planejar</a><a href="minha-conta.html">Minha conta</a><a href="parceiros.html">Parceiros</a></nav></header>
-<section class="saas-hero"><span class="eyebrow">SUA CONTA PROTEGIDA</span><h1>Confirme que é você.</h1><p>Use um autenticador TOTP e mantenha seus códigos de recuperação em um lugar seguro.</p></section>
-<section class="saas-card"><h2>Autenticação em duas etapas</h2><p id="mfa-status">Carregando...</p>
-<form id="mfa-configurar"><label for="mfa-senha">Senha atual</label><input id="mfa-senha" type="password" autocomplete="current-password" required maxlength="128"><button class="primary-button" type="submit">Cadastrar autenticador</button></form>
-<div id="mfa-segredo" hidden><p>Adicione esta chave ao seu aplicativo autenticador. A confirmação abaixo ativa a proteção.</p><code id="mfa-chave"></code></div>
-<form id="mfa-confirmar"><label for="mfa-codigo">Código do autenticador ou de recuperação</label><input id="mfa-codigo" autocomplete="one-time-code" maxlength="32" required><button class="primary-button" type="submit">Confirmar código</button></form>
-<div id="mfa-backup" hidden><h3>Guarde estes códigos agora</h3><p>Cada código funciona uma única vez. Eles não serão exibidos novamente.</p><pre id="mfa-codigos"></pre><button id="mfa-continuar" class="primary-button" type="button">Guardei os códigos. Continuar</button></div>
-<form id="mfa-revogar" hidden><h3>Trocar autenticador</h3><p>Administradores de produção precisam manter o segundo fator ativo.</p><label for="revogar-senha">Senha atual</label><input id="revogar-senha" type="password" autocomplete="current-password" required><label for="revogar-codigo">Código novo ou de recuperação</label><input id="revogar-codigo" autocomplete="one-time-code" required><button type="submit">Confirmar troca do autenticador</button></form></section><p id="saas-msg" role="status" aria-live="polite"></p>
-<footer><a href="privacidade.html">Privacidade</a> · <a href="termos.html">Termos</a> · <a href="cookies.html">Cookies</a></footer></main>
-<script src="js/config.js"></script><script src="js/state.js"></script><script src="js/api.js"></script><script src="js/telemetria.js"></script><script src="js/script.js"></script><script src="js/auth-ui.js"></script><script src="js/seguranca.js"></script><script src="js/analytics.js"></script><script src="js/pwa.js"></script></body></html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#a62210">
+<meta name="robots" content="noindex,nofollow">
+<title>Segurança da conta — ChurrasPlan</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="assets/pwa/icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="stylesheet" href="css/ds.css">
+<link rel="stylesheet" href="css/pages/account.css">
+</head>
+<body class="app-page account-page security-page">
+<a class="skip-link" href="#main">Pular para o conteúdo</a>
+<header class="app-bar">
+  <div class="app-bar__inner">
+    <a class="brand-lockup" href="index.html" aria-label="ChurrasPlan, página inicial">
+      <img class="brand-lockup__icon" src="assets/logo-icon-96.webp" alt="" width="34" height="32">
+      <img class="brand-lockup__wordmark" src="assets/logo-wordmark-320.webp" alt="ChurrasPlan" width="118" height="18">
+    </a>
+    <nav class="app-nav" aria-label="Navegação da conta">
+      <a href="minha-conta.html">Minha conta</a>
+      <a href="onde-comprar.html">Onde comprar</a>
+      <a href="profissional.html">Profissional</a>
+      <a href="seguranca.html">Segurança</a>
+      <a href="planos.html">Planos</a>
+    </nav>
+    <div class="app-bar__end">
+      <span id="auth-nav-slot"></span>
+    </div>
+  </div>
+</header>
+
+<main id="main" class="app-main account-shell security-shell">
+  <header class="page-header">
+    <div>
+      <p class="page-kicker">Segurança</p>
+      <h1>Confirme que é você.</h1>
+      <p>Use um autenticador TOTP e mantenha seus códigos de recuperação em um lugar seguro.</p>
+    </div>
+  </header>
+
+  <div class="security-layout">
+    <section class="account-section mfa-card" aria-labelledby="mfa-titulo">
+      <div class="cartao__titulo"><span class="section-icon" data-icon="shield"></span><h2 id="mfa-titulo">Autenticação em duas etapas</h2></div>
+      <p id="mfa-status" class="mfa-status">Carregando...</p>
+
+      <form id="mfa-configurar" class="mfa-step">
+        <h3>Cadastrar um autenticador</h3>
+        <p>Confirme sua senha para gerar a chave que vai para o aplicativo autenticador.</p>
+        <div class="mfa-form-row">
+          <div class="campo"><label for="mfa-senha">Senha atual</label><input id="mfa-senha" type="password" autocomplete="current-password" required maxlength="128"></div>
+          <button class="btn btn--primary" type="submit">Cadastrar autenticador</button>
+        </div>
+      </form>
+
+      <div id="mfa-segredo" class="mfa-secret" hidden>
+        <p>Adicione esta chave ao seu aplicativo autenticador. A confirmação abaixo ativa a proteção.</p>
+        <code id="mfa-chave"></code>
+      </div>
+
+      <form id="mfa-confirmar" class="mfa-step">
+        <h3>Código de verificação</h3>
+        <div class="mfa-form-row">
+          <div class="campo"><label for="mfa-codigo">Código do autenticador ou de recuperação</label><input id="mfa-codigo" autocomplete="one-time-code" maxlength="32" required></div>
+          <button class="btn btn--secondary" type="submit">Confirmar código</button>
+        </div>
+      </form>
+
+      <div id="mfa-backup" class="mfa-backup" hidden>
+        <h3>Guarde estes códigos agora</h3>
+        <p>Cada código funciona uma única vez. Eles não serão exibidos novamente.</p>
+        <pre id="mfa-codigos"></pre>
+        <button id="mfa-continuar" class="btn btn--primary" type="button">Guardei os códigos. Continuar</button>
+      </div>
+
+      <form id="mfa-revogar" class="mfa-step" hidden>
+        <h3>Trocar autenticador</h3>
+        <p>Administradores de produção precisam manter o segundo fator ativo.</p>
+        <div class="grade-campos grade-campos--2">
+          <div class="campo"><label for="revogar-senha">Senha atual</label><input id="revogar-senha" type="password" autocomplete="current-password" required></div>
+          <div class="campo"><label for="revogar-codigo">Código novo ou de recuperação</label><input id="revogar-codigo" autocomplete="one-time-code" required></div>
+        </div>
+        <button class="btn btn--secondary" type="submit">Confirmar troca do autenticador</button>
+      </form>
+
+      <p id="saas-msg" class="security-msg" role="status" aria-live="polite"></p>
+    </section>
+
+    <aside class="account-section security-aside" aria-labelledby="titulo-como-ativar">
+      <h2 id="titulo-como-ativar">Como ativar</h2>
+      <ol class="security-steps">
+        <li><strong>Confirme sua senha</strong>Ela gera uma chave exclusiva para a sua conta.</li>
+        <li><strong>Adicione a chave ao aplicativo</strong>Use um aplicativo autenticador compatível com TOTP.</li>
+        <li><strong>Digite o código gerado</strong>A proteção é ativada assim que o código é confirmado.</li>
+        <li><strong>Guarde os códigos de recuperação</strong>Eles substituem o aplicativo se você perder o acesso a ele.</li>
+      </ol>
+      <div class="legal-links"><a href="minha-conta.html">Voltar para minha conta</a><a href="privacidade.html">Privacidade</a></div>
+    </aside>
+  </div>
+</main>
+
+<footer class="app-footer-mini">
+  <span>© 2026 ChurrasPlan</span>
+  <nav aria-label="Links legais"><a href="privacidade.html">Privacidade</a><a href="termos.html">Termos</a><a href="cookies.html">Cookies</a></nav>
+</footer>
+
+<script src="js/config.js"></script>
+<script src="js/state.js"></script>
+<script src="js/api.js"></script>
+<script src="js/telemetria.js"></script>
+<script src="js/script.js"></script>
+<script src="js/auth-ui.js"></script>
+<script src="js/icons.js"></script>
+<script src="js/seguranca.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/analytics.js"></script>
+<script src="js/pwa.js"></script>
+</body>
+</html>

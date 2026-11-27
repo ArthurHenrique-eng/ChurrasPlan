@@ -3,111 +3,191 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="theme-color" content="#9e3b25">
+<meta name="theme-color" content="#a62210">
 <title>ChurrasPlan — Planejamento e compra de churrascos</title>
-
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="css/unified-core.css">
-<link rel="stylesheet" href="css/unified-home.css">
-<link rel="stylesheet" href="css/integracao-v3.css">
-  <link rel="stylesheet" href="css/production-v63.css">
-<link rel="stylesheet" href="css/saas.css">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="assets/pwa/icon-192.png">
+<link rel="stylesheet" href="css/ds.css">
+<link rel="stylesheet" href="css/pages/home.css">
 <!-- SEO_INICIO --><meta name="description" content="Planeje quantidades, listas e orçamento; conecte seu churrasco a mercados, açougues e profissionais locais."><link rel="canonical" href="http://localhost:8080/index.html"><meta property="og:title" content="ChurrasPlan — Planejamento e compra de churrascos"><meta property="og:description" content="Planeje quantidades, listas e orçamento; conecte seu churrasco a mercados, açougues e profissionais locais."><meta property="og:url" content="http://localhost:8080/index.html"><meta property="og:type" content="website"><meta name="twitter:card" content="summary"><meta name="robots" content="noindex,nofollow"><script type="application/ld+json">{"@context": "https://schema.org", "@type": "WebSite", "name": "ChurrasPlan", "url": "http://localhost:8080/"}</script><!-- SEO_FIM --></head>
-<body class="home-body pagina-inicial">
+<body class="home-body">
 <a class="skip-link" href="#main">Ir para o conteúdo</a>
-<header class="home-header">
-  <div class="home-container">
-    <a class="home-brand" href="#inicio" aria-label="ChurrasPlan início">
-      <img class="home-logo-icon" src="assets/logo-icon.png" alt="">
-      <img class="home-wordmark" src="assets/logo-wordmark.png" alt="ChurrasPlan">
+<header class="site-header">
+  <div class="site-header__inner">
+    <a class="brand-lockup" href="index.html" aria-label="ChurrasPlan, página inicial">
+      <img class="brand-lockup__icon" src="assets/logo-icon-96.webp" alt="" width="38" height="36">
+      <img class="brand-lockup__wordmark" src="assets/logo-wordmark-320.webp" alt="ChurrasPlan" width="132" height="20">
     </a>
-    <nav aria-label="Navegação principal">
+    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav" data-nav-toggle><span class="nav-toggle__bars"></span><span class="sr-only">Abrir menu</span></button>
+    <nav class="site-nav" id="site-nav" aria-label="Navegação principal">
       <a href="#como-funciona">Como funciona</a>
       <a href="planos.html">Planos</a>
-      <a href="#seu-cardapio">Seu cardápio</a>
-      <a href="#lista-compras">Lista de compras</a>
-      <a href="planejamento.html" class="primary-button">Planejar agora<span data-icon="arrow"></span></a>
+      <a href="onde-comprar.html">Onde comprar</a>
+      <a href="parceiros.html">Para negócios</a>
       <span id="auth-nav-slot"></span>
+      <a class="btn btn--primary site-nav__cta" href="planejamento.html">Planejar churrasco</a>
     </nav>
   </div>
 </header>
+
 <main id="main" class="home-main">
-<section class="home-hero" id="inicio">
-  <div class="home-container hero-layout">
+
+<section class="home-hero" id="inicio" aria-labelledby="hero-titulo">
+  <div class="container-page hero-layout">
     <div class="hero-copy">
-      <span class="eyebrow"><span></span>O MELHOR DO CHURRASCO É ESTAR JUNTO</span>
-      <h1>Menos conta.<br>Mais <em>churrasco.</em></h1>
-      <p>Da primeira brasa à última conversa. Escolha seu cardápio e descubra quanto comprar para reunir a sua turma, do seu jeito.</p>
-      <a href="planos.html" class="continue-link" style="display:inline-flex;margin-right:16px">Conhecer planos</a>
-      <a href="planejamento.html" class="primary-button hero-cta">Planejar meu churrasco<span data-icon="arrow"></span></a>
-      <a id="link-continuar" class="continue-link" href="planejamento.html" style="display:none"></a>
-      <div class="hero-promises"><span><i data-icon="check"></i>Porções ajustáveis</span><span><i data-icon="check"></i>Lista pronta para levar</span></div>
-      <div class="occasion-pills"><span>Em família</span><span>Entre amigos</span><span>Uma comemoração</span></div>
+      <p class="eyebrow"><span></span>Planejador de churrasco</p>
+      <h1 id="hero-titulo">Menos conta.<br>Mais churrasco.</h1>
+      <p class="hero-lead">Diga quantas pessoas vêm e o que vai para a grelha. O ChurrasPlan calcula carnes, bebidas, carvão e gelo, monta a lista de compras e estima quanto vai custar.</p>
+      <div class="hero-actions">
+        <a href="planejamento.html" class="btn btn--primary btn--lg">Planejar meu churrasco</a>
+        <a id="link-continuar" class="btn btn--secondary btn--lg" href="planejamento.html" style="display:none"></a>
+        <a href="planos.html" class="text-button">Ver planos e preços</a>
+      </div>
+      <ul class="hero-facts" aria-label="Destaques">
+        <li>Grátis para planejar, sem cadastro</li>
+        <li>Rascunho salvo neste navegador</li>
+        <li>Compra em embalagens reais</li>
+      </ul>
     </div>
+
     <div class="hero-visual">
-      <div class="brand-seal"><img src="assets/logo-icon.png" alt="Símbolo ChurrasPlan"></div>
-      <div class="demo-card">
-        <div class="demo-head"><div><span class="mini-label">EXPERIMENTE AQUI</span><h2>Quantos vêm para a mesa?</h2></div><span class="demo-icon" data-icon="users"></span></div>
-        <div class="demo-guest"><strong id="demo-total">14</strong><span>pessoas para um<br>bom encontro</span><div class="demo-buttons"><button id="demo-minus" type="button" aria-label="Diminuir pessoas">−</button><button id="demo-plus" type="button" aria-label="Adicionar pessoa">+</button></div></div>
-        <label class="sr-only" for="demo-range">Pessoas na simulação</label><input type="range" id="demo-range" min="4" max="40" value="14">
+      <article class="ticket demo-card" aria-labelledby="demo-titulo">
+        <header class="ticket__head">
+          <span class="ticket__label">Simulação rápida</span>
+          <h2 id="demo-titulo">Quantos vêm para a mesa?</h2>
+        </header>
+        <div class="demo-guest">
+          <button id="demo-minus" class="demo-step" type="button" aria-label="Diminuir pessoas">−</button>
+          <p class="demo-count"><strong id="demo-total" data-live>14</strong><span>pessoas</span></p>
+          <button id="demo-plus" class="demo-step" type="button" aria-label="Adicionar pessoa">+</button>
+        </div>
+        <label class="sr-only" for="demo-range">Pessoas na simulação</label>
+        <input type="range" id="demo-range" min="4" max="40" value="14">
         <p class="demo-assumptions" id="demo-assumptions"></p>
-        <div class="demo-totals"><div><span data-icon="beef"></span><span>Carnes<strong id="demo-meat">-</strong></span></div><div><span data-icon="glass"></span><span>Bebidas<strong id="demo-drinks">-</strong></span></div></div>
+        <div class="demo-totals">
+          <div class="demo-total"><span class="demo-total__label">Carnes</span><strong id="demo-meat" class="tag-number" data-live>-</strong></div>
+          <div class="demo-total"><span class="demo-total__label">Bebidas</span><strong id="demo-drinks" class="tag-number" data-live>-</strong></div>
+        </div>
         <div class="demo-breakdown" id="demo-breakdown"></div>
-        <div class="demo-footer"><span data-icon="info"></span>Simulação de referência. Personalize tudo no planejador.</div>
+        <p class="demo-footer">Base: almoço de 4 horas, perfil normal. No planejador você ajusta cortes, bebidas e restrições.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section class="how-section" id="como-funciona" aria-labelledby="como-titulo">
+  <div class="container-page">
+    <div class="section-head">
+      <h2 id="como-titulo">Do convite à compra em três etapas</h2>
+      <p>O cálculo começa por quem estará à mesa e termina numa lista que você leva ao mercado.</p>
+    </div>
+    <ol class="how-steps">
+      <li>
+        <span class="how-number">1</span>
+        <h3>Conte sobre o encontro</h3>
+        <p>Adultos, crianças, ocasião, duração e perfil de consumo. Restrições alimentares entram aqui também.</p>
+      </li>
+      <li>
+        <span class="how-number">2</span>
+        <h3>Monte a grelha</h3>
+        <p>Escolha os cortes e divida os percentuais. Inclua bebidas, carvão, gelo e acompanhamentos.</p>
+      </li>
+      <li>
+        <span class="how-number">3</span>
+        <h3>Leve a lista pronta</h3>
+        <p>Veja a necessidade, a quantidade de compra em embalagens, o custo estimado e quanto cada pessoa paga.</p>
+      </li>
+    </ol>
+  </div>
+</section>
+
+<section class="menu-section" id="seu-cardapio" aria-labelledby="cardapio-titulo">
+  <div class="container-page menu-layout">
+    <div class="menu-preview" aria-hidden="true">
+      <p class="menu-preview__title">Cardápio do sábado</p>
+      <div class="preview-option"><span>Picanha</span><b>60%</b></div>
+      <div class="preview-option"><span>Linguiça</span><b>40%</b></div>
+      <div class="preview-option"><span>Pão de alho</span><i class="display-switch on"></i></div>
+      <div class="preview-option"><span>Cerveja e refrigerante</span><i class="display-switch on"></i></div>
+      <div class="preview-option"><span>Gelo e carvão</span><i class="display-switch on"></i></div>
+      <div class="preview-option is-off"><span>Opção vegetariana</span><i class="display-switch"></i></div>
+    </div>
+    <div class="menu-copy">
+      <h2 id="cardapio-titulo">Um plano do seu jeito, com a conta à mostra</h2>
+      <div class="benefit">
+        <h3>Necessidade e compra separadas</h3>
+        <p>Você vê quanto será consumido e quanto precisa comprar, já convertido para embalagens, sacos e garrafas.</p>
       </div>
-      <div class="floating-note"><span data-icon="bag"></span><div><strong>Da conta ao carrinho.</strong><span>Necessidade e compra sem confusão.</span></div></div>
-    </div>
-  </div>
-</section>
-<section class="how-section" id="como-funciona">
-  <div class="home-container">
-    <div class="home-section-intro"><span class="eyebrow">SIMPLES DO COMEÇO AO FIM</span><h2>Você convida.<br>A gente ajuda a organizar.</h2><p>Um planejamento que acompanha o seu encontro, sem deixar os detalhes para a última hora.</p></div>
-    <div class="how-grid">
-      <article><span class="how-number">01</span><div class="how-icon" data-icon="users"></div><h3>Conte sobre o encontro</h3><p>Convidados, ocasião, duração e perfil de consumo. O cálculo começa com quem estará à mesa.</p></article>
-      <article><span class="how-number">02</span><div class="how-icon" data-icon="beef"></div><h3>Monte a sua grelha</h3><p>Escolha os cortes, distribua os percentuais e inclua bebidas, carvão, gelo e acompanhamentos.</p></article>
-      <article><span class="how-number">03</span><div class="how-icon" data-icon="bag"></div><h3>Leve a lista pronta</h3><p>Confira necessidade, quantidade de compra, embalagens, ofertas cadastradas e subtotais.</p></article>
-    </div>
-  </div>
-</section>
-<section class="possibilities" id="seu-cardapio">
-  <div class="home-container possibilities-layout">
-    <div class="menu-preview">
-      <div class="menu-preview-heading"><span data-icon="flame"></span><span>UM CARDÁPIO COM A SUA CARA</span></div>
-      <h3>Tem espaço para<br>o gosto de todo mundo.</h3>
-      <div class="preview-option"><span><i data-icon="beef"></i>Picanha na grelha</span><b>60%</b></div>
-      <div class="preview-option"><span><i data-icon="utensils"></i>Pão de alho</span><i class="display-switch on" aria-hidden="true"></i></div>
-      <div class="preview-option"><span><i data-icon="glass"></i>Bebidas</span><i class="display-switch on" aria-hidden="true"></i></div>
-      <div class="preview-option"><span><i data-icon="snow"></i>Gelo e carvão</span><i class="display-switch on" aria-hidden="true"></i></div>
-      <small>Exemplo de escolhas disponíveis no planejador.</small>
-    </div>
-    <div class="possibilities-copy">
-      <span class="eyebrow">O SEU CHURRASCO, NOS DETALHES</span><h2>Um bom plano.<br>Do seu jeito.</h2>
-      <div class="benefit"><span data-icon="sliders"></span><div><h3>A conta é transparente</h3><p>Ajuste o perfil, veja necessidade e compra separadas e mantenha a divisão das carnes em 100%.</p></div></div>
-      <div class="benefit"><span data-icon="store"></span><div><h3>Estimativas e ofertas com origem clara</h3><p>O resultado distingue ofertas elegíveis de lojas, referências datadas de orçamento e itens sem preço. Assim você sabe a origem de cada estimativa.</p></div></div>
-      <details><summary>Preciso preencher tudo de uma vez?</summary><p>Não. O planejamento em andamento fica salvo no navegador e você pode continuar depois.</p></details>
-      <details><summary>O resultado usa quantidade de compra?</summary><p>Sim. Necessidade física, embalagem comercial e quantidade para comprar são tratadas separadamente.</p></details>
-      <a href="planejamento.html" class="primary-button">Começar meu planejamento<span data-icon="arrow"></span></a>
-    </div>
-  </div>
-</section>
-<section class="shopping-section" id="lista-compras">
-  <div class="home-container">
-    <div class="home-section-intro"><span class="eyebrow">DA CONTA AO CARRINHO</span><h2>Uma lista feita para<br>usar no mercado.</h2><p>O resultado organiza os itens e preserva a diferença entre o que será consumido e o que precisa ser comprado.</p></div>
-    <div class="shopping-showcase">
-      <div class="shopping-list-card">
-        <div class="shopping-list-head"><span><i data-icon="bag"></i>LISTA DE COMPRAS</span><span>exemplo</span></div>
-        <div class="shopping-demo-row"><i data-icon="check"></i><span>Picanha</span><strong>3,0 kg</strong></div>
-        <div class="shopping-demo-row"><i data-icon="check"></i><span>Linguiça</span><strong>2,0 kg</strong></div>
-        <div class="shopping-demo-row"><i data-icon="check"></i><span>Carvão</span><strong>1 saco · 3 kg</strong></div>
-        <div class="shopping-demo-row"><i data-icon="check"></i><span>Refrigerante</span><strong>4 garrafas · 8 L</strong></div>
+      <div class="benefit">
+        <h3>Preço com origem clara</h3>
+        <p>O resultado indica se o valor vem de oferta de loja parceira, de referência de orçamento ou se o item ainda está sem preço.</p>
       </div>
-      <div class="shopping-copy-card"><span class="icon-wrap" data-icon="store"></span><h3>Quantidade comercial, não só matemática.</h3><p>O ChurrasPlan converte a necessidade para a forma de venda do produto e usa essa quantidade para a lista e o custo.</p><a href="planejamento.html" class="primary-button">Montar minha lista<span data-icon="arrow"></span></a></div>
+      <div class="faq">
+        <details><summary>Preciso preencher tudo de uma vez?</summary><p>Não. O planejamento em andamento fica salvo no navegador e você continua de onde parou.</p></details>
+        <details><summary>Posso dividir o valor entre os convidados?</summary><p>Sim. No resultado você escolhe quantas pessoas vão dividir e vê o valor por pessoa.</p></details>
+      </div>
+      <a href="planejamento.html" class="btn btn--primary">Começar meu planejamento</a>
+    </div>
+  </div>
+</section>
+
+<section class="shopping-section" id="lista-compras" aria-labelledby="lista-titulo">
+  <div class="container-page shopping-layout">
+    <div class="shopping-copy">
+      <h2 id="lista-titulo">Uma lista feita para usar no mercado</h2>
+      <p>Marque os itens enquanto compra, informe o preço pago e veja quanto economizou em relação à estimativa.</p>
+      <a href="planejamento.html" class="btn btn--secondary">Montar minha lista</a>
+    </div>
+    <div class="ticket shopping-list-card" aria-label="Exemplo de lista de compras">
+      <header class="ticket__head"><span class="ticket__label">Exemplo de lista</span><span class="ticket__meta">12 pessoas</span></header>
+      <ul class="shopping-demo">
+        <li class="is-done"><span>Picanha</span><strong>3,0 kg</strong></li>
+        <li class="is-done"><span>Linguiça</span><strong>2,0 kg</strong></li>
+        <li><span>Carvão</span><strong>1 saco de 3 kg</strong></li>
+        <li><span>Refrigerante</span><strong>4 garrafas de 2 L</strong></li>
+        <li><span>Gelo</span><strong>2 sacos de 5 kg</strong></li>
+      </ul>
+      <p class="shopping-demo__total"><span>Estimativa</span><strong class="tag-number">R$ 412,80</strong></p>
+    </div>
+  </div>
+</section>
+
+<section class="audience-section" aria-labelledby="negocios-titulo">
+  <div class="container-page">
+    <h2 id="negocios-titulo" class="sr-only">Para negócios</h2>
+    <div class="audience-grid">
+      <a class="audience-card" href="profissional.html">
+        <span class="audience-card__who">Churrasqueiros e buffets</span>
+        <strong>Organize clientes e propostas com custos e margem calculados.</strong>
+        <span class="audience-card__link">Conhecer a área profissional</span>
+      </a>
+      <a class="audience-card" href="parceiros.html">
+        <span class="audience-card__who">Açougues e mercados</span>
+        <strong>Apareça para quem já está montando a lista do churrasco.</strong>
+        <span class="audience-card__link">Conhecer o ChurrasPlan Parceiros</span>
+      </a>
     </div>
   </div>
 </section>
 </main>
-<footer class="home-footer"><div class="home-container"><a class="home-brand" href="#inicio"><img class="home-wordmark" src="assets/logo-wordmark.png" alt="ChurrasPlan"></a><p>A plataforma de planejamento e compra de churrascos que conecta consumidores, churrasqueiros e mercados locais.</p><div class="private-badge"><span data-icon="flame"></span>ChurrasPlan</div><nav class="legal-footer-links" aria-label="Informações legais"><a href="parceiros.html">ChurrasPlan Parceiros</a><a href="guias/index.html">Guias de churrasco</a><a href="privacidade.html">Privacidade</a><a href="termos.html">Termos</a><a href="cookies.html">Cookies</a></nav></div></footer>
+<footer class="site-footer">
+  <div class="site-footer__inner">
+    <div class="site-footer__brand">
+      <img src="assets/logo-wordmark-320.webp" alt="ChurrasPlan" width="150" height="23" loading="lazy">
+      <p>Planejamento de churrasco com quantidades, orçamento e lista de compras, conectado a mercados e açougues da sua região.</p>
+    </div>
+    <nav class="site-footer__nav" aria-label="Rodapé">
+      <div><p class="site-footer__title">Produto</p><a href="planejamento.html">Planejar churrasco</a><a href="planos.html">Planos e preços</a><a href="onde-comprar.html">Onde comprar</a><a href="guias/index.html">Guias de churrasco</a></div>
+      <div><p class="site-footer__title">Negócios</p><a href="parceiros.html">ChurrasPlan Parceiros</a><a href="parceiro.html">Área do parceiro</a><a href="profissional.html">Área profissional</a></div>
+      <div><p class="site-footer__title">Conta e privacidade</p><a href="minha-conta.html">Minha conta</a><a href="privacidade.html">Privacidade</a><a href="termos.html">Termos de uso</a><a href="cookies.html">Cookies</a></div>
+    </nav>
+  </div>
+  <div class="site-footer__legal"><span>© 2026 ChurrasPlan</span><span>Quantidades e preços exibidos são estimativas de planejamento.</span></div>
+</footer>
+
 <script src="js/config.js"></script><script src="js/state.js"></script><script src="js/api.js"></script><script src="js/telemetria.js"></script><script src="js/script.js"></script><script src="js/auth-ui.js"></script><script src="js/index.js"></script><script src="js/icons.js"></script><script src="js/home-unificado.js"></script>
+<script src="js/ui.js"></script>
 <script src="js/pwa.js"></script>
 <script src="js/analytics.js"></script>
 <script src="js/vercel-analytics.js"></script>
