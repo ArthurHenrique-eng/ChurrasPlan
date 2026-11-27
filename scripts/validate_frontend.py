@@ -19,8 +19,12 @@ for html in root.rglob("*.html"):
         for val in re.findall(fr'{attr}=["\']([^"\']+)["\']', text):
             if val.startswith(("http://","https://","#","mailto:","tel:","data:")) or val.startswith("/") or "?" in val or val == "":
                 continue
-            target=(html.parent/val).resolve()
+            # "pagina.html#secao": confere o arquivo e também a âncora de destino.
+            caminho, _, ancora = val.partition("#")
+            target=(html.parent/caminho).resolve()
             if not target.exists(): errors.append(f"{html}: referência ausente {val}")
+            elif ancora and target.suffix == ".html" and not re.search(fr'id=["\']{re.escape(ancora)}["\']', target.read_text(encoding="utf-8")):
+                errors.append(f"{html}: âncora ausente {val}")
 if errors:
     print("\n".join(errors)); sys.exit(1)
 print(f"OK: {len(list(root.rglob('*.html')))} HTML verificados")

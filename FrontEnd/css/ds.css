@@ -913,7 +913,8 @@ table,
   gap: var(--s-6);
 }
 
-.site-footer__nav h2 {
+.site-footer__nav h2,
+.site-footer__title {
   margin-bottom: var(--s-3);
   color: var(--branco);
   font-size: var(--fs-14);
@@ -1843,6 +1844,17 @@ details[open]::details-content {
   color: var(--brilho-700);
   font-size: var(--fs-14);
   line-height: 1.5;
+}
+
+.sandbox-warning__icon {
+  display: inline-flex;
+  flex: none;
+  margin-top: 1px;
+}
+
+.sandbox-warning__icon svg.icon {
+  width: 18px;
+  height: 18px;
 }
 
 /* Tabelas --------------------------------------------------------------- */

@@ -1,14 +1,144 @@
 <!DOCTYPE html>
-<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ChurrasPlan Parceiros — Mercados, açougues e profissionais</title><meta name="theme-color" content="#6f7c59"><meta name="mobile-web-app-capable" content="yes">
-<link rel="icon" href="favicon.svg"><link rel="manifest" href="manifest.webmanifest"><link rel="stylesheet" href="css/unified-core.css"><link rel="stylesheet" href="css/production-v63.css"><link rel="stylesheet" href="css/saas.css"><!-- SEO_INICIO --><meta name="description" content="Gerencie ofertas e filiais, receba interesse comercial e acompanhe resultados do ChurrasPlan."><link rel="canonical" href="http://localhost:8080/parceiros.html"><meta property="og:title" content="ChurrasPlan Parceiros — Mercados, açougues e profissionais"><meta property="og:description" content="Gerencie ofertas e filiais, receba interesse comercial e acompanhe resultados do ChurrasPlan."><meta property="og:url" content="http://localhost:8080/parceiros.html"><meta property="og:type" content="website"><meta name="twitter:card" content="summary"><meta name="robots" content="noindex,nofollow"><script type="application/ld+json">{"@context": "https://schema.org", "@type": "WebSite", "name": "ChurrasPlan", "url": "http://localhost:8080/"}</script><!-- SEO_FIM --></head>
-<body class="account-page"><a class="skip-link" href="#main">Pular para o conteúdo</a><main id="main" class="saas-shell">
-<header class="simple-topbar"><a class="home-brand" href="index.html"><img class="home-wordmark" src="assets/logo-wordmark.png" alt="ChurrasPlan"></a><nav aria-label="Navegação"><a href="planejamento.html">Planejar</a><a href="minha-conta.html">Minha conta</a><a href="parceiros.html">Parceiros</a></nav></header>
-<section class="saas-hero"><span class="eyebrow">DO PLANEJAMENTO AO SEU MERCADO</span><h1>Sua oferta no caminho<br>do próximo churrasco.</h1><p>O ChurrasPlan conecta consumidores, churrasqueiros e mercados locais. Cadastre suas ofertas e acompanhe as pessoas encaminhadas para sua loja.</p><a class="primary-button" href="#interesse">Quero conhecer</a> <a class="text-button" href="parceiro.html">Já sou parceiro</a></section>
-<section class="saas-grid" aria-label="Valor para cada negócio"><article class="saas-card"><h2>Açougues e mercados</h2><p>Publique preços, organize seu catálogo por SKU e atualize ofertas por CSV. Compare visualizações e cliques sem confundir intenção com venda.</p></article><article class="saas-card"><h2>Churrasqueiros e buffets</h2><p>Salve planejamentos, gerencie clientes e prepare propostas com quantidades comerciais e custos rastreáveis.</p><a href="profissional.html">Conhecer ferramentas profissionais</a></article><article class="saas-card"><h2>Redes e filiais</h2><p>Gerencie unidades e colaboradores em uma organização. Mantenha catálogo, campanhas e permissões sob controle.</p><a href="planos.html">Ver planos e disponibilidade</a></article></section>
-<section class="saas-card" id="interesse"><h2>Vamos conversar sobre seu negócio</h2><p>O piloto regional começa com parceiros reais e ofertas verificadas. Este formulário solicita atendimento comercial.</p>
-<form id="lead-form" class="saas-grid"><label>Seu nome<input name="nome" required minlength="2" maxlength="120" autocomplete="name"></label><label>E-mail de contato<input name="email" type="email" required maxlength="160" autocomplete="email"></label><label>Nome do negócio<input name="empresa" required minlength="2" maxlength="150"></label><label>Cidade e região<input name="cidade" required minlength="2" maxlength="120"></label><label>Seu segmento<select name="tipo_estabelecimento"><option value="acougue">Açougue</option><option value="mercado">Mercado</option><option value="supermercado">Supermercado</option><option value="buffet">Buffet</option><option value="churrasqueiro">Churrasqueiro</option><option value="outro">Outro</option></select></label>
-<label class="honeypot" aria-hidden="true">Site<input name="site" tabindex="-1" autocomplete="off"></label>
-<label class="saas-full check"><input name="ciente_privacidade" type="checkbox" required>Li a <a href="privacidade.html">política de privacidade</a> e estou solicitando contato sobre o ChurrasPlan.</label><label class="saas-full check"><input name="marketing" type="checkbox">Também quero receber novidades promocionais (opcional).</label><button class="primary-button" type="submit">Registrar interesse</button></form></section><p id="saas-msg" role="status" aria-live="polite"></p>
-<footer><a href="privacidade.html">Privacidade</a> · <a href="termos.html">Termos</a> · <a href="cookies.html">Cookies</a></footer></main>
-<script src="js/config.js"></script><script src="js/state.js"></script><script src="js/api.js"></script><script src="js/telemetria.js"></script><script src="js/script.js"></script><script src="js/auth-ui.js"></script><script src="js/parceiros-landing.js"></script><script src="js/analytics.js"></script><script src="js/pwa.js"></script></body></html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ChurrasPlan Parceiros — Mercados, açougues e profissionais</title>
+<meta name="theme-color" content="#a62210">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="assets/pwa/icon-192.png">
+<link rel="preload" href="fonts/archivo-latin-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="css/ds.css">
+<link rel="stylesheet" href="css/pages/commercial.css">
+<!-- SEO_INICIO --><meta name="description" content="Gerencie ofertas e filiais, receba interesse comercial e acompanhe resultados do ChurrasPlan."><link rel="canonical" href="http://localhost:8080/parceiros.html"><meta property="og:title" content="ChurrasPlan Parceiros — Mercados, açougues e profissionais"><meta property="og:description" content="Gerencie ofertas e filiais, receba interesse comercial e acompanhe resultados do ChurrasPlan."><meta property="og:url" content="http://localhost:8080/parceiros.html"><meta property="og:type" content="website"><meta name="twitter:card" content="summary"><meta name="robots" content="noindex,nofollow"><script type="application/ld+json">{"@context": "https://schema.org", "@type": "WebSite", "name": "ChurrasPlan", "url": "http://localhost:8080/"}</script><!-- SEO_FIM --></head>
+<body class="commercial-page partners-page">
+<a class="skip-link" href="#main">Pular para o conteúdo</a>
+<header class="site-header">
+  <div class="site-header__inner">
+    <a class="brand-lockup" href="index.html" aria-label="ChurrasPlan, página inicial">
+      <img class="brand-lockup__icon" src="assets/logo-icon-96.webp" alt="" width="38" height="36">
+      <img class="brand-lockup__wordmark" src="assets/logo-wordmark-320.webp" alt="ChurrasPlan" width="132" height="20">
+    </a>
+    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav" data-nav-toggle><span class="nav-toggle__bars"></span><span class="sr-only">Abrir menu</span></button>
+    <nav class="site-nav" id="site-nav" aria-label="Navegação principal">
+      <a href="index.html#como-funciona">Como funciona</a>
+      <a href="planos.html">Planos</a>
+      <a href="onde-comprar.html">Onde comprar</a>
+      <a href="parceiros.html">Para negócios</a>
+      <span id="auth-nav-slot"></span>
+      <a class="btn btn--primary site-nav__cta" href="planejamento.html">Planejar churrasco</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main" class="commercial-main">
+  <div class="container-page">
+    <section class="commercial-hero partner-hero" aria-labelledby="parceiros-titulo">
+      <div>
+        <p class="eyebrow"><span></span>Do planejamento ao seu mercado</p>
+        <h1 id="parceiros-titulo">Sua oferta no caminho do próximo churrasco.</h1>
+        <p class="commercial-lead">O ChurrasPlan conecta consumidores, churrasqueiros e mercados locais. Cadastre suas ofertas e acompanhe as pessoas encaminhadas para sua loja.</p>
+        <div class="commercial-actions">
+          <a class="btn btn--primary btn--lg" href="#interesse">Quero conhecer</a>
+          <a class="text-button" href="parceiro.html">Já sou parceiro</a>
+        </div>
+      </div>
+      <figure class="offer-example">
+        <div class="ticket-shadow">
+          <div class="ticket offer-ticket">
+            <div class="ticket__head">
+              <span class="ticket__label">Lista de compras</span>
+              <span class="ticket__meta">Churrasco para 20 pessoas</span>
+            </div>
+            <ul class="offer-list">
+              <li><span>Picanha</span><span>3,2 kg</span></li>
+              <li><span>Fraldinha</span><span>2,4 kg</span></li>
+              <li><span>Linguiça toscana</span><span>2,5 kg</span></li>
+              <li><span>Carvão</span><span>10 kg</span></li>
+            </ul>
+            <div class="offer-match">
+              <span class="offer-match__label">Oferta de parceiro verificado</span>
+              <strong>Picanha bovina</strong>
+              <span class="offer-match__meta">Açougue do bairro, a&nbsp;1,2&nbsp;km</span>
+              <span class="offer-price">R$ 69,90<small>/kg</small></span>
+            </div>
+          </div>
+        </div>
+        <figcaption>Exemplo ilustrativo. Preços e distâncias reais vêm das ofertas de cada parceiro.</figcaption>
+      </figure>
+    </section>
+
+    <section class="business-section" aria-labelledby="parceiros-negocios">
+      <div class="pricing-section__head">
+        <h2 id="parceiros-negocios">Para cada tipo de negócio</h2>
+      </div>
+      <div class="business-grid">
+        <article class="business-card">
+          <h3>Açougues e mercados</h3>
+          <p>Publique preços, organize seu catálogo por SKU e atualize ofertas por CSV. Compare visualizações e cliques sem confundir intenção com venda.</p>
+        </article>
+        <article class="business-card">
+          <h3>Churrasqueiros e buffets</h3>
+          <p>Salve planejamentos, gerencie clientes e prepare propostas com quantidades comerciais e custos rastreáveis.</p>
+          <a class="text-button" href="profissional.html">Conhecer ferramentas profissionais</a>
+        </article>
+        <article class="business-card">
+          <h3>Redes e filiais</h3>
+          <p>Gerencie unidades e colaboradores em uma organização. Mantenha catálogo, campanhas e permissões sob controle.</p>
+          <a class="text-button" href="planos.html">Ver planos e disponibilidade</a>
+        </article>
+      </div>
+    </section>
+
+    <section class="lead-section" id="interesse" aria-labelledby="interesse-titulo">
+      <div class="lead-section__copy">
+        <h2 id="interesse-titulo">Vamos conversar sobre seu negócio</h2>
+        <p>O piloto regional começa com parceiros reais e ofertas verificadas. Este formulário solicita atendimento comercial.</p>
+      </div>
+      <div>
+        <form id="lead-form" class="lead-form">
+          <label>Seu nome<input name="nome" required minlength="2" maxlength="120" autocomplete="name"></label>
+          <label>E-mail de contato<input name="email" type="email" required maxlength="160" autocomplete="email"></label>
+          <label>Nome do negócio<input name="empresa" required minlength="2" maxlength="150"></label>
+          <label>Cidade e região<input name="cidade" required minlength="2" maxlength="120"></label>
+          <label>Seu segmento<select name="tipo_estabelecimento"><option value="acougue">Açougue</option><option value="mercado">Mercado</option><option value="supermercado">Supermercado</option><option value="buffet">Buffet</option><option value="churrasqueiro">Churrasqueiro</option><option value="outro">Outro</option></select></label>
+          <label class="honeypot" aria-hidden="true">Site<input name="site" tabindex="-1" autocomplete="off"></label>
+          <label class="saas-full legal-check"><input name="ciente_privacidade" type="checkbox" required><span>Li a <a href="privacidade.html">política de privacidade</a> e estou solicitando contato sobre o ChurrasPlan.</span></label>
+          <label class="saas-full legal-check"><input name="marketing" type="checkbox"><span>Também quero receber novidades promocionais (opcional).</span></label>
+          <button class="btn btn--primary btn--lg" type="submit">Registrar interesse</button>
+        </form>
+        <p id="saas-msg" class="lead-msg" role="status" aria-live="polite"></p>
+      </div>
+    </section>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="site-footer__inner">
+    <div class="site-footer__brand">
+      <img src="assets/logo-wordmark-320.webp" alt="ChurrasPlan" width="150" height="23" loading="lazy">
+      <p>Planejamento de churrasco com quantidades, orçamento e lista de compras, conectado a mercados e açougues da sua região.</p>
+    </div>
+    <nav class="site-footer__nav" aria-label="Rodapé">
+      <div><p class="site-footer__title">Produto</p><a href="planejamento.html">Planejar churrasco</a><a href="planos.html">Planos e preços</a><a href="onde-comprar.html">Onde comprar</a><a href="guias/index.html">Guias de churrasco</a></div>
+      <div><p class="site-footer__title">Negócios</p><a href="parceiros.html">ChurrasPlan Parceiros</a><a href="parceiro.html">Área do parceiro</a><a href="profissional.html">Área profissional</a></div>
+      <div><p class="site-footer__title">Conta e privacidade</p><a href="minha-conta.html">Minha conta</a><a href="privacidade.html">Privacidade</a><a href="termos.html">Termos de uso</a><a href="cookies.html">Cookies</a></div>
+    </nav>
+  </div>
+  <div class="site-footer__legal"><span>© 2026 ChurrasPlan</span><span>Quantidades e preços exibidos são estimativas de planejamento.</span></div>
+</footer>
+
+<script src="js/config.js"></script>
+<script src="js/state.js"></script>
+<script src="js/api.js"></script>
+<script src="js/telemetria.js"></script>
+<script src="js/script.js"></script>
+<script src="js/auth-ui.js"></script>
+<script src="js/parceiros-landing.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/analytics.js"></script>
+<script src="js/pwa.js"></script>
+</body>
+</html>

@@ -9,7 +9,7 @@
     const aviso = (mensagem, erro = true) => {
         const box = el("planos-mensagem");
         box.hidden = false; box.textContent = mensagem;
-        box.style.borderColor = erro ? "#d88d78" : "#a6bba5";
+        box.dataset.tipo = erro ? "erro" : "info";
         box.scrollIntoView({ behavior: "smooth", block: "nearest" });
     };
     const variaveisPreco = {
@@ -25,6 +25,7 @@
             const achado = precos[publico].find(item => item.plano === plano && item.periodicidade === periodicidade());
             const btn = document.querySelector('[data-plano="' + plano + '"]');
             btn.disabled = !achado;
+            el("preco-" + plano).classList.toggle("is-indisponivel", !achado);
             el("preco-" + plano).textContent = achado
                 ? formato(achado.centavos) + (periodicidade() === "mensal" ? " / mês" : " / ano")
                 : "Indisponível no teste";
