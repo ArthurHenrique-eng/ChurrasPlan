@@ -87,6 +87,11 @@ def _autorreferencias(tabela) -> list[str]:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--executar", action="store_true", help="copia de fato; sem isso só confere e conta")
+    parser.add_argument(
+        "--sem-detalhes",
+        action="store_true",
+        help="não imprime a contagem por tabela (para logs públicos, como os do GitHub Actions)",
+    )
     args = parser.parse_args()
 
     try:
@@ -122,9 +127,10 @@ def main() -> int:
     print(f"head do código: {head}")
     print(f"origem (MySQL): revisão {revisao_origem}, {sum(contagem_origem.values())} linhas")
     print(f"destino (PostgreSQL): revisão {revisao_destino}, {sum(contagem_destino.values())} linhas")
-    print(f"{'tabela':32} {'origem':>8} {'destino':>8}")
-    for t in tabelas:
-        print(f"{t.name:32} {contagem_origem.get(t.name, '-'):>8} {contagem_destino[t.name]:>8}")
+    if not args.sem_detalhes:
+        print(f"{'tabela':32} {'origem':>8} {'destino':>8}")
+        for t in tabelas:
+            print(f"{t.name:32} {contagem_origem.get(t.name, '-'):>8} {contagem_destino[t.name]:>8}")
 
     problemas = []
     if revisao_origem != head and revisao_origem not in REVISOES_ORIGEM_EXTRAS:
