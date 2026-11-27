@@ -1,23 +1,28 @@
-const VERSION = "churrasplan-v6.10.0";
+const VERSION = "churrasplan-v7.0.0";
 const STATIC_CACHE = `${VERSION}-static`;
 const PAGE_CACHE = `${VERSION}-pages`;
+// Tudo o que as páginas de SAFE_PAGES precisam para abrir sem rede.
+// scripts/validate_frontend.py confere se cada arquivo existe: um único
+// caminho quebrado faz cache.addAll falhar e o service worker não instala.
 const STATIC_ASSETS = [
   "/offline.html",
   "/favicon.svg",
   "/manifest.webmanifest",
-  "/assets/logo-icon.png",
-  "/assets/logo-wordmark.png",
+  "/assets/logo-icon-96.webp",
+  "/assets/logo-wordmark-320.webp",
   "/assets/pwa/icon-192.png",
   "/assets/pwa/icon-512.png",
-  "/css/unified-core.css",
-  "/css/unified-home.css",
-  "/css/integracao-v3.css",
-  "/css/production-v63.css",
+  "/fonts/archivo-latin-var.woff2",
+  "/css/ds.css",
+  "/css/pages/home.css",
+  "/css/pages/planner.css",
+  "/css/pages/content.css",
   "/js/config.js",
   "/js/state.js",
   "/js/api.js",
   "/js/script.js",
   "/js/icons.js",
+  "/js/ui.js",
   "/js/pwa.js"
 ];
 const SAFE_PAGES = new Set([
