@@ -559,3 +559,34 @@ def test_free_quota_concorrente_nao_passa_de_cinco():
         db.commit()
     finally:
         db.close()
+
+
+def test_cota_profissional_free_conta_com_lock_do_usuario():
+    """A cota de clientes do plano Free conta com o usuário bloqueado, sem erro de dialeto."""
+    _setup_url()
+    from fastapi import HTTPException
+    from database.connection import SessionLocal
+    from models import ClienteProfissional, Usuario
+    from routers.profissional import cota
+    from services.auth import hash_senha
+
+    db = SessionLocal()
+    try:
+        u = Usuario(nome="Profissional Free", email=f"prof-{uuid.uuid4().hex}@example.com",
+                    senha_hash=hash_senha("SenhaProfissional123"), papel="usuario")
+        db.add(u); db.commit()
+        uid = u.id
+        for n in range(3):
+            cota(db, u, ClienteProfissional, 3)
+            db.add(ClienteProfissional(usuario_id=uid, nome=f"Cliente {n}"))
+            db.commit()
+        with pytest.raises(HTTPException) as exc:
+            cota(db, u, ClienteProfissional, 3)
+        assert exc.value.status_code == 409
+        assert exc.value.detail["codigo"] == "LIMITE_PROFISSIONAL_FREE"
+        db.rollback()
+        db.query(ClienteProfissional).filter_by(usuario_id=uid).delete()
+        db.query(Usuario).filter_by(id=uid).delete()
+        db.commit()
+    finally:
+        db.close()
