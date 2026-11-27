@@ -608,6 +608,7 @@ QA adicional do painel do fundador: quatro funis e retenção renderizados em 14
 
 - Checks do job Frontend static checks (`node --check`, datas, origem da API, `validate_frontend.py`, coordenadas, parceiro, CSP): todos aprovados.
 - Páginas redesenhadas conferidas no Chromium em 1440 e 390 px, sem rolagem horizontal até 320 px. Fluxos manuais incluídos: planos com aviso de checkout cancelado; convite com RSVP "talvez", restauração após recarregar e estado sem código; onde comprar sem mapa; páginas legais com menu móvel e preferências de cookies; "Tentar novamente" da página offline.
+- E2E Chromium (`e2e/`, 13 fluxos): 12 aprovados na execução completa. O fluxo do parceiro falhou só porque o SQLite local, criado com `AUTO_CREATE_SCHEMA` e sem as migrations de dados, não tinha a categoria "Limpeza"; depois de aplicar nesse banco os dados da migration 0007, ele também passou.
 - Service worker: instala com 19 entradas; com a rede desligada, `privacidade.html` abre do cache já estilizada e `/guias/index.html` e `/admin.html` caem em `offline.html` estilizada.
 - Acessibilidade: axe-core 4.10.2 (WCAG 2.0/2.1/2.2 A e AA e boas práticas) em 28 páginas, a 1440 e 390 px, com sessão de parceiro e de administrador nas áreas logadas: nenhuma violação depois das correções acima. O banner de consentimento aberto também passou.
 - Responsividade: 28 páginas em 320, 360, 390, 768, 1024 e 1440 px sem rolagem horizontal do documento e sem erro de JavaScript.
@@ -620,4 +621,4 @@ QA adicional do painel do fundador: quatro funis e retenção renderizados em 14
 - A Política de Privacidade ainda cita Google Maps/Places, mas o backend usa somente Geoapify e o mapa é MapLibre; revisar o texto jurídico.
 - `planos.js` mostra nomes de variáveis `STRIPE_PRICE_*` quando um preço não está configurado; convém escondê-los em produção.
 - `FrontEnd/Dockerfile`: `RUN apk upgrade --no-cache` numa camada cacheável pode reaproveitar pacotes antigos em builds com cache.
-- O E2E do parceiro falha localmente na categoria "Limpeza", ausente no banco local; o mesmo ocorre na `main`.
+- `sitemap.xml`, `robots.txt` e os canônicos estão gerados com `http://localhost:8080`, e `robots.txt` bloqueia a indexação (`Disallow: /`). A Vercel publica `FrontEnd/` como está, sem build; antes de abrir a indexação, rodar `scripts/build_seo.py --base-url` com a URL pública e publicar o resultado. Situação anterior a esta revisão.
