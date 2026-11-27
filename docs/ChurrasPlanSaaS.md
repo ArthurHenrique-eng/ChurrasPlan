@@ -578,7 +578,7 @@ QA adicional do painel do fundador: quatro funis e retenção renderizados em 14
 **JavaScript (apresentação e correções):**
 - Templates passam a usar as classes do design system. Códigos internos ganham rótulos de exibição (plano, status de assinatura e fatura, papel, status de proposta e tarefa); os valores enviados à API não mudaram.
 - `api.js`: `mensagemErroApi` transforma `detail` estruturado (lista de validação, `mensagem`, `LIMITE_MEMBROS_ATINGIDO`, `RECURSO_PLANO_NECESSARIO`) em texto legível; `erro.body` continua com o corpo completo.
-- `auth-pages.js`: link de redefinição ou verificação incompleto (HTTP 422) mostra uma instrução em vez de JSON.
+- `auth-pages.js`: link de redefinição ou verificação com token cortado (422 de validação no campo `token`) mostra uma instrução em vez de JSON; o 422 da regra de senha continua mostrando a mensagem da API.
 - Correções: `event.currentTarget` guardado antes do primeiro `await` em `admin.js`, `preferencias.js` e `conta-retencao.js` (virava `null` e quebrava o reset do formulário ou a reativação do botão); o índice de seções de `ui.js` só regrava atributos que mudaram (evita laço infinito do `MutationObserver`); `seguranca.js` confirma a ativação do MFA com mensagem; `operacao.js` esconde o painel e mostra aviso a quem não é administrador (a API continua negando o acesso).
 - `offline.html`: "Tentar novamente" usa `data-recarregar`, tratado em `pwa.js`, porque o `onclick` inline era bloqueado pela CSP.
 - `carnes.js`, `bebidas.js`, `extras.js`: cada item é um `<label>` clicável por inteiro; o percentual de carne ganha `aria-label`. `onde-comprar.js`: cores dos marcadores seguem os tokens e os botões de ordenação expõem `aria-pressed`.
