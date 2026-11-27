@@ -1,24 +1,21 @@
 services:
   db:
-    image: mysql:8.4
+    image: postgres:17
     restart: unless-stopped
     environment:
-      MYSQL_DATABASE: ${MYSQL_DATABASE:-churrasplan}
-      MYSQL_USER: ${MYSQL_USER:-churrasplan}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-churrasplan_dev}
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root_dev_change_me}
-    command:
-    - --character-set-server=utf8mb4
-    - --collation-server=utf8mb4_unicode_ci
-    - --default-time-zone=+00:00
+      POSTGRES_DB: ${POSTGRES_DB:-churrasplan}
+      POSTGRES_USER: ${POSTGRES_USER:-churrasplan}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-churrasplan_dev}
+      TZ: UTC
+      PGTZ: UTC
     ports:
-    - ${MYSQL_PORT:-3306}:3306
+    - ${POSTGRES_PORT:-5432}:5432
     volumes:
-    - churrasplan_mysql:/var/lib/mysql
+    - churrasplan_postgres:/var/lib/postgresql/data
     healthcheck:
       test:
       - CMD-SHELL
-      - mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent
+      - pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB
       interval: 5s
       timeout: 5s
       retries: 20
@@ -31,11 +28,12 @@ services:
         condition: service_healthy
     environment:
       APP_ENV: development
+      DB_DRIVER: postgresql
       DB_HOST: db
-      DB_PORT: 3306
-      DB_USER: ${MYSQL_USER:-churrasplan}
-      DB_PASSWORD: ${MYSQL_PASSWORD:-churrasplan_dev}
-      DB_NAME: ${MYSQL_DATABASE:-churrasplan}
+      DB_PORT: 5432
+      DB_USER: ${POSTGRES_USER:-churrasplan}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-churrasplan_dev}
+      DB_NAME: ${POSTGRES_DB:-churrasplan}
       AUTO_CREATE_SCHEMA: 'false'
       CORS_ORIGINS: http://localhost:8080,http://127.0.0.1:8080
       PUBLIC_APP_URL: http://localhost:8080
@@ -92,11 +90,12 @@ services:
         condition: service_healthy
     environment:
       APP_ENV: development
+      DB_DRIVER: postgresql
       DB_HOST: db
-      DB_PORT: 3306
-      DB_USER: ${MYSQL_USER:-churrasplan}
-      DB_PASSWORD: ${MYSQL_PASSWORD:-churrasplan_dev}
-      DB_NAME: ${MYSQL_DATABASE:-churrasplan}
+      DB_PORT: 5432
+      DB_USER: ${POSTGRES_USER:-churrasplan}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-churrasplan_dev}
+      DB_NAME: ${POSTGRES_DB:-churrasplan}
       AUTO_CREATE_SCHEMA: 'false'
       CORS_ORIGINS: http://localhost:8080,http://127.0.0.1:8080
       PUBLIC_APP_URL: http://localhost:8080
@@ -124,4 +123,4 @@ services:
     - -m
     - scripts.worker
 volumes:
-  churrasplan_mysql: null
+  churrasplan_postgres: null

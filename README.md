@@ -85,7 +85,7 @@ ChurrasPlan/
 │   ├── services/
 │   ├── sql/
 │   ├── tests/
-│   ├── tests_mysql/
+│   ├── tests_banco_real/
 │   └── scripts/
 ├── FrontEnd/
 │   ├── assets/
@@ -108,7 +108,9 @@ ChurrasPlan/
 O Alembic é a fonte de verdade do schema. Head atual da branch SaaS: **`20261012_0024`**, incluindo as migrations 0009 organizações, 0010 entitlements, 0011 equipe/convites, 0012 filiais/ofertas CSV, 0013 catálogo/campanhas, 0014 Billing B2B, 0015 Billing B2C, 0016 periodicidade B2B, 0017 modelos Premium pessoais, 0018 segurança/MFA/outbox, 0019 growth, 0020 ferramentas profissionais/retenção, 0021 assistente, 0022 privacidade/métricas, 0023 EAN por organização e 0024 contexto mínimo de funis. Veja [a memória técnica mestra](docs/ChurrasPlanSaaS.md) para a matriz integral, rollback e requisitos de validação.
 
 
-`BackEnd/Python/sql/schema.sql` representa uma **instalação nova** no head atual. Para banco existente, use migrations.
+`BackEnd/Python/sql/schema.sql` representa uma **instalação nova** no head atual, em sintaxe MySQL. Para banco existente, e em qualquer instalação PostgreSQL, use migrations.
+
+Banco de produção: **PostgreSQL** (Neon, desde 27/11/2026). Defina `DATABASE_URL` com a URL de conexão direta do provedor; `postgresql://` e `postgres://` são convertidos para o driver psycopg 3. MySQL 8 continua suportado por compatibilidade (`mysql+pymysql://...` ou `DB_DRIVER=mysql`). Detalhes e diferenças de dialeto na [seção 10.1 da memória técnica](docs/ChurrasPlanSaaS.md#101-banco-de-dados-postgresql-neon-desde-27112026).
 
 ## Rodar com Docker — desenvolvimento
 
@@ -131,7 +133,7 @@ Swagger:
 http://localhost:8080/docs
 ```
 
-A stack sobe MySQL 8.4, aplica migrations, garante o catálogo genérico e carrega registros de **referência de planejamento** em desenvolvimento, inicia FastAPI e serve o frontend via Nginx.
+A stack sobe PostgreSQL 17, aplica migrations, garante o catálogo genérico e carrega registros de **referência de planejamento** em desenvolvimento, inicia FastAPI e serve o frontend via Nginx.
 
 Os preços de desenvolvimento existem somente para exercitar orçamento, custo por pessoa e divisão. Para desabilitá-los:
 
@@ -199,7 +201,7 @@ Readiness incluindo conexão com o banco.
 - configuração de produção falha cedo quando insegura;
 - `pip-audit` e `bandit` no CI.
 
-Em produção, a aplicação também recusa banco diferente de MySQL/PyMySQL.
+Em produção, a aplicação também recusa banco diferente de PostgreSQL (psycopg) ou MySQL (PyMySQL).
 
 ## LGPD / privacidade
 
@@ -257,14 +259,17 @@ cd BackEnd/Python
 pytest -q tests
 ```
 
-### MySQL real
+### Banco real (PostgreSQL ou MySQL)
+
+Use sempre um banco descartável:
 
 ```bash
-export MYSQL_TEST_URL='mysql+pymysql://.../churrasplan_test?charset=utf8mb4'
-export DATABASE_URL="$MYSQL_TEST_URL"
+export DB_TEST_URL='postgresql://usuario:senha@127.0.0.1:5432/churrasplan_test'
+# MySQL (compatibilidade): mysql+pymysql://.../churrasplan_test?charset=utf8mb4
+export DATABASE_URL="$DB_TEST_URL"
 alembic upgrade head
 alembic check
-pytest -q tests_mysql
+pytest -q tests_banco_real
 ```
 
 ### E2E
@@ -288,7 +293,7 @@ Linux/macOS/Git Bash:
 ./scripts/test_all.sh
 ```
 
-Os scripts também suportam MySQL real e E2E por opção/variável de ambiente.
+Os scripts também suportam banco real e E2E por opção/variável de ambiente (`RUN_DB=1` com `DB_TEST_URL` no Bash; `-MySQL` no PowerShell).
 
 ### Validações auxiliares
 
@@ -303,13 +308,13 @@ node --check FrontEnd/sw.js
 
 `.github/workflows/ci.yml` executa:
 1. backend em SQLite;
-2. migrations/testes contra MySQL 8.4 real;
+2. migrations/testes contra PostgreSQL 17 real e, por compatibilidade, MySQL 8.4 real;
 3. frontend estático;
 4. auditoria de dependências/segurança;
 5. build das imagens Docker e validação de compose;
-6. E2E Chromium contra MySQL real.
+6. E2E Chromium contra PostgreSQL real.
 
-Na trilha SaaS, a branch `Saas-ChurrasPlan` também executa os seis jobs em pushes, além de PRs. A configuração de `CodeQL` faz análise estática de Python e JavaScript; o `Dependabot` propõe atualizações de dependências via PRs direcionados à `main` (minor/patch agrupados por ecossistema, majors em PRs individuais e imagens Docker mensais; veja `.github/dependabot.yml`). As regras de proteção e aprovações obrigatórias ainda devem ser configuradas no GitHub conforme `docs/ChurrasPlanSaaS.md`.
+Na trilha SaaS, a branch `Saas-ChurrasPlan` também executa os jobs em pushes, além de PRs. A configuração de `CodeQL` faz análise estática de Python e JavaScript; o `Dependabot` propõe atualizações de dependências via PRs direcionados à `main` (minor/patch agrupados por ecossistema, majors em PRs individuais e imagens Docker mensais; veja `.github/dependabot.yml`). As regras de proteção e aprovações obrigatórias ainda devem ser configuradas no GitHub conforme `docs/ChurrasPlanSaaS.md`.
 
 A etapa de **deploy** não está ligada a um provedor específico. Isso é intencional: primeiro deve ser definido onde staging/produção serão hospedados e como os segredos serão gerenciados.
 
@@ -333,7 +338,7 @@ Caddy/HTTPS
   ├─ /api → FastAPI
   └─ site → Nginx frontend
        ↓
-MySQL em rede interna
+PostgreSQL em rede interna
 ```
 
 Veja `docs/ChurrasPlanSaaS.md`.

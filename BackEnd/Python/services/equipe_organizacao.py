@@ -9,6 +9,7 @@ from fastapi import HTTPException
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from database.connection import contagem_com_bloqueio
 from models import AuditoriaOrganizacao, ConviteOrganizacao, Organizacao, OrganizacaoMembro, Usuario
 from services.auth import agora, normalizar_email, validar_email_simples
 from services.entitlements import resolver_plano
@@ -56,9 +57,9 @@ def exigir_papel_gerenciavel(ator: OrganizacaoMembro, novo_papel: str, papel_atu
 def garantir_vaga(db: Session, org: Organizacao, *, convite_consumido_id: int | None = None) -> dict:
     plano, _, _ = resolver_plano(db, org.id, bloqueio=True)
     limite = LIMITES_MEMBROS[plano]
-    membros = int(db.execute(select(func.count(OrganizacaoMembro.id)).where(
+    membros = int(db.execute(contagem_com_bloqueio(db, select(func.count(OrganizacaoMembro.id)).where(
         OrganizacaoMembro.organizacao_id == org.id, OrganizacaoMembro.ativo.is_(True)
-    ).with_for_update()).scalar_one())
+    ))).scalar_one())
     filtro = [
         ConviteOrganizacao.organizacao_id == org.id,
         ConviteOrganizacao.usado_em.is_(None),
@@ -67,9 +68,9 @@ def garantir_vaga(db: Session, org: Organizacao, *, convite_consumido_id: int | 
     ]
     if convite_consumido_id is not None:
         filtro.append(ConviteOrganizacao.id != convite_consumido_id)
-    pendentes = int(db.execute(select(func.count(ConviteOrganizacao.id)).where(
+    pendentes = int(db.execute(contagem_com_bloqueio(db, select(func.count(ConviteOrganizacao.id)).where(
         *filtro
-    ).with_for_update()).scalar_one())
+    ))).scalar_one())
     if membros + pendentes >= limite:
         raise HTTPException(status_code=409, detail={
             "codigo": "LIMITE_MEMBROS_ATINGIDO", "plano": plano, "limite": limite,

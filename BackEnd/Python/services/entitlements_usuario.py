@@ -10,6 +10,7 @@ from fastapi import HTTPException
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from database.connection import contagem_com_bloqueio
 from models import AssinaturaStripeUsuario, Churrasco, Usuario
 from services.billing_usuario import assinatura_usuario_efetiva
 
@@ -40,8 +41,8 @@ def exigir_premium_usuario(db: Session, usuario: Usuario, recurso: str) -> None:
 def total_planejamentos(db: Session, usuario_id: int, *, bloqueio: bool = False) -> int:
     stmt = select(func.count(Churrasco.id)).where(Churrasco.usuario_id == usuario_id)
     if bloqueio:
-        # Leitura corrente InnoDB mesmo que transação tenha aberto snapshot RR.
-        stmt = stmt.with_for_update()
+        # Leitura corrente após o lock do usuário; ver contagem_com_bloqueio.
+        stmt = contagem_com_bloqueio(db, stmt)
     return int(db.execute(stmt).scalar_one())
 
 
