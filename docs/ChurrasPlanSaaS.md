@@ -592,6 +592,8 @@ QA adicional do painel do fundador: quatro funis e retenção renderizados em 14
 
 **Service worker `churrasplan-v7.0.0`:** pré-carrega `ds.css`, os CSS das páginas seguras (home, planner, content), a fonte Archivo, os logos WebP e `ui.js`; a ativação apaga os caches `churrasplan-*` anteriores. `scripts/validate_frontend.py` falha quando um caminho de `STATIC_ASSETS` ou `SAFE_PAGES` não existe (um único ausente impede a instalação) e quando um link `pagina.html#ancora` aponta para id inexistente. No CI, a checagem de cabeçalhos do Nginx usa `ds.css`, o logo WebP e a fonte.
 
+**Publicação na Vercel:** `FrontEnd/vercel.json` fixa `"framework": null` e `FrontEnd/.vercelignore` tira do deploy `Dockerfile`, `nginx.conf` e `security-headers.conf`. O build da Vercel vinha tratando o projeto como container (preset Container, que detecta o `Dockerfile` feito para o Docker Compose): montava a imagem Nginx a cada deploy e a enviava ao Vercel Container Registry. Em 27/11/2026 o repositório de imagens chegou ao limite e todo deploy passou a falhar no push ("repository has reached the maximum allowed number of images"). Com a mudança, o site sai como estático pela CDN, com os cabeçalhos e o proxy de `/api` definidos no `vercel.json`; o container continua sendo usado no Docker Compose e no CI.
+
 ### 20.4 Regras para novas telas
 
 1. Carregar `css/ds.css` e um único arquivo de `css/pages/`, reaproveitando o grupo mais próximo antes de criar outro.
@@ -618,6 +620,7 @@ QA adicional do painel do fundador: quatro funis e retenção renderizados em 14
 ### 20.6 Pendências
 
 - Revisão visual humana no PR e no preview da Vercel antes do merge.
+- Vercel, no painel (opcional): apagar as imagens antigas do repositório `dockerfile` no Container Registry do projeto, que deixam de ser usadas, e trocar o Framework Preset para Other, para o painel refletir o `vercel.json`.
 - A Política de Privacidade ainda cita Google Maps/Places, mas o backend usa somente Geoapify e o mapa é MapLibre; revisar o texto jurídico.
 - `planos.js` mostra nomes de variáveis `STRIPE_PRICE_*` quando um preço não está configurado; convém escondê-los em produção.
 - `FrontEnd/Dockerfile`: `RUN apk upgrade --no-cache` numa camada cacheável pode reaproveitar pacotes antigos em builds com cache.
