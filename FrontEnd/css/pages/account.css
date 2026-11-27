@@ -1,0 +1,1137 @@
+/* Conta e autenticação =====================================================
+   Login, cadastro, recuperação de senha, verificação de e-mail, minha conta,
+   segurança (MFA) e preferências de comunicação. Depende de css/ds.css.
+
+   Classes antigas geradas por scripts (history-card, history-actions,
+   billing-block, plan-summary, saas-card) são estilizadas aqui para que a
+   lógica em js/ continue intacta. */
+
+/* 1. Autenticação ========================================================== */
+
+.auth-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+.auth-topbar {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.auth-topbar__inner {
+  width: min(var(--w-page), 100% - 2 * var(--gutter));
+  min-height: 64px;
+  margin-inline: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-4);
+}
+
+.auth-main {
+  flex: 1 0 auto;
+  width: min(1080px, 100% - 2 * var(--gutter));
+  margin-inline: auto;
+  padding: clamp(32px, 8vh, 96px) 0 var(--s-8);
+}
+
+.auth-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 440px);
+  align-items: center;
+  gap: clamp(40px, 7vw, 104px);
+}
+
+.auth-layout--single {
+  grid-template-columns: minmax(0, 480px);
+  justify-content: center;
+  align-items: start;
+  gap: var(--s-6);
+}
+
+.auth-copy h1 {
+  max-width: 14ch;
+  font-size: clamp(2.375rem, 1.3rem + 3.6vw, 4rem);
+  font-weight: 800;
+  font-stretch: 75%;
+  line-height: 0.98;
+  letter-spacing: -0.02em;
+}
+
+.auth-copy > p {
+  max-width: 40ch;
+  margin-top: var(--s-5);
+  color: var(--text-2);
+  font-size: var(--fs-18);
+  line-height: 1.55;
+}
+
+.auth-layout--single .auth-copy h1 {
+  max-width: none;
+  font-size: var(--fs-h1);
+  line-height: 1.08;
+}
+
+.auth-layout--single .auth-copy > p {
+  margin-top: var(--s-3);
+  font-size: var(--fs-16);
+}
+
+/* Comanda com o que a conta guarda: o único destaque da tela */
+.auth-ticket {
+  width: min(100%, 360px);
+  margin-top: var(--s-10);
+}
+
+.auth-ticket .ticket {
+  padding-top: var(--s-5);
+  border-top: 4px solid transparent;
+  border-image: var(--grill) 1;
+}
+
+.auth-benefits {
+  margin: var(--s-2) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.auth-benefits li {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s-3);
+  margin: 0;
+  padding: var(--s-3) 0;
+  border-bottom: 1px dashed var(--border);
+  font-size: var(--fs-15);
+  font-weight: 550;
+  line-height: 1.45;
+}
+
+.auth-benefits li:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.auth-benefits li::before {
+  content: "";
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin-top: 0;
+  border-radius: 50%;
+  background: var(--erva-50) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232b6a47' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 12.5 4 4L18 8'/%3E%3C/svg%3E") center / 12px no-repeat;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .auth-ticket .ticket {
+    animation: ticket-print 640ms var(--ease) 120ms both;
+  }
+}
+
+@keyframes ticket-print {
+  from {
+    clip-path: inset(0 0 100% 0);
+  }
+
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+.auth-card {
+  padding: clamp(24px, 3.4vw, 40px);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  box-shadow: var(--sh-2);
+}
+
+.auth-card h2 {
+  font-size: var(--fs-24);
+  font-weight: 750;
+}
+
+.auth-card__lead {
+  margin-top: var(--s-2);
+  color: var(--text-2);
+  font-size: var(--fs-15);
+}
+
+.auth-form {
+  display: grid;
+  gap: var(--s-4);
+  margin-top: var(--s-6);
+}
+
+.auth-form .legal-checks {
+  margin-top: var(--s-1);
+}
+
+.auth-form > .btn {
+  margin-top: var(--s-2);
+}
+
+/* js/script.js troca a classe do aviso; por isso o seletor é pelo id */
+#auth-message {
+  margin: var(--s-5) 0 0;
+}
+
+.auth-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-2) var(--s-4);
+  margin-top: var(--s-6);
+  padding-top: var(--s-5);
+  border-top: 1px solid var(--border);
+  color: var(--text-2);
+  font-size: var(--fs-14);
+}
+
+.auth-links a {
+  font-weight: 600;
+}
+
+#dev-link:empty {
+  display: none;
+}
+
+#dev-link .auth-links {
+  margin-top: var(--s-4);
+  padding-top: var(--s-4);
+}
+
+@media (max-width: 859px) {
+  .auth-layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--s-6);
+  }
+
+  .auth-layout:not(.auth-layout--single) {
+    max-width: 520px;
+    margin-inline: auto;
+  }
+
+  .auth-copy h1 {
+    max-width: 18ch;
+    font-size: clamp(2rem, 1.2rem + 3.6vw, 2.75rem);
+  }
+
+  .auth-copy > p {
+    margin-top: var(--s-3);
+    font-size: var(--fs-16);
+  }
+
+  .auth-ticket {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .auth-main {
+    padding-top: var(--s-6);
+  }
+
+  .auth-card {
+    padding: var(--s-5);
+    border-radius: var(--r-md);
+  }
+
+  .auth-links {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+/* 2. Minha conta =========================================================== */
+
+.account-shell {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-5);
+}
+
+.account-shell > .page-header {
+  padding-bottom: var(--s-3);
+}
+
+/* Aviso geral da conta (js/script.js redefine as classes) */
+.account-shell > .mensagem {
+  margin: 0;
+}
+
+.account-section {
+  min-width: 0;
+}
+
+.account-section > .texto-suave {
+  max-width: 68ch;
+}
+
+.account-grid {
+  display: grid;
+  gap: var(--s-5);
+  align-items: start;
+}
+
+.account-col {
+  display: grid;
+  gap: var(--s-5);
+  min-width: 0;
+}
+
+@media (min-width: 960px) {
+  .account-grid {
+    grid-template-columns: minmax(0, 1fr) 340px;
+  }
+
+  /* O resumo da conta acompanha a rolagem da coluna principal */
+  .account-aside {
+    position: sticky;
+    top: calc(64px + var(--s-5));
+  }
+}
+
+/* Histórico e modelos: linhas dentro do cartão, sem cartões aninhados */
+.history-list {
+  display: grid;
+  color: var(--text-2);
+  font-size: var(--fs-15);
+}
+
+.history-list .skeleton-group {
+  display: grid;
+  gap: var(--s-3);
+  padding: 0;
+}
+
+.history-skeleton {
+  height: 64px;
+  margin: 0;
+  border-radius: var(--r-md);
+}
+
+.history-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3) var(--s-5);
+  padding: var(--s-4) 0;
+  border-top: 1px solid var(--border);
+  color: var(--text);
+}
+
+.history-card:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.history-card:last-child {
+  padding-bottom: 0;
+}
+
+.history-card > div:first-child {
+  min-width: 0;
+}
+
+.history-card h3 {
+  font-size: var(--fs-16);
+  font-weight: 680;
+  overflow-wrap: anywhere;
+}
+
+.history-card > strong {
+  min-width: 0;
+  font-size: var(--fs-16);
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+
+.history-card p {
+  margin-top: 2px;
+  color: var(--text-2);
+  font-size: var(--fs-14);
+  font-variant-numeric: tabular-nums;
+}
+
+.history-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2);
+}
+
+.history-card .history-actions {
+  flex: none;
+}
+
+.history-card .history-actions .botao,
+.history-card .history-actions .btn {
+  min-height: 38px;
+  padding: 0 14px;
+  font-size: var(--fs-14);
+}
+
+@media (max-width: 600px) {
+  .history-card .history-actions .botao,
+  .history-card .history-actions .btn {
+    min-height: 44px;
+  }
+}
+
+.history-list > p,
+.history-list > .empty-state {
+  margin: 0;
+}
+
+/* Coluna lateral: perfil, plano e atalhos */
+.account-aside {
+  display: grid;
+  gap: var(--s-5);
+}
+
+.account-aside > .cartao__titulo {
+  margin-bottom: 0;
+}
+
+.account-profile {
+  display: grid;
+  gap: 2px;
+}
+
+.account-profile > strong {
+  font-size: var(--fs-18);
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.account-profile > .texto-suave {
+  font-size: var(--fs-14);
+  overflow-wrap: anywhere;
+}
+
+.account-profile .restriction-chips {
+  margin-top: var(--s-3);
+}
+
+.account-profile .skeleton--title {
+  width: 60%;
+  margin: 0 0 var(--s-2);
+}
+
+/* Plano pessoal como etiqueta kraft de açougue, com furo */
+.plan-card {
+  position: relative;
+  display: grid;
+  gap: var(--s-1);
+  padding: var(--s-4) var(--s-4) var(--s-4) 40px;
+  border: 1px solid var(--kraft-100);
+  border-radius: var(--r-md);
+  background: var(--kraft-50);
+}
+
+.plan-card::before {
+  content: "";
+  position: absolute;
+  top: 22px;
+  left: 15px;
+  width: 10px;
+  height: 10px;
+  border: 1px solid var(--kraft);
+  border-radius: 50%;
+  background: var(--surface);
+}
+
+.plan-card__label {
+  color: var(--vinho);
+  font-size: var(--fs-13);
+  font-weight: 650;
+}
+
+.plan-card__name {
+  color: var(--carvao-950);
+  font-size: var(--fs-30);
+  font-weight: 800;
+  font-stretch: 75%;
+  line-height: 1;
+  letter-spacing: -0.01em;
+}
+
+.plan-card p {
+  margin-top: var(--s-1);
+  color: var(--text-2);
+  font-size: var(--fs-14);
+}
+
+.plan-card small {
+  color: var(--text-3);
+  font-size: var(--fs-13);
+}
+
+.plan-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  margin-top: var(--s-3);
+}
+
+.plan-card__actions .btn {
+  flex: 1 1 auto;
+  background: var(--surface);
+}
+
+.plan-card > a:only-child {
+  font-weight: 600;
+}
+
+.plan-card .skeleton {
+  background-color: var(--kraft-100);
+}
+
+.account-menu {
+  display: grid;
+  gap: 2px;
+  padding-top: var(--s-4);
+  border-top: 1px solid var(--border);
+}
+
+.account-menu > a,
+.account-menu > button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--text);
+  font-size: var(--fs-15);
+  font-weight: 550;
+  text-align: left;
+  text-decoration: none;
+  transition: background-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
+}
+
+.account-menu > a::after,
+.account-menu > button::after {
+  content: "";
+  flex: none;
+  width: 16px;
+  height: 16px;
+  background: var(--cinza-400);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m9 6 6 6-6 6'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m9 6 6 6-6 6'/%3E%3C/svg%3E") center / contain no-repeat;
+  transition: transform var(--t-fast) var(--ease), background-color var(--t-fast) var(--ease);
+}
+
+.account-menu > a:hover,
+.account-menu > button:hover {
+  background: var(--cinza-100);
+  color: var(--text);
+}
+
+.account-menu > a:hover::after,
+.account-menu > button:hover::after {
+  background: var(--brasa-600);
+  transform: translateX(2px);
+}
+
+@media (min-width: 600px) and (max-width: 959px) {
+  .account-aside {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+
+  .account-aside > .cartao__titulo {
+    grid-column: 1 / -1;
+  }
+
+  .account-menu {
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: var(--s-4);
+  }
+}
+
+/* Assinaturas e faturas (js/billing-conta-fase2.js) */
+.billing-block {
+  margin-top: var(--s-4);
+  padding: var(--s-4) var(--s-5);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--cinza-50);
+  color: var(--text-2);
+  font-size: var(--fs-14);
+}
+
+.billing-block:empty {
+  display: none;
+}
+
+.billing-block h3 {
+  color: var(--text);
+  font-size: var(--fs-16);
+  font-weight: 680;
+}
+
+.billing-block h3 + p {
+  margin-top: var(--s-1);
+}
+
+.billing-block > p {
+  color: var(--text-2);
+  font-size: var(--fs-14);
+}
+
+.billing-block .history-actions {
+  margin-top: var(--s-3);
+}
+
+.billing-block .history-actions .botao,
+.billing-block .history-actions .btn {
+  min-height: 38px;
+  padding: 0 14px;
+  font-size: var(--fs-14);
+}
+
+.billing-block .history-actions + h3,
+.billing-block > p + h3 {
+  margin-top: var(--s-5);
+  padding-top: var(--s-4);
+  border-top: 1px dashed var(--border-strong);
+  font-size: var(--fs-15);
+}
+
+.billing-block ul {
+  display: grid;
+  margin: var(--s-2) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.billing-block li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px var(--s-4);
+  margin: 0;
+  padding: var(--s-2) 0;
+  border-top: 1px solid var(--border);
+  color: var(--text-2);
+  font-size: var(--fs-13);
+  font-variant-numeric: tabular-nums;
+}
+
+.billing-block li:first-child {
+  border-top: 0;
+}
+
+.invoice-id {
+  flex: 1 1 12rem;
+  min-width: 0;
+  color: var(--text);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.invoice-total {
+  color: var(--text);
+  font-weight: 650;
+}
+
+/* Benefícios e ferramentas Premium (js/b2c-fase1.js) */
+.plan-summary {
+  max-width: 68ch;
+  color: var(--text);
+  font-size: var(--fs-15);
+}
+
+.plan-summary > p {
+  margin-top: var(--s-2);
+  color: var(--text-2);
+  font-size: var(--fs-14);
+}
+
+#conta-beneficios-secao > .history-actions {
+  margin-top: var(--s-4);
+  padding: var(--s-4);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--cinza-50);
+}
+
+#conta-beneficios-secao > .history-actions select {
+  flex: 1 1 220px;
+  width: auto;
+  min-width: 0;
+  max-width: 340px;
+}
+
+#conta-beneficios-secao > .history-actions .botao {
+  min-height: 40px;
+  padding: 0 14px;
+  font-size: var(--fs-14);
+}
+
+#conta-beneficios-secao > p:not([class]) {
+  margin-top: var(--s-3);
+  color: var(--text-2);
+  font-size: var(--fs-14);
+}
+
+.premium-result:empty {
+  display: none;
+}
+
+.premium-result {
+  margin-top: var(--s-4);
+  padding: var(--s-4) var(--s-5);
+  border-left: 3px solid var(--brasa-600);
+  border-radius: 0 var(--r-sm) var(--r-sm) 0;
+  background: var(--brasa-50);
+  color: var(--text);
+}
+
+.premium-result h3 {
+  font-size: var(--fs-16);
+}
+
+.premium-result ul {
+  margin-top: var(--s-2);
+  color: var(--text-2);
+  font-size: var(--fs-14);
+}
+
+.premium-result .mensagem {
+  margin: 0;
+}
+
+.account-subtitle {
+  margin-top: var(--s-8);
+  padding-top: var(--s-6);
+  border-top: 1px solid var(--border);
+  font-size: var(--fs-18);
+  font-weight: 700;
+}
+
+.account-subtitle + .texto-suave {
+  margin-top: var(--s-1);
+  font-size: var(--fs-14);
+}
+
+#conta-modelos {
+  margin-top: var(--s-4);
+}
+
+/* Privacidade e dados */
+.privacy-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-4) var(--s-6);
+  margin-top: var(--s-5);
+  padding: var(--s-4) var(--s-5);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+}
+
+.privacy-marketing {
+  flex: 1 1 260px;
+  color: var(--text);
+}
+
+.privacy-actions__buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+}
+
+.legal-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2) var(--s-5);
+  margin-top: var(--s-4);
+  font-size: var(--fs-14);
+}
+
+/* Retenção e indicação (js/conta-retencao.js) */
+.retention-grid {
+  display: grid;
+  gap: var(--s-5);
+}
+
+@media (min-width: 860px) {
+  .retention-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.retention-block {
+  display: grid;
+  align-content: start;
+  gap: var(--s-3);
+  padding: var(--s-4) var(--s-5);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+}
+
+.retention-block h3 {
+  font-size: var(--fs-16);
+  font-weight: 680;
+}
+
+.retention-block > .btn {
+  justify-self: start;
+}
+
+.retention-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2) var(--s-5);
+  margin-bottom: var(--s-5);
+  font-size: var(--fs-14);
+}
+
+#indicacao-aviso {
+  color: var(--text-2);
+  font-size: var(--fs-14);
+  overflow-wrap: anywhere;
+}
+
+#indicacao-aviso:empty,
+#lembretes-lista:empty {
+  display: none;
+}
+
+#lembrete-form {
+  display: grid;
+  gap: var(--s-3);
+}
+
+#lembrete-form .grade-campos {
+  gap: var(--s-3) var(--s-4);
+}
+
+#lembrete-form > .btn {
+  justify-self: start;
+}
+
+#lembretes-lista {
+  margin-top: var(--s-1);
+}
+
+#lembretes-lista p {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-2) var(--s-4);
+  margin: 0;
+  padding: var(--s-2) 0;
+  border-top: 1px dashed var(--border);
+  color: var(--text-2);
+  font-size: var(--fs-14);
+  font-variant-numeric: tabular-nums;
+}
+
+#lembretes-lista button {
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--text);
+  font-size: var(--fs-13);
+  font-weight: 650;
+}
+
+#lembretes-lista button:hover {
+  background: var(--cinza-100);
+}
+
+/* No celular, "Novo churrasco" continua no menu da conta; o cabeçalho cabe em uma linha */
+@media (max-width: 520px) {
+  .account-page .app-bar__end > .btn {
+    display: none;
+  }
+}
+
+@media (max-width: 600px) {
+  .history-card {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .history-card .history-actions > * {
+    flex: 1 1 0;
+  }
+
+  .privacy-actions {
+    padding: var(--s-4);
+  }
+
+  .privacy-actions__buttons,
+  .privacy-actions__buttons > .btn {
+    width: 100%;
+  }
+}
+
+/* 3. Segurança (MFA) ======================================================= */
+
+.security-layout {
+  display: grid;
+  gap: var(--s-5);
+  align-items: start;
+}
+
+@media (min-width: 960px) {
+  .security-layout {
+    grid-template-columns: minmax(0, 1fr) 320px;
+  }
+}
+
+.mfa-status {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s-3);
+  padding: var(--s-3) var(--s-4);
+  border-radius: var(--r-sm);
+  background: var(--cinza-100);
+  color: var(--text);
+  font-size: var(--fs-15);
+  font-weight: 550;
+}
+
+.mfa-status::before {
+  content: "";
+  flex: none;
+  width: 10px;
+  height: 10px;
+  margin-top: 7px;
+  border-radius: 50%;
+  background: var(--cinza-400);
+}
+
+.mfa-card:has(#mfa-configurar[hidden]) .mfa-status {
+  background: var(--erva-50);
+  color: var(--erva-700);
+}
+
+.mfa-card:has(#mfa-configurar[hidden]) .mfa-status::before {
+  background: var(--erva-600);
+  box-shadow: 0 0 0 3px var(--erva-100);
+}
+
+.mfa-step {
+  display: grid;
+  gap: var(--s-3);
+  margin-top: var(--s-6);
+  padding-top: var(--s-6);
+  border-top: 1px solid var(--border);
+}
+
+.mfa-step h3 {
+  font-size: var(--fs-16);
+  font-weight: 680;
+}
+
+.mfa-step > p {
+  color: var(--text-2);
+  font-size: var(--fs-14);
+}
+
+.mfa-step > .btn {
+  justify-self: start;
+}
+
+.mfa-form-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--s-3);
+}
+
+.mfa-form-row > .campo {
+  flex: 1 1 240px;
+}
+
+.mfa-form-row > .btn {
+  flex: none;
+}
+
+.mfa-secret {
+  display: grid;
+  gap: var(--s-3);
+  margin-top: var(--s-5);
+  padding: var(--s-4) var(--s-5);
+  border: 1px solid var(--kraft-100);
+  border-radius: var(--r-md);
+  background: var(--kraft-50);
+}
+
+.mfa-secret p {
+  color: var(--text-2);
+  font-size: var(--fs-14);
+}
+
+#mfa-chave {
+  display: block;
+  padding: var(--s-3) var(--s-4);
+  border: 1px dashed var(--kraft);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--carvao-950);
+  font-size: var(--fs-18);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  word-break: break-all;
+  user-select: all;
+}
+
+.mfa-backup {
+  display: grid;
+  gap: var(--s-3);
+  margin-top: var(--s-6);
+  padding: var(--s-5);
+  border: 1px solid var(--brilho-100);
+  border-radius: var(--r-md);
+  background: var(--brilho-50);
+}
+
+.mfa-backup h3 {
+  font-size: var(--fs-18);
+  font-weight: 700;
+}
+
+.mfa-backup p {
+  color: var(--brilho-700);
+  font-size: var(--fs-14);
+}
+
+#mfa-codigos {
+  margin: 0;
+  padding: var(--s-4);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--carvao-950);
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  font-size: var(--fs-15);
+  line-height: 1.9;
+  white-space: pre-wrap;
+  user-select: all;
+}
+
+@media (min-width: 480px) {
+  #mfa-codigos {
+    column-count: 2;
+    column-gap: var(--s-8);
+  }
+}
+
+.mfa-backup > .btn {
+  justify-self: start;
+}
+
+#saas-msg:empty {
+  display: none;
+}
+
+.security-msg {
+  margin-top: var(--s-5);
+  padding: var(--s-3) var(--s-4);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--text);
+  font-size: var(--fs-14);
+  animation: message-in var(--t-slow) var(--ease);
+}
+
+.security-aside h2 {
+  font-size: var(--fs-18);
+}
+
+.security-steps {
+  display: grid;
+  gap: var(--s-4);
+  margin: var(--s-4) 0 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: passo;
+}
+
+.security-steps li {
+  position: relative;
+  margin: 0;
+  padding-left: 40px;
+  color: var(--text-2);
+  font-size: var(--fs-14);
+  line-height: 1.5;
+  counter-increment: passo;
+}
+
+.security-steps li::before {
+  content: counter(passo);
+  position: absolute;
+  top: -2px;
+  left: 0;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--carvao-900);
+  color: var(--branco);
+  font-size: var(--fs-13);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.security-steps strong {
+  display: block;
+  color: var(--text);
+  font-size: var(--fs-15);
+}
+
+.security-aside .legal-links {
+  margin-top: var(--s-5);
+  padding-top: var(--s-4);
+  border-top: 1px solid var(--border);
+}
+
+/* 4. Preferências de comunicação =========================================== */
+
+.preferences-card #descadastrar {
+  margin-top: var(--s-6);
+}
+
+.preferences-card #saas-msg {
+  margin-top: var(--s-4);
+  padding: var(--s-3) var(--s-4);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--cinza-50);
+  color: var(--text);
+  font-size: var(--fs-15);
+  animation: message-in var(--t-slow) var(--ease);
+}
+
+/* 5. Impressão ============================================================= */
+
+@media print {
+  .auth-topbar,
+  .account-menu,
+  .privacy-center,
+  .history-actions,
+  .plan-card__actions {
+    display: none !important;
+  }
+}

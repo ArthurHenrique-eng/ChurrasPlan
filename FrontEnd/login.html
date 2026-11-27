@@ -1,113 +1,73 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
-  <head>
-    <meta charset="utf-8"/>
-    <meta content="width=device-width,initial-scale=1" name="viewport"/>
-    <title>
-      Entrar — ChurrasPlan
-    </title>
-    <link href="favicon.svg" rel="icon" type="image/svg+xml"/>
-    <link href="css/unified-core.css" rel="stylesheet"/>
-    <link href="css/integracao-v3.css" rel="stylesheet"/>
-    <meta name="theme-color" content="#6f7c59">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <link rel="manifest" href="manifest.webmanifest">
-  <link rel="apple-touch-icon" href="assets/pwa/icon-192.png">
-  <link rel="stylesheet" href="css/production-v63.css">
-<link rel="stylesheet" href="css/saas.css">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#a62210">
 <meta name="robots" content="noindex,nofollow">
+<title>Entrar — ChurrasPlan</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="assets/pwa/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="preload" href="fonts/archivo-latin-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="css/ds.css">
+<link rel="stylesheet" href="css/pages/account.css">
 </head>
-  <body class="account-page" data-auth-page="login">
-  <a class="skip-link" href="#main">Pular para o conteúdo</a>
-    <main id="main" class="account-shell">
-      <header class="simple-topbar">
-        <a class="home-brand" href="index.html">
-          <img alt="" class="home-logo-icon" src="assets/logo-icon.png"/>
-          <img alt="ChurrasPlan" class="home-wordmark" src="assets/logo-wordmark.png"/>
-        </a>
-        <a class="text-button" href="index.html">
-          Voltar ao site
-        </a>
-      </header>
-      <section class="auth-layout">
-        <div class="auth-copy">
-          <span class="eyebrow">
-            <span>
-            </span>
-            SUA CONTA CHURRASPLAN
-          </span>
-          <h1>
-            Planeje uma vez.
-            <br/>
-            <em>
-              Reaproveite tudo.
-            </em>
-          </h1>
-          <p>
-            Entre para salvar churrascos, criar links de confirmação, acessar seu histórico e usar a comparação de onde comprar.
-          </p>
-          <div class="auth-benefits">
-            <span>
-              Histórico e repetir churrascos
-            </span>
-            <span>
-              Convites e confirmação de presença
-            </span>
-            <span>
-              Mapa e comparação de estabelecimentos
-            </span>
-          </div>
+<body class="auth-page" data-auth-page="login">
+<a class="skip-link" href="#main">Pular para o conteúdo</a>
+<header class="auth-topbar">
+  <div class="auth-topbar__inner">
+    <a class="brand-lockup" href="index.html" aria-label="ChurrasPlan, página inicial">
+      <img class="brand-lockup__icon" src="assets/logo-icon-96.webp" alt="" width="38" height="36">
+      <img class="brand-lockup__wordmark" src="assets/logo-wordmark-320.webp" alt="ChurrasPlan" width="132" height="20">
+    </a>
+    <a class="text-button" href="index.html">Voltar ao site</a>
+  </div>
+</header>
+<main id="main" class="auth-main">
+  <div class="auth-layout">
+    <section class="auth-copy">
+      <h1>Planeje uma vez.<br>Reaproveite tudo.</h1>
+      <p>Entre para salvar churrascos, criar links de confirmação, consultar seu histórico e comparar onde comprar.</p>
+      <div class="ticket-shadow auth-ticket">
+        <div class="ticket">
+          <div class="ticket__head"><span class="ticket__label">O que fica na sua conta</span></div>
+          <ul class="auth-benefits">
+            <li>Histórico para abrir ou repetir churrascos</li>
+            <li>Convites com confirmação de presença</li>
+            <li>Comparação de mercados e açougues</li>
+          </ul>
         </div>
-        <div class="auth-card">
-          <h2>
-            Entrar
-          </h2>
-          <p>
-            Os cálculos básicos continuam disponíveis sem cadastro.
-          </p>
-          <form class="auth-form" id="auth-form">
-            <div class="campo">
-              <label for="auth-email">
-                E-mail
-              </label>
-              <input autocomplete="email" id="auth-email" required="" type="email"/>
-            </div>
-            <div class="campo">
-              <label for="auth-senha">
-                Senha
-              </label>
-              <input autocomplete="current-password" id="auth-senha" minlength="8" required="" type="password"/>
-            </div>
-            <button class="botao botao--primario" type="submit">
-              Entrar
-            </button>
-          </form>
-          <div class="mensagem auth-message" id="auth-message" style="display:none">
-          </div>
-          <div class="auth-links">
-            <a href="cadastro.html">
-              Criar conta
-            </a>
-            <a href="recuperar-senha.html">
-              Esqueci minha senha
-            </a>
-          </div>
-        </div>
-      </section>
-    </main>
-    <script src="js/config.js">
-    </script>
-    <script src="js/state.js">
-    </script>
-    <script src="js/api.js">
-    </script>
-    <script src="js/script.js">
-    </script>
-    <script src="js/auth-ui.js">
-    </script>
-    <script src="js/auth-pages.js">
-    </script>
-  <script src="js/pwa.js"></script>
+      </div>
+    </section>
+    <section class="auth-card" aria-labelledby="auth-titulo">
+      <h2 id="auth-titulo">Entrar</h2>
+      <p class="auth-card__lead">Os cálculos básicos continuam disponíveis sem cadastro.</p>
+      <form class="auth-form" id="auth-form">
+        <div class="campo"><label for="auth-email">E-mail</label><input autocomplete="email" id="auth-email" required type="email" inputmode="email"></div>
+        <div class="campo"><label for="auth-senha">Senha</label><input autocomplete="current-password" id="auth-senha" minlength="8" required type="password"></div>
+        <button class="btn btn--primary btn--lg btn--block" type="submit">Entrar</button>
+      </form>
+      <div class="mensagem auth-message" id="auth-message" style="display:none"></div>
+      <div class="auth-links">
+        <a href="recuperar-senha.html">Esqueci minha senha</a>
+        <span>Ainda não tem conta? <a href="cadastro.html">Criar conta</a></span>
+      </div>
+    </section>
+  </div>
+</main>
+<footer class="app-footer-mini">
+  <span>© 2026 ChurrasPlan</span>
+  <nav aria-label="Links legais"><a href="privacidade.html">Privacidade</a><a href="termos.html">Termos</a><a href="cookies.html">Cookies</a></nav>
+</footer>
+<script src="js/config.js"></script>
+<script src="js/state.js"></script>
+<script src="js/api.js"></script>
+<script src="js/script.js"></script>
+<script src="js/auth-ui.js"></script>
+<script src="js/auth-pages.js"></script>
+<script src="js/pwa.js"></script>
 <script src="js/analytics.js"></script>
 </body>
 </html>

@@ -1,0 +1,1589 @@
+/* ChurrasPlan — fluxo de planejamento e central do churrasco.
+   Páginas: planejamento, carnes, bebidas, extras e resultado. Depende de css/ds.css.
+   Classes geradas por js/planejamento.js, carnes.js, bebidas.js, extras.js e
+   resultado.js são estilizadas aqui sem mudar o comportamento dos scripts. */
+
+/* Estrutura do fluxo ---------------------------------------------------- */
+.flow-main {
+  padding-top: var(--s-8);
+}
+
+.flow-main > .steps {
+  margin-bottom: 0;
+}
+
+.flow-header {
+  padding: var(--s-8) 0 var(--s-6);
+}
+
+.flow-header h1 {
+  max-width: 32ch;
+}
+
+.flow-main > .mensagem {
+  margin-bottom: var(--s-5);
+}
+
+.flow-layout {
+  display: grid;
+  gap: var(--s-5);
+  align-items: start;
+}
+
+.flow-content {
+  display: grid;
+  gap: var(--s-5);
+  min-width: 0;
+}
+
+.flow-aside {
+  display: grid;
+  gap: var(--s-4);
+  min-width: 0;
+}
+
+@media (min-width: 1024px) {
+  .flow-layout {
+    grid-template-columns: minmax(0, 1fr) 320px;
+    column-gap: var(--s-8);
+  }
+
+  .flow-content {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .flow-aside {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    position: sticky;
+    top: calc(64px + var(--s-6));
+  }
+
+  .flow-aside--static {
+    position: static;
+  }
+
+  .flow-layout > .acoes-navegacao {
+    grid-column: 1;
+    grid-row: 2;
+  }
+}
+
+.flow-note {
+  padding: var(--s-4) var(--s-5);
+  border-left: 3px solid var(--kraft);
+  color: var(--text-2);
+  font-size: var(--fs-14);
+  line-height: 1.55;
+}
+
+.flow-note strong {
+  display: block;
+  color: var(--text);
+  font-weight: 650;
+}
+
+/* Estimativa ao vivo (comanda lateral) */
+.flow-estimate {
+  --notch: 6px;
+  --notch-gap: 16px;
+  padding: var(--s-5) var(--s-5) calc(var(--s-5) + 12px);
+  border-top: 4px solid transparent;
+  border-image: var(--grill) 1;
+}
+
+/* js/carnes.js liga este bloco com display:flex */
+#preview-total {
+  flex-direction: column;
+}
+
+.estimate-line {
+  display: grid;
+  gap: 4px;
+  padding: var(--s-4) 0;
+  border-bottom: 1px dashed var(--border);
+}
+
+/* Linhas geradas por js/bebidas.js e js/extras.js: item à esquerda, quantidade à direita */
+.estimate-lines .hero__aside-linha {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 2px var(--s-3);
+  padding: var(--s-3) 0;
+  border-bottom: 1px dashed var(--border);
+}
+
+.estimate-lines .hero__aside-linha > strong {
+  margin-left: auto;
+  text-align: right;
+}
+
+/* Bebidas trazem necessidade e compra no mesmo texto: melhor empilhado */
+#preview-bebidas-conteudo .hero__aside-linha {
+  display: grid;
+  gap: 2px;
+}
+
+#preview-bebidas-conteudo .hero__aside-linha > strong {
+  margin-left: 0;
+  text-align: left;
+}
+
+.estimate-line:last-child,
+.estimate-lines .hero__aside-linha:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.estimate-line > span {
+  color: var(--text-3);
+  font-size: var(--fs-13);
+  font-weight: 600;
+}
+
+.estimate-lines .hero__aside-linha > span {
+  color: var(--text-2);
+  font-size: var(--fs-14);
+  font-weight: 550;
+}
+
+.estimate-line--texto strong,
+.estimate-lines .hero__aside-linha > strong {
+  font-size: var(--fs-14);
+  font-weight: 650;
+  line-height: 1.45;
+  font-variant-numeric: tabular-nums;
+}
+
+.estimate-line .tag-number {
+  font-size: clamp(2rem, 1.6rem + 1vw, 2.5rem);
+}
+
+.flow-estimate-empty {
+  display: none;
+  padding: var(--s-5);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--r-md);
+  color: var(--text-2);
+  font-size: var(--fs-14);
+  line-height: 1.55;
+}
+
+.ticket-shadow:has(> .flow-estimate[style*="none"]) {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .flow-aside:has(.flow-estimate[style*="none"]) .flow-estimate-empty {
+    display: block;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .flow-estimate {
+    animation: estimate-print 520ms var(--ease) both;
+  }
+}
+
+@keyframes estimate-print {
+  from {
+    clip-path: inset(0 0 100% 0);
+  }
+
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+/* Ações do passo: no celular ficam presas ao rodapé enquanto o formulário rola */
+.acoes-navegacao {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  padding-top: var(--s-3);
+}
+
+.acoes-navegacao > :last-child {
+  margin-left: auto;
+}
+
+@media (max-width: 720px) {
+  .flow-page .acoes-navegacao:not(.acoes-navegacao--resultado) {
+    position: sticky;
+    bottom: 0;
+    z-index: 30;
+    flex-wrap: nowrap;
+    margin: 0 calc(-1 * var(--gutter));
+    padding: 12px var(--gutter) calc(12px + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid var(--border);
+    background: rgba(249, 247, 245, 0.94);
+    backdrop-filter: saturate(1.2) blur(12px);
+    -webkit-backdrop-filter: saturate(1.2) blur(12px);
+  }
+
+  .flow-page .acoes-navegacao:not(.acoes-navegacao--resultado) .btn--primary {
+    flex: 1 1 auto;
+    padding-inline: 16px;
+  }
+
+  .flow-page .acoes-navegacao:not(.acoes-navegacao--resultado) .btn--ghost {
+    padding-inline: 10px;
+  }
+}
+
+/* Etapa 1: encontro, convidados, orçamento e perfil ---------------------- */
+@media (min-width: 720px) {
+  .grade-campos--encontro {
+    grid-template-columns: minmax(0, 1.5fr) minmax(0, 1.25fr) minmax(0, 0.75fr);
+  }
+}
+
+.opcoes-cartoes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 196px), 1fr));
+  gap: var(--s-3);
+}
+
+.opcoes-cartoes--perfil {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 150px), 1fr));
+}
+
+.opcao-cartao {
+  position: relative;
+  display: grid;
+  align-content: start;
+  gap: 2px;
+  min-height: 76px;
+  padding: 14px 16px 14px 46px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  cursor: pointer;
+  transition: border-color var(--t-fast) var(--ease), background-color var(--t-fast) var(--ease), box-shadow var(--t-fast) var(--ease), transform var(--t-fast) var(--ease);
+}
+
+.opcao-cartao input[type="radio"] {
+  position: absolute;
+  top: 15px;
+  left: 16px;
+}
+
+.opcao-cartao input[type="radio"]:focus-visible {
+  outline-offset: 3px;
+}
+
+.opcao-cartao:hover {
+  border-color: var(--cinza-400);
+}
+
+.opcao-cartao:active {
+  transform: scale(0.99);
+}
+
+.opcao-cartao.selecionada,
+.opcao-cartao:has(input:checked) {
+  border-color: var(--brasa-600);
+  background: var(--brasa-50);
+  box-shadow: inset 0 0 0 1px var(--brasa-600);
+}
+
+.opcao-cartao__titulo {
+  color: var(--text);
+  font-size: var(--fs-15);
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+.opcao-cartao__descricao {
+  color: var(--text-2);
+  font-size: var(--fs-13);
+  line-height: 1.45;
+}
+
+/* Total de convidados: etiqueta kraft com furo */
+.contador-total {
+  position: relative;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-left: auto;
+  padding: 6px 14px 6px 28px;
+  border: 1px solid var(--kraft-100);
+  border-radius: var(--r-sm);
+  background: var(--kraft-50);
+}
+
+.contador-total::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 10px;
+  width: 8px;
+  height: 8px;
+  margin-top: -4px;
+  border: 1px solid var(--kraft);
+  border-radius: 50%;
+  background: var(--surface);
+}
+
+.contador-total > span {
+  color: var(--vinho);
+  font-size: var(--fs-13);
+  font-weight: 650;
+}
+
+.contador-total > strong {
+  min-width: 2ch;
+  color: var(--carvao-950);
+  font-size: 1.875rem;
+  font-weight: 800;
+  font-stretch: 75%;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Detalhes recolhidos dos convidados e do assistente */
+.guest-details {
+  margin-top: var(--s-5);
+  border-top: 1px solid var(--border);
+}
+
+.guest-details > summary,
+.assistant-card summary {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 10px;
+  min-height: 48px;
+  padding: var(--s-4) 36px 0 0;
+  color: var(--text);
+  font-weight: 650;
+}
+
+.assistant-card summary {
+  padding: 0 36px 0 0;
+  align-items: center;
+}
+
+.guest-details > summary small {
+  color: var(--text-3);
+  font-size: var(--fs-13);
+  font-weight: 450;
+}
+
+.guest-details > summary::after,
+.assistant-card summary::after {
+  content: "";
+  position: absolute;
+  right: 4px;
+  top: calc(50% + var(--s-2) - 9px);
+  width: 18px;
+  height: 18px;
+  background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") center / contain no-repeat;
+  transition: transform var(--t) var(--ease);
+}
+
+.assistant-card summary::after {
+  top: calc(50% - 9px);
+}
+
+.guest-details[open] > summary::after,
+.assistant-card details[open] summary::after {
+  transform: rotate(180deg);
+}
+
+.guest-details > summary:hover,
+.assistant-card summary:hover {
+  color: var(--brasa-700);
+}
+
+.guest-details__content {
+  display: grid;
+  gap: var(--s-4);
+  padding-top: var(--s-4);
+}
+
+.grade-campos--restricoes {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 168px), 1fr));
+}
+
+/* Orçamento */
+.budget-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(200px, 240px);
+  gap: var(--s-4) var(--s-6);
+  align-items: center;
+}
+
+.budget-title {
+  margin-bottom: 4px;
+  color: var(--text);
+  font-weight: 650;
+}
+
+/* Perfil personalizado (js/planejamento.js alterna display) */
+.bloco-personalizado {
+  margin-top: var(--s-5);
+  padding-top: var(--s-5);
+  border-top: 1px dashed var(--border-strong);
+}
+
+.bloco-personalizado > * + * {
+  margin-top: var(--s-4);
+}
+
+.grade-campos--4 {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 168px), 1fr));
+}
+
+/* Assistente de frase */
+.assistant-card {
+  padding: var(--s-4) var(--s-5);
+}
+
+.assistant-card__body {
+  display: grid;
+  gap: var(--s-3);
+  padding-top: var(--s-3);
+  color: var(--text-2);
+  font-size: var(--fs-14);
+}
+
+#assistente-form {
+  display: grid;
+  gap: var(--s-2);
+}
+
+.assistant-card__msg:empty {
+  display: none;
+}
+
+.assistant-card__msg {
+  color: var(--text);
+  font-weight: 550;
+}
+
+.assistant-card__preview {
+  display: grid;
+  gap: var(--s-3);
+  padding: var(--s-4);
+  border-radius: var(--r-sm);
+  background: var(--kraft-50);
+  border: 1px solid var(--kraft-100);
+  color: var(--text);
+}
+
+/* Etapas 2 a 4: listas de itens marcáveis -------------------------------- */
+.lista-itens {
+  display: grid;
+  gap: var(--s-2);
+}
+
+.lista-checks {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr));
+}
+
+.item-config,
+.item-config__rotulo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 52px;
+  cursor: pointer;
+}
+
+.item-config {
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  transition: border-color var(--t-fast) var(--ease), background-color var(--t-fast) var(--ease);
+}
+
+.item-config:hover {
+  border-color: var(--border-strong);
+}
+
+.item-config:has(input[type="checkbox"]:checked) {
+  border-color: var(--brasa-200);
+  background: var(--brasa-50);
+}
+
+.item-config:has(input[type="checkbox"]:disabled) {
+  background: var(--cinza-50);
+  cursor: not-allowed;
+}
+
+.item-config:has(input[type="checkbox"]:disabled) .item-config__nome {
+  color: var(--text-3);
+}
+
+.item-config__nome {
+  display: grid;
+  gap: 2px;
+  color: var(--text);
+  font-size: var(--fs-15);
+  font-weight: 550;
+  line-height: 1.35;
+}
+
+.item-config__nome small {
+  color: var(--text-3);
+  font-size: var(--fs-13);
+  font-weight: 450;
+}
+
+.item-config--destaque {
+  min-height: 60px;
+  padding: 12px 16px;
+}
+
+/* Carnes: nome + percentual */
+@media (min-width: 720px) {
+  .lista-carnes {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.item-carne {
+  justify-content: space-between;
+  padding: 6px 8px 6px 14px;
+  cursor: default;
+}
+
+.item-config__rotulo {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 44px;
+}
+
+.campo-percentual {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.campo-percentual input[type="number"] {
+  width: 84px;
+  min-height: 40px;
+  padding: 6px 10px;
+  text-align: right;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+.campo-percentual span {
+  color: var(--text-2);
+  font-weight: 650;
+}
+
+/* Soma dos percentuais: fica visível ao rolar a lista */
+.resumo-percentual {
+  position: sticky;
+  top: 64px;
+  z-index: 5;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--s-3);
+  margin: 0 calc(-1 * var(--s-2)) var(--s-4);
+  padding: 10px var(--s-2);
+  border-radius: var(--r-sm);
+  background: rgba(255, 255, 255, 0.96);
+}
+
+.resumo-percentual__rotulo {
+  color: var(--text-2);
+  font-size: var(--fs-14);
+  font-weight: 600;
+}
+
+.barra-percentual {
+  height: 8px;
+  overflow: hidden;
+  border-radius: var(--r-pill);
+  background: var(--cinza-150);
+}
+
+.barra-percentual__preenchimento {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--brasa-600);
+  transition: width var(--t) var(--ease), background-color var(--t) var(--ease);
+}
+
+.resumo-percentual .valor {
+  min-width: 4.5ch;
+  color: var(--brasa-700);
+  font-size: var(--fs-18);
+  font-weight: 750;
+  text-align: right;
+}
+
+.resumo-percentual .valor.ok {
+  color: var(--erva-700);
+}
+
+.cartao__titulo > .btn:last-child {
+  margin-left: auto;
+}
+
+/* Bebida alcoólica */
+.grupo-alcool {
+  display: grid;
+  gap: var(--s-3);
+  margin-top: var(--s-3);
+}
+
+.aviso-alcool {
+  color: var(--text-3);
+  font-size: var(--fs-13);
+  line-height: 1.5;
+}
+
+#resumo-quem-bebe:empty {
+  display: none;
+}
+
+/* Etapa 5: central do churrasco --------------------------------------------- */
+.result-header {
+  align-items: flex-end;
+}
+
+.result-header h1 {
+  max-width: 26ch;
+  overflow-wrap: anywhere;
+}
+
+.resumo-evento__meta:empty {
+  display: none;
+}
+
+.resumo-evento__meta {
+  font-size: var(--fs-15);
+}
+
+.central-account-state:empty {
+  display: none;
+}
+
+.central-account-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  padding: 4px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-pill);
+  background: var(--surface);
+  color: var(--text-2);
+  font-size: var(--fs-13);
+  font-weight: 600;
+}
+
+/* Carregamento com esqueleto */
+.result-loading {
+  display: grid;
+  gap: var(--s-4);
+}
+
+.result-loading__text {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-2);
+  font-weight: 550;
+}
+
+.result-loading__text::before {
+  content: "";
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--brasa-100);
+  border-top-color: var(--brasa-600);
+  border-radius: 50%;
+  animation: spin 800ms linear infinite;
+}
+
+.result-loading__grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--s-3);
+}
+
+.result-loading__grid .skeleton {
+  height: 96px;
+}
+
+.result-loading__rows {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: var(--s-4);
+}
+
+.result-loading__rows .skeleton {
+  height: 260px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+#conteudo-resultado > * + * {
+  margin-top: var(--s-5);
+}
+
+/* Números principais */
+.resumo-evento__grade {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--s-3);
+}
+
+.resumo-evento__bloco {
+  display: grid;
+  align-content: space-between;
+  gap: var(--s-3);
+  min-height: 112px;
+  padding: var(--s-4) var(--s-5);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface);
+}
+
+.resumo-evento__bloco > span {
+  color: var(--text-2);
+  font-size: var(--fs-14);
+  font-weight: 600;
+}
+
+.resumo-evento__bloco > strong {
+  color: var(--carvao-950);
+  font-size: clamp(1.625rem, 1.2rem + 1.2vw, 2.375rem);
+  font-weight: 800;
+  font-stretch: 75%;
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+/* O custo por pessoa é a etiqueta de preço da página */
+.resumo-evento__bloco--preco {
+  position: relative;
+  padding-left: 34px;
+  border-color: var(--kraft-100);
+  background: var(--kraft-50);
+}
+
+.resumo-evento__bloco--preco::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 13px;
+  width: 9px;
+  height: 9px;
+  margin-top: -4.5px;
+  border: 1px solid var(--kraft);
+  border-radius: 50%;
+  background: var(--bg);
+}
+
+.resumo-evento__bloco--preco > span {
+  color: var(--vinho);
+}
+
+.central-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s-5);
+  align-items: stretch;
+}
+
+/* Orçamento no resultado */
+.budget-result {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s-3);
+}
+
+.budget-result > div {
+  display: grid;
+  gap: 4px;
+  padding: var(--s-3) var(--s-4);
+  border-radius: var(--r-sm);
+  background: var(--cinza-50);
+}
+
+.budget-result > div span {
+  color: var(--text-3);
+  font-size: var(--fs-13);
+  font-weight: 600;
+}
+
+.budget-result > div strong {
+  font-size: var(--fs-20);
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+}
+
+.budget-result > p {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: var(--r-sm);
+  background: var(--cinza-100);
+  color: var(--text-2);
+  font-size: var(--fs-14);
+  font-weight: 600;
+}
+
+.budget-result.budget-ok > p {
+  background: var(--erva-50);
+  color: var(--erva-700);
+}
+
+.budget-result.budget-over > p {
+  background: var(--perigo-50);
+  color: var(--perigo-700);
+}
+
+/* Restrições */
+#bloco-restricoes > * + * {
+  margin-top: var(--s-3);
+}
+
+#bloco-restricoes p {
+  font-size: var(--fs-14);
+}
+
+.restriction-warnings {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.restriction-warnings li {
+  position: relative;
+  margin: 0;
+  padding: 8px 12px 8px 34px;
+  border-radius: var(--r-sm);
+  background: var(--brilho-50);
+  color: var(--brilho-700);
+  font-size: var(--fs-14);
+  line-height: 1.45;
+}
+
+.restriction-warnings li::before {
+  content: "!";
+  position: absolute;
+  top: 9px;
+  left: 11px;
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--brilho-500);
+  color: var(--carvao-950);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+/* Itens + custos */
+.grade-resultado {
+  display: grid;
+  grid-template-columns: minmax(0, 1.75fr) minmax(280px, 1fr);
+  gap: var(--s-5);
+  align-items: start;
+}
+
+.grade-resultado__lado {
+  display: grid;
+  gap: var(--s-5);
+}
+
+.itens-card .table-scroll {
+  width: auto;
+  margin: 0 calc(-1 * clamp(18px, 2.4vw, 28px));
+  border-radius: 0;
+  border-left: 0;
+  border-right: 0;
+}
+
+.tabela-itens {
+  width: 100%;
+  font-size: var(--fs-14);
+}
+
+.tabela-itens th:not(:first-child),
+.tabela-itens td.numero {
+  text-align: right;
+}
+
+.tabela-itens th:first-child,
+.tabela-itens td:first-child {
+  padding-left: clamp(18px, 2.4vw, 28px);
+}
+
+.tabela-itens th:last-child,
+.tabela-itens td:last-child {
+  padding-right: clamp(18px, 2.4vw, 28px);
+}
+
+.tabela-itens td.categoria-titulo {
+  padding-top: var(--s-5);
+  background: var(--cinza-50);
+  color: var(--brasa-700);
+  font-size: var(--fs-13);
+  font-weight: 700;
+  text-align: left;
+}
+
+.tabela-itens td small {
+  color: var(--text-3);
+  font-size: var(--fs-12);
+}
+
+.sem-preco {
+  color: var(--text-3);
+  font-style: normal;
+}
+
+/* Custos */
+.custos-linha {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-3);
+  padding: var(--s-3) 0;
+  border-bottom: 1px dashed var(--border);
+  font-size: var(--fs-14);
+}
+
+.custos-linha span:last-child {
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.custos-linha.total {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.custos-linha.total span:first-child {
+  font-weight: 650;
+}
+
+.custos-linha.total span:last-child {
+  color: var(--carvao-950);
+  font-size: var(--fs-24);
+  font-weight: 800;
+  font-stretch: 75%;
+}
+
+.custos-card .mensagem {
+  margin-bottom: var(--s-3);
+}
+
+/* Divisão do valor */
+.split-control {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 44px;
+  gap: var(--s-2);
+  margin: var(--s-4) 0;
+}
+
+.split-control button {
+  display: grid;
+  place-items: center;
+  height: 44px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--text);
+  font-size: var(--fs-20);
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color var(--t-fast) var(--ease), background-color var(--t-fast) var(--ease), transform var(--t-fast) var(--ease);
+}
+
+.split-control button:hover {
+  border-color: var(--brasa-600);
+  color: var(--brasa-700);
+}
+
+.split-control button:active {
+  transform: scale(0.94);
+}
+
+.split-control input {
+  text-align: center;
+  font-size: var(--fs-18) !important;
+  font-weight: 700 !important;
+}
+
+.split-result {
+  display: grid;
+  gap: 2px;
+  padding: var(--s-4);
+  border-radius: var(--r-sm);
+  background: var(--kraft-50);
+  border: 1px solid var(--kraft-100);
+}
+
+.split-result > span {
+  color: var(--vinho);
+  font-size: var(--fs-13);
+  font-weight: 650;
+}
+
+.split-result > strong {
+  color: var(--carvao-950);
+  font-size: 2rem;
+  font-weight: 800;
+  font-stretch: 75%;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Lista de compras: a comanda de papel do churrasco */
+.shopping-central-card {
+  --notch: 7px;
+  --notch-gap: 18px;
+  padding: clamp(18px, 2.4vw, 28px) clamp(18px, 2.4vw, 28px) calc(clamp(18px, 2.4vw, 28px) + 14px);
+  border-top: 4px solid transparent;
+  border-image: var(--grill) 1;
+}
+
+.shopping-totals {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--s-3);
+  margin-bottom: var(--s-5);
+}
+
+.shopping-totals > div:not(.shopping-progress) {
+  display: grid;
+  gap: 2px;
+  padding: var(--s-3) var(--s-4);
+  border-radius: var(--r-sm);
+  background: var(--cinza-50);
+}
+
+.shopping-totals > div > span {
+  color: var(--text-3);
+  font-size: var(--fs-13);
+  font-weight: 600;
+}
+
+.shopping-totals > div > strong {
+  font-size: var(--fs-20);
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+}
+
+.shopping-progress {
+  grid-column: 1 / -1;
+  height: 8px;
+  overflow: hidden;
+  border-radius: var(--r-pill);
+  background: var(--cinza-150);
+}
+
+.shopping-progress > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--erva-600);
+  transition: width var(--t-slow) var(--ease);
+}
+
+.shopping-total-note {
+  grid-column: 1 / -1;
+  color: var(--text-3);
+  font-size: var(--fs-13);
+  line-height: 1.5;
+}
+
+.shopping-items {
+  display: grid;
+}
+
+.shopping-items .categoria-titulo {
+  padding: var(--s-5) 0 var(--s-2);
+  color: var(--brasa-700);
+  font-size: var(--fs-13);
+  font-weight: 700;
+}
+
+.shopping-items .categoria-titulo:first-child {
+  padding-top: 0;
+}
+
+.lista-compras-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--s-3);
+  min-height: 56px;
+  padding: 10px 0;
+  border-bottom: 1px dashed var(--border);
+}
+
+.lista-compras-item__desc {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+
+.lista-compras-item__desc strong {
+  font-size: var(--fs-15);
+  font-weight: 600;
+  transition: color var(--t) var(--ease);
+}
+
+.lista-compras-item__desc small {
+  color: var(--text-3);
+  font-size: var(--fs-13);
+  font-variant-numeric: tabular-nums;
+}
+
+.lista-compras-item__qtd {
+  color: var(--text-2);
+  font-size: var(--fs-13);
+  font-weight: 600;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.lista-compras-item.comprado .lista-compras-item__desc strong {
+  color: var(--text-3);
+  text-decoration: line-through;
+  text-decoration-color: var(--brasa-500);
+  text-decoration-thickness: 2px;
+}
+
+/* Recursos da conta */
+.central-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--s-3);
+  margin-top: var(--s-4);
+}
+
+.central-action {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  column-gap: var(--s-3);
+  row-gap: 2px;
+  align-items: start;
+  min-height: 92px;
+  padding: var(--s-4);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  transition: border-color var(--t-fast) var(--ease), box-shadow var(--t-fast) var(--ease), transform var(--t-fast) var(--ease);
+}
+
+.central-action:hover {
+  border-color: var(--brasa-200);
+  box-shadow: var(--sh-2);
+}
+
+.central-action:active {
+  transform: translateY(1px);
+}
+
+.central-action__icon {
+  grid-row: 1 / span 2;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--r-sm);
+  background: var(--cinza-100);
+  color: var(--text-2);
+}
+
+.central-action__icon svg.icon {
+  width: 18px;
+  height: 18px;
+}
+
+.central-action strong {
+  font-size: var(--fs-15);
+  font-weight: 650;
+}
+
+.central-action small {
+  color: var(--text-2);
+  font-size: var(--fs-13);
+  line-height: 1.45;
+}
+
+.resource-lock {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: var(--r-pill);
+  background: var(--cinza-100);
+  color: var(--text-3);
+  font-size: var(--fs-12);
+  font-weight: 650;
+}
+
+.resource-lock[hidden] {
+  display: none;
+}
+
+/* Painel de convite (js/resultado.js) */
+.invite-panel {
+  display: grid;
+  gap: var(--s-4);
+  margin-top: var(--s-5);
+  padding-top: var(--s-5);
+  border-top: 1px solid var(--border);
+}
+
+.invite-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--s-3);
+}
+
+.invite-head .eyebrow {
+  margin-bottom: 4px;
+}
+
+.invite-head h3 {
+  font-size: var(--fs-20);
+}
+
+.invite-head__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+}
+
+.invite-link input {
+  font-size: var(--fs-14) !important;
+  font-variant-numeric: tabular-nums;
+}
+
+.invite-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--s-2);
+}
+
+.invite-stats > div {
+  display: grid;
+  gap: 2px;
+  padding: var(--s-3);
+  border-radius: var(--r-sm);
+  background: var(--cinza-50);
+  text-align: center;
+}
+
+.invite-stats strong {
+  font-size: var(--fs-24);
+  font-weight: 800;
+  font-stretch: 75%;
+  font-variant-numeric: tabular-nums;
+}
+
+.invite-stats span {
+  color: var(--text-3);
+  font-size: var(--fs-13);
+}
+
+.rsvp-mini-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.rsvp-mini-list:empty {
+  display: none;
+}
+
+.rsvp-mini-list span {
+  padding: 4px 10px;
+  border-radius: var(--r-pill);
+  background: var(--cinza-100);
+  color: var(--text-2);
+  font-size: var(--fs-13);
+}
+
+.acoes-navegacao--resultado {
+  padding-top: var(--s-5);
+}
+
+/* Responsivo ------------------------------------------------------------------ */
+@media (max-width: 1023px) {
+  .grade-resultado {
+    grid-template-columns: 1fr;
+  }
+
+  .grade-resultado__lado {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+}
+
+@media (max-width: 860px) {
+  .resumo-evento__grade,
+  .result-loading__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .central-grid,
+  .central-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .result-loading__rows {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .flow-main {
+    padding-top: var(--s-5);
+  }
+
+  .flow-header {
+    padding: var(--s-6) 0 var(--s-5);
+  }
+
+  .budget-layout,
+  .grade-resultado__lado {
+    grid-template-columns: 1fr;
+  }
+
+  .shopping-totals {
+    grid-template-columns: 1fr;
+  }
+
+  .invite-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .resumo-evento__bloco {
+    min-height: 96px;
+    padding: var(--s-3) var(--s-4);
+  }
+
+  .resumo-evento__bloco--preco {
+    padding-left: 30px;
+  }
+
+  .resumo-evento__bloco--preco::before {
+    left: 11px;
+  }
+
+  /* Tabela de itens vira uma lista compacta no celular:
+     nome e subtotal na primeira linha, quantidades e preço abaixo */
+  .itens-card .table-scroll {
+    margin: 0;
+    border: 0;
+    overflow: visible;
+  }
+
+  .tabela-itens,
+  .tabela-itens tbody,
+  .tabela-itens td {
+    display: block;
+  }
+
+  .tabela-itens thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+  }
+
+  .tabela-itens tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "nome subtotal"
+      "necessario comprar"
+      "preco preco";
+    gap: 4px var(--s-3);
+    padding: var(--s-3) 0;
+    border-bottom: 1px dashed var(--border);
+  }
+
+  .tabela-itens td,
+  .tabela-itens th:first-child,
+  .tabela-itens td:first-child,
+  .tabela-itens td:last-child {
+    padding: 0;
+    border: 0;
+    text-align: left;
+  }
+
+  .tabela-itens td:nth-child(1) {
+    grid-area: nome;
+    font-weight: 650;
+  }
+
+  .tabela-itens td:nth-child(2) {
+    grid-area: necessario;
+  }
+
+  .tabela-itens td:nth-child(3) {
+    grid-area: comprar;
+  }
+
+  .tabela-itens td:nth-child(4) {
+    grid-area: preco;
+    color: var(--text-2);
+    font-size: var(--fs-13);
+  }
+
+  .tabela-itens td:nth-child(5) {
+    grid-area: subtotal;
+    font-weight: 700;
+  }
+
+  .tabela-itens td.numero,
+  .tabela-itens td:nth-child(3).numero,
+  .tabela-itens td:nth-child(5).numero {
+    text-align: right;
+  }
+
+  .tabela-itens td:nth-child(2).numero {
+    text-align: left;
+  }
+
+  .tabela-itens td:nth-child(4).numero {
+    text-align: left;
+  }
+
+  .tabela-itens td:nth-child(4) br,
+  .tabela-itens td:nth-child(4) small::before {
+    display: none;
+  }
+
+  .tabela-itens td:nth-child(4) small {
+    margin-left: 6px;
+  }
+
+  .tabela-itens td.categoria-titulo {
+    padding: var(--s-2) 0 0;
+    background: none;
+  }
+
+  .tabela-itens tr:has(> td.categoria-titulo) {
+    border-bottom: 0;
+    padding-bottom: 0;
+  }
+
+  .tabela-itens td:nth-child(2).numero::before,
+  .tabela-itens td:nth-child(3).numero::before {
+    margin-right: 6px;
+    color: var(--text-3);
+    font-size: var(--fs-12);
+    font-weight: 600;
+  }
+
+  .tabela-itens td:nth-child(2).numero::before {
+    content: "Necessário";
+  }
+
+  .tabela-itens td:nth-child(3).numero::before {
+    content: "Comprar";
+  }
+
+  .tabela-itens tr:hover td {
+    background: none;
+  }
+
+  .shopping-totals {
+    gap: var(--s-2);
+  }
+
+  .shopping-totals > div:not(.shopping-progress) {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 2px var(--s-3);
+  }
+
+  .shopping-totals > div > strong {
+    font-size: var(--fs-18);
+  }
+
+  .lista-compras-item__qtd {
+    max-width: 9.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .cartao__titulo > .btn:last-child {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .contador-total {
+    padding-right: 12px;
+  }
+
+  .item-carne {
+    padding-left: 12px;
+  }
+
+  .campo-percentual input[type="number"] {
+    width: 72px;
+  }
+}
+
+@media print {
+  .app-bar,
+  .steps,
+  .acoes-navegacao,
+  .advanced-hub,
+  .split-control,
+  .app-footer-mini {
+    display: none !important;
+  }
+
+  .shopping-central-card {
+    -webkit-mask: none;
+    mask: none;
+  }
+}

@@ -336,7 +336,7 @@ function renderOtimizacao(dados) {
 
     if (otimizada.total != null) {
         html += `<div class="optimized-box">
-            <span class="eyebrow"><span></span>COMPRA OTIMIZADA</span>
+            <span class="eyebrow"><span></span>Compra otimizada</span>
             <strong>${formatarMoeda(otimizada.total)}</strong>
             <p class="texto-suave">${otimizada.estabelecimentos_usados} estabelecimento(s)${otimizada.economia_vs_melhor_loja != null ? ` · economia de ${formatarMoeda(otimizada.economia_vs_melhor_loja)} contra a melhor loja única completa` : ""}</p>
             <div class="basket-items">${(otimizada.itens || []).map((i) => `${escaparHTML(i.descricao)} → ${escaparHTML(i.estabelecimento_nome)} · ${formatarMoeda(i.subtotal)}`).join("<br>")}</div>

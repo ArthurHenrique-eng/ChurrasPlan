@@ -37,11 +37,13 @@ function renderizarListaCarnes() {
         const percentual = marcado ? item.percentual : "";
         return `
             <div class="item-config item-carne">
-                <input type="checkbox" data-carne="${carne.slug}" ${marcado ? "checked" : ""}>
-                <span class="item-config__nome">${escaparHTML(carne.nome)}</span>
+                <label class="item-config__rotulo">
+                    <input type="checkbox" data-carne="${carne.slug}" ${marcado ? "checked" : ""}>
+                    <span class="item-config__nome">${escaparHTML(carne.nome)}</span>
+                </label>
                 <div class="campo-percentual" style="${marcado ? "" : "visibility:hidden"}">
-                    <input type="number" min="0" max="100" step="1" data-percentual="${carne.slug}" value="${percentual}">
-                    <span>%</span>
+                    <input type="number" min="0" max="100" step="1" inputmode="numeric" data-percentual="${carne.slug}" value="${percentual}" aria-label="Percentual de ${escaparHTML(carne.nome)}">
+                    <span aria-hidden="true">%</span>
                 </div>
             </div>`;
     }).join("");

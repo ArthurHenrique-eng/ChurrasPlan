@@ -13,6 +13,19 @@ function lerCookie(nome) {
     return parte ? decodeURIComponent(parte.slice(prefixo.length)) : null;
 }
 
+// Converte o "detail" da API em texto para a interface. O corpo completo
+// continua disponível em erro.body para quem precisar do código do erro.
+function mensagemErroApi(detalhe) {
+    if (typeof detalhe === "string") return detalhe;
+    if (Array.isArray(detalhe)) return "Alguns dados enviados não são válidos. Confira e tente novamente.";
+    if (detalhe && typeof detalhe === "object") {
+        if (typeof detalhe.mensagem === "string" && detalhe.mensagem) return detalhe.mensagem;
+        if (detalhe.codigo === "LIMITE_MEMBROS_ATINGIDO") return "O limite de membros do plano foi atingido.";
+        if (detalhe.codigo === "RECURSO_PLANO_NECESSARIO") return "Este recurso não está incluído no plano atual.";
+    }
+    return JSON.stringify(detalhe);
+}
+
 async function requisitar(caminho, opcoes = {}) {
     const controller = new AbortController();
     const { headers: headersInformados = {}, signal: sinalExterno, ...restante } = opcoes;
@@ -51,7 +64,7 @@ async function requisitar(caminho, opcoes = {}) {
                 const next = window.location.pathname.split("/").pop() + window.location.search;
                 window.location.assign("seguranca.html?next=" + encodeURIComponent(next));
             }
-            const erro = new Error(typeof detalhe === "string" ? detalhe : JSON.stringify(detalhe));
+            const erro = new Error(mensagemErroApi(detalhe));
             erro.status = resposta.status;
             erro.body = corpo;
             throw erro;

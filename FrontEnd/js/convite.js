@@ -125,7 +125,7 @@ function preencherRSVP(form, dados) {
 function mostrarFalhaConvite(mensagem) {
     const evento = document.getElementById("convite-evento");
     evento.innerHTML = `
-        <span class="eyebrow"><span></span>CONVITE INDISPONÍVEL</span>
+        <span class="eyebrow"><span></span>Convite indisponível</span>
         <h1>Não foi possível abrir este convite.</h1>
         <p>${conviteEscaparHTML(mensagem)}</p>
     `;
@@ -164,7 +164,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         ].filter(Boolean);
 
         document.getElementById("convite-evento").innerHTML = `
-            <span class="eyebrow"><span></span>VOCÊ FOI CONVIDADO</span>
+            <span class="eyebrow"><span></span>Convite</span>
             <h1>${conviteEscaparHTML(c.nome_churrasco || "Churrasco")}</h1>
             <p>${partes.map(conviteEscaparHTML).join(" · ")}</p>
         `;

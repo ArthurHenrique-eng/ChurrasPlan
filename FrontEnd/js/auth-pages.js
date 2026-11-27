@@ -74,12 +74,12 @@ document.addEventListener("DOMContentLoaded", async () => {
         e.preventDefault(); const token = new URLSearchParams(location.search).get("token"), s1 = document.getElementById("auth-senha").value, s2 = document.getElementById("auth-senha2").value;
         if (!token) { authMensagem("Link de redefinição inválido.", "erro"); return; }
         if (s1 !== s2) { authMensagem("As senhas não coincidem.", "erro"); return; }
-        try { const r = await ChurrasPlanAPI.redefinirSenha(token, s1); authMensagem(r.mensagem, "sucesso"); setTimeout(() => irPara("login.html"), 900); } catch (erro) { authMensagem(erro.message, "erro"); }
+        try { const r = await ChurrasPlanAPI.redefinirSenha(token, s1); authMensagem(r.mensagem, "sucesso"); setTimeout(() => irPara("login.html"), 900); } catch (erro) { authMensagem(erro.status === 422 ? "Este link de redefinição está incompleto. Peça um novo em Esqueci minha senha." : erro.message, "erro"); }
     });
     if (pagina === "verificar") {
         const token = new URLSearchParams(location.search).get("token");
         if (!token) { authMensagem("Link de verificação inválido.", "erro"); return; }
         try { const r = await ChurrasPlanAPI.verificarEmail(token); document.getElementById("verify-title").textContent = "E-mail confirmado ✓"; document.getElementById("verify-copy").textContent = r.mensagem; authMensagem("Sua conta está pronta para os recursos avançados.", "sucesso"); }
-        catch (erro) { document.getElementById("verify-title").textContent = "Não foi possível verificar"; document.getElementById("verify-copy").textContent = erro.message; }
+        catch (erro) { document.getElementById("verify-title").textContent = "Não foi possível verificar"; document.getElementById("verify-copy").textContent = erro.status === 422 ? "Este link de verificação está incompleto. Abra novamente o link enviado para o seu e-mail." : erro.message; }
     }
 });
