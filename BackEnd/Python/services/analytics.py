@@ -2,6 +2,7 @@
 import hashlib
 import hmac
 from sqlalchemy.dialects.mysql import insert as mysql_insert
+from sqlalchemy.dialects.postgresql import insert as postgresql_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from config import settings
 from models import EventoProduto
@@ -41,7 +42,8 @@ def registrar_produto(db, evento: str, chave: str, propriedades: dict | None = N
         stmt = mysql_insert(EventoProduto).values(**valores)
         stmt = stmt.on_duplicate_key_update(dedup_hash=stmt.inserted.dedup_hash)
     else:
-        stmt = sqlite_insert(EventoProduto).values(**valores).on_conflict_do_nothing(index_elements=["dedup_hash"])
+        insert = postgresql_insert if db.bind.dialect.name == "postgresql" else sqlite_insert
+        stmt = insert(EventoProduto).values(**valores).on_conflict_do_nothing(index_elements=["dedup_hash"])
     db.execute(stmt)
 
 

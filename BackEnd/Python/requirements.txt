@@ -3,6 +3,7 @@ starlette==1.6.0
 uvicorn[standard]==0.54.0
 sqlalchemy==2.0.50
 pymysql==1.2.3
+psycopg[binary]==3.3.9
 cryptography==50.0.2
 pydantic==2.13.4
 python-dotenv==1.2.4

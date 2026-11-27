@@ -14,19 +14,26 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from database.connection import engine
 
 
+def _inserir(conn, sql: str, params: dict | None = None) -> int:
+    """INSERT que devolve o id gerado no PostgreSQL (RETURNING) e no MySQL (lastrowid)."""
+    if conn.dialect.name == "postgresql":
+        return conn.execute(text(sql + " RETURNING id"), params or {}).scalar_one()
+    return conn.execute(text(sql), params or {}).lastrowid
+
+
 def main():
     with engine.begin() as conn:
-        uid = conn.execute(text("""
+        uid = _inserir(conn, """
             INSERT INTO usuarios (nome, email, senha_hash, papel)
             VALUES ('Parceiro legado CI', 'saas-legado-migracao@example.invalid',
                     'hash-ficticio-sem-login', 'parceiro')
-        """)).lastrowid
-        eid = conn.execute(text("""
+        """)
+        eid = _inserir(conn, """
             INSERT INTO estabelecimentos
               (usuario_responsavel_id, slug, nome, tipo, parceiro_verificado, ativo)
-            VALUES (:uid, 'saas-loja-legada-ci', 'Mercado Legado CI', 'mercado', 1, 1)
-        """), {"uid": uid}).lastrowid
-        pid = conn.execute(text("""
+            VALUES (:uid, 'saas-loja-legada-ci', 'Mercado Legado CI', 'mercado', TRUE, TRUE)
+        """, {"uid": uid})
+        pid = _inserir(conn, """
             INSERT INTO produtos (
                 categoria_id, produto_pai_id, tipo_produto, slug, nome,
                 marca, unidade_consumo, unidade_venda, venda_fracionada,
@@ -35,40 +42,40 @@ def main():
                 (SELECT categoria_id FROM (SELECT categoria_id FROM produtos
                  WHERE slug = 'agua') AS base), NULL, 'comercial',
                 'saas-produto-legado-ci', 'Água Legada 1L', 'Marca Legada',
-                'litro', 'garrafa', 0, 1.0, 'litro', 1
+                'litro', 'garrafa', FALSE, 1.0, 'litro', TRUE
             )
-        """)).lastrowid
+        """)
         conn.execute(text("""
             INSERT INTO precos (
                 produto_id, estabelecimento_id, criado_por_usuario_id, preco,
                 moeda, fonte, origem, estoque_status, disponivel
             ) VALUES (:pid, :eid, :uid, 3.79, 'BRL', 'ci-legado',
-                      'manual_parceiro', 'disponivel', 1)
+                      'manual_parceiro', 'disponivel', TRUE)
         """), {"pid": pid, "eid": eid, "uid": uid})
 
         # Outro SKU ofertado tanto por loja associada quanto por loja SEM
         # responsável: a migração não pode atribuir essa marca a um tenant.
-        nao_associada = conn.execute(text("""
+        nao_associada = _inserir(conn, """
             INSERT INTO estabelecimentos (slug, nome, tipo, parceiro_verificado, ativo)
-            VALUES ('saas-loja-sem-dono-ci', 'Loja sem responsável CI', 'mercado', 0, 1)
-        """)).lastrowid
-        compartilhado = conn.execute(text("""
+            VALUES ('saas-loja-sem-dono-ci', 'Loja sem responsável CI', 'mercado', FALSE, TRUE)
+        """)
+        compartilhado = _inserir(conn, """
             INSERT INTO produtos (
                 categoria_id, tipo_produto, slug, nome, marca, unidade_consumo,
                 unidade_venda, venda_fracionada, ativo
             ) VALUES (
                 (SELECT categoria_id FROM (SELECT categoria_id FROM produtos WHERE slug='agua') AS base),
                 'comercial', 'saas-sku-ambiguo-ci', 'SKU ambíguo CI',
-                'Marca compartilhada', 'litro', 'garrafa', 0, 1
+                'Marca compartilhada', 'litro', 'garrafa', FALSE, TRUE
             )
-        """)).lastrowid
+        """)
         for loja_id in [eid, nao_associada]:
             conn.execute(text("""
                 INSERT INTO precos (
                     produto_id, estabelecimento_id, preco, origem, moeda,
                     estoque_status, disponivel, fonte
                 ) VALUES (
-                    :pid, :eid, 5.19, 'ci-legado', 'BRL', 'disponivel', 1,
+                    :pid, :eid, 5.19, 'ci-legado', 'BRL', 'disponivel', TRUE,
                     'ci-teste-ambiguidade'
                 )
             """), {"pid": compartilhado, "eid": loja_id})

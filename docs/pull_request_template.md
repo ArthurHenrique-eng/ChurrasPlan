@@ -2,7 +2,7 @@
 
 ## Validação
 
-Informe testes backend, MySQL/Alembic, frontend/E2E e segurança executados.
+Informe testes backend, banco real/Alembic (PostgreSQL e MySQL), frontend/E2E e segurança executados.
 
 ## Compatibilidade e operação
 

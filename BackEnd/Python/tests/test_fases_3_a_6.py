@@ -426,6 +426,63 @@ def test_validacao_de_producao_recusa_configuracao_insegura():
     assert "COOKIE_SECURE" in texto and "SMTP_HOST" in texto and "HTTPS" in texto and "CORS_ORIGINS" in texto
 
 
+def _config_producao_segura(url):
+    from types import SimpleNamespace
+    from cryptography.fernet import Fernet
+    return SimpleNamespace(
+        APP_ENV="production", COOKIE_SECURE=True, REQUIRE_EMAIL_VERIFICATION=True,
+        SMTP_HOST="smtp.example.com", PUBLIC_APP_URL="https://churrasplan.example.com",
+        CORS_ORIGINS=["https://churrasplan.example.com"], GEOAPIFY_ENABLED=False,
+        GEOAPIFY_SERVER_API_KEY=None, TRUSTED_HOSTS=["churrasplan.example.com"],
+        SECURITY_PEPPER="p" * 40, FORCE_HTTPS=True, MFA_REQUIRED_ADMIN=True,
+        DATA_ENCRYPTION_KEY=Fernet.generate_key().decode(), RATE_LIMIT_ENABLED=True,
+        DATABASE_URL=url, DATABASE_URL_OVERRIDE=url, DB_PASSWORD="",
+    )
+
+
+@pytest.mark.parametrize("url", [
+    "postgresql+psycopg://u:s@ep-exemplo.us-east-1.aws.neon.tech/neondb?sslmode=require",
+    "mysql+pymysql://u:s@db:3306/churrasplan?charset=utf8mb4",
+])
+def test_validacao_de_producao_aceita_postgresql_e_mysql(url):
+    from config import validar_configuracao_producao
+    validar_configuracao_producao(_config_producao_segura(url))
+
+
+@pytest.mark.parametrize("url", ["sqlite:///prod.db", "postgresql+psycopg2://u:s@db/churrasplan"])
+def test_validacao_de_producao_recusa_outro_banco_ou_driver(url):
+    from config import validar_configuracao_producao
+    with pytest.raises(RuntimeError, match="DATABASE_URL"):
+        validar_configuracao_producao(_config_producao_segura(url))
+
+
+@pytest.mark.parametrize("entrada,esperada", [
+    ("postgresql://u:s@ep-x.neon.tech/neondb?sslmode=require",
+     "postgresql+psycopg://u:s@ep-x.neon.tech/neondb?sslmode=require"),
+    ("postgres://u:s@host:5432/db", "postgresql+psycopg://u:s@host:5432/db"),
+    (" postgresql+psycopg://u:s@host/db ", "postgresql+psycopg://u:s@host/db"),
+    ("mysql+pymysql://u:s@host/db?charset=utf8mb4", "mysql+pymysql://u:s@host/db?charset=utf8mb4"),
+    ("sqlite:///:memory:", "sqlite:///:memory:"),
+])
+def test_database_url_do_provedor_usa_psycopg(entrada, esperada):
+    from config import normalizar_database_url
+    assert normalizar_database_url(entrada) == esperada
+
+
+def test_database_url_montada_por_db_driver():
+    from config import Settings
+    cfg = Settings()
+    cfg.DATABASE_URL_OVERRIDE = None
+    cfg.DB_HOST, cfg.DB_PORT, cfg.DB_USER, cfg.DB_PASSWORD, cfg.DB_NAME = "db", "5432", "app", "s@nha", "churrasplan"
+    cfg.DB_DRIVER = "postgresql"
+    assert cfg.DATABASE_URL == "postgresql+psycopg://app:s%40nha@db:5432/churrasplan"
+    cfg.DB_DRIVER, cfg.DB_PORT = "mysql", "3306"
+    assert cfg.DATABASE_URL == "mysql+pymysql://app:s%40nha@db:3306/churrasplan?charset=utf8mb4"
+    cfg.DB_DRIVER = "oracle"
+    with pytest.raises(ValueError, match="DB_DRIVER"):
+        cfg.DATABASE_URL
+
+
 def test_oferta_de_parceiro_nao_verificado_nao_entra_em_preco_publico_ou_orcamento(client):
     _, h = cadastro_login(client, email="parceiro-preco@example.com")
     assert client.post("/api/parceiro/ativar", headers=h).status_code == 200

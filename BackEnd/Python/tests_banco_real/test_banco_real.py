@@ -5,25 +5,29 @@ import pytest
 from sqlalchemy import inspect, text
 
 
+# Banco descartável: PostgreSQL (produção) ou MySQL 8 (compatibilidade).
+# MYSQL_TEST_URL continua aceito para scripts antigos.
+DB_TEST_URL = os.getenv("DB_TEST_URL") or os.getenv("MYSQL_TEST_URL")
+
 pytestmark = pytest.mark.skipif(
-    not os.getenv("MYSQL_TEST_URL"),
-    reason="Defina MYSQL_TEST_URL para executar os testes contra MySQL real.",
+    not DB_TEST_URL,
+    reason="Defina DB_TEST_URL para executar os testes contra PostgreSQL ou MySQL real.",
 )
 
 
 def _setup_url():
-    os.environ["DATABASE_URL"] = os.environ["MYSQL_TEST_URL"]
+    os.environ["DATABASE_URL"] = DB_TEST_URL
     os.environ.setdefault("APP_ENV", "test")
     os.environ.setdefault("REQUIRE_EMAIL_VERIFICATION", "false")
     os.environ.setdefault("COOKIE_SECURE", "false")
-    os.environ.setdefault("SECURITY_PEPPER", "mysql-test-pepper-012345678901234567890123456789")
+    os.environ.setdefault("SECURITY_PEPPER", "banco-real-test-pepper-0123456789012345678901234")
 
 
-def test_mysql_schema_head_e_utf8mb4():
+def test_schema_head_e_codificacao_utf8():
     _setup_url()
     from database.connection import engine
 
-    assert engine.dialect.name == "mysql"
+    assert engine.dialect.name in {"postgresql", "mysql"}
     insp = inspect(engine)
     esperadas = {
         "usuarios", "churrascos", "produtos", "precos", "estabelecimentos",
@@ -35,13 +39,36 @@ def test_mysql_schema_head_e_utf8mb4():
     assert any(i["name"] == "ix_eventos_produto_funil" for i in insp.get_indexes("eventos_produto"))
     with engine.connect() as conn:
         head = conn.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
-        charset = conn.execute(text("SELECT @@character_set_database")).scalar_one()
+        if engine.dialect.name == "mysql":
+            charset = conn.execute(text("SELECT @@character_set_database")).scalar_one()
+        else:
+            charset = conn.execute(text(
+                "SELECT pg_encoding_to_char(encoding) FROM pg_database WHERE datname = current_database()"
+            )).scalar_one()
     assert head == "20261127_0025"
     assert "neon_auth_user_id" in {c["name"] for c in insp.get_columns("usuarios")}
-    assert str(charset).lower() == "utf8mb4"
+    assert str(charset).lower() in {"utf8mb4", "utf8"}
 
 
-def test_mysql_funis_agregados_preservam_ordem_e_contexto(monkeypatch):
+def test_timestamps_do_banco_em_utc():
+    """now() do banco e services.auth.agora() precisam falar o mesmo fuso (UTC)."""
+    _setup_url()
+    from database.connection import SessionLocal
+    from models import Usuario
+    from services.auth import agora, hash_senha
+
+    db = SessionLocal()
+    try:
+        u = Usuario(nome="Fuso UTC", email=f"fuso-{uuid.uuid4().hex}@example.com",
+                    senha_hash=hash_senha("SenhaFusoUTC123"), papel="usuario")
+        db.add(u); db.commit(); db.refresh(u)
+        assert abs((u.criado_em - agora()).total_seconds()) < 120
+        db.delete(u); db.commit()
+    finally:
+        db.close()
+
+
+def test_funis_agregados_preservam_ordem_e_contexto(monkeypatch):
     _setup_url()
     from datetime import datetime, timedelta
     from sqlalchemy.orm import Session
@@ -51,7 +78,7 @@ def test_mysql_funis_agregados_preservam_ordem_e_contexto(monkeypatch):
     from services import analytics_dashboard
     instante = datetime(2040, 1, 1, 12)
     monkeypatch.setattr(analytics_dashboard, "agora", lambda: instante + timedelta(hours=1))
-    contexto = "teste-mysql-funil-" + uuid.uuid4().hex
+    contexto = "teste-banco-real-funil-" + uuid.uuid4().hex
     with Session(engine) as db:
         try:
             for n, evento in enumerate(["landing_visualizada", "planejamento_iniciado", "planejamento_concluido", "resultado_visualizado"]):
@@ -68,19 +95,19 @@ def test_mysql_funis_agregados_preservam_ordem_e_contexto(monkeypatch):
             db.rollback()
 
 
-def test_mysql_fk_json_decimal_e_cascade():
+def test_fk_json_decimal_e_cascade():
     _setup_url()
     from database.connection import SessionLocal
     from models import ConsentimentoUsuario, Usuario
     from services.auth import hash_senha
 
-    email = f"mysql-{uuid.uuid4().hex}@example.com"
+    email = f"banco-real-{uuid.uuid4().hex}@example.com"
     db = SessionLocal()
     try:
-        u = Usuario(nome="Teste MySQL çã", email=email, senha_hash=hash_senha("SenhaMySQL123"), papel="usuario")
+        u = Usuario(nome="Teste banco real çã", email=email, senha_hash=hash_senha("SenhaBancoReal123"), papel="usuario")
         db.add(u); db.flush()
         uid = u.id
-        db.add(ConsentimentoUsuario(usuario_id=uid, tipo="privacidade", versao="teste", concedido=True, origem="mysql_ci"))
+        db.add(ConsentimentoUsuario(usuario_id=uid, tipo="privacidade", versao="teste", concedido=True, origem="banco_real_ci"))
         db.commit()
         assert db.query(ConsentimentoUsuario).filter_by(usuario_id=uid).count() == 1
         db.delete(u); db.commit()
@@ -89,7 +116,7 @@ def test_mysql_fk_json_decimal_e_cascade():
         db.close()
 
 
-def test_mysql_production_readiness_schema_sem_ip_bruto_e_com_json():
+def test_production_readiness_schema_sem_ip_bruto_e_com_json():
     _setup_url()
     from database.connection import SessionLocal, engine
     from models import AuditoriaAdmin, Usuario
@@ -103,19 +130,19 @@ def test_mysql_production_readiness_schema_sem_ip_bruto_e_com_json():
     db = SessionLocal()
     try:
         admin = Usuario(
-            nome="Admin MySQL", email=f"admin-{uuid.uuid4().hex}@example.com",
-            senha_hash=hash_senha("SenhaAdminMySQL123"), papel="admin", ativo=True,
+            nome="Admin banco real", email=f"admin-{uuid.uuid4().hex}@example.com",
+            senha_hash=hash_senha("SenhaAdminBanco123"), papel="admin", ativo=True,
         )
         db.add(admin); db.flush()
         db.add(AuditoriaAdmin(
             admin_usuario_id=admin.id,
-            acao="teste_mysql",
+            acao="teste_banco_real",
             entidade="sistema",
             entidade_id="ci",
             detalhes={"origem": "github-actions", "ok": True},
         ))
         db.commit()
-        registro = db.query(AuditoriaAdmin).filter_by(acao="teste_mysql", admin_usuario_id=admin.id).one()
+        registro = db.query(AuditoriaAdmin).filter_by(acao="teste_banco_real", admin_usuario_id=admin.id).one()
         assert registro.detalhes["ok"] is True
     finally:
         db.close()
@@ -125,6 +152,8 @@ def test_mysql_todas_as_tabelas_usam_innodb():
     _setup_url()
     from database.connection import engine
 
+    if engine.dialect.name != "mysql":
+        pytest.skip("Verificação de engine de armazenamento só se aplica ao MySQL.")
     with engine.connect() as conn:
         rows = conn.execute(text(
             """
@@ -139,7 +168,7 @@ def test_mysql_todas_as_tabelas_usam_innodb():
     incorretas = [dict(r) for r in rows if str(r["ENGINE"]).lower() != "innodb"]
     assert incorretas == []
 
-def test_mysql_catalogo_generico_aplicado_por_migrations_sem_seed_demo():
+def test_catalogo_generico_aplicado_por_migrations_sem_seed_demo():
     _setup_url()
     from config import CATALOGO_PRODUTOS_PADRAO
     from database.connection import SessionLocal
@@ -170,7 +199,7 @@ def test_mysql_catalogo_generico_aplicado_por_migrations_sem_seed_demo():
 
 
 
-def test_mysql_tenant_migration_backfill_preserva_dados():
+def test_tenant_migration_backfill_preserva_dados():
     _setup_url()
     from database.connection import SessionLocal, engine
     from models import Estabelecimento, Organizacao, OrganizacaoMembro, Preco, Produto, Usuario
@@ -213,7 +242,7 @@ def test_mysql_tenant_migration_backfill_preserva_dados():
 
 
 
-def test_mysql_cota_concorrente_mesma_organizacao(monkeypatch):
+def test_cota_concorrente_mesma_organizacao(monkeypatch):
     """Dois escritores simultâneos não ultrapassam o limite da organização."""
     from concurrent.futures import ThreadPoolExecutor
     from threading import Barrier
@@ -265,7 +294,7 @@ def test_mysql_cota_concorrente_mesma_organizacao(monkeypatch):
 
 
 
-def test_mysql_convites_concorrentes_respeitam_lotacao(monkeypatch):
+def test_convites_concorrentes_respeitam_lotacao(monkeypatch):
     """Com a última vaga, duas transações concorrentes não geram dois convites."""
     from concurrent.futures import ThreadPoolExecutor
     from datetime import timedelta
@@ -318,8 +347,8 @@ def test_mysql_convites_concorrentes_respeitam_lotacao(monkeypatch):
         db.close()
 
 
-def test_mysql_importacao_csv_idempotente_concorrente():
-    """Reenvios da mesma chave geram uma só oferta no MySQL real."""
+def test_importacao_csv_idempotente_concorrente():
+    """Reenvios da mesma chave geram uma só oferta no banco real."""
     from concurrent.futures import ThreadPoolExecutor
     from threading import Barrier
 
@@ -340,7 +369,7 @@ def test_mysql_importacao_csv_idempotente_concorrente():
         db.close()
     csv_texto = ("estabelecimento_id;produto_id;preco;estoque_status\n"
                  f"{loja_id};{produto_id};5,50;disponivel\n")
-    payload = ImportacaoOfertasCSV(chave_idempotencia="mysql-idempotencia-lote", csv_texto=csv_texto)
+    payload = ImportacaoOfertasCSV(chave_idempotencia="banco-real-idempotencia-lote", csv_texto=csv_texto)
     barreira = Barrier(2)
 
     def worker():
@@ -364,8 +393,8 @@ def test_mysql_importacao_csv_idempotente_concorrente():
         db.close()
 
 
-def test_mysql_catalogo_idempotente_com_duas_importacoes_concorrentes():
-    """Lotes paralelos com mesma chave não duplicam SKUs no MySQL/InnoDB."""
+def test_catalogo_idempotente_com_duas_importacoes_concorrentes():
+    """Lotes paralelos com mesma chave não duplicam SKUs (locks e chaves únicas reais)."""
     from concurrent.futures import ThreadPoolExecutor
     from threading import Barrier
 
@@ -383,7 +412,7 @@ def test_mysql_catalogo_idempotente_com_duas_importacoes_concorrentes():
     finally:
         db.close()
     codigo = "SKU-FASE4A-" + uuid.uuid4().hex[:12]
-    chave = "catalogo-mysql-" + uuid.uuid4().hex[:16]
+    chave = "catalogo-banco-real-" + uuid.uuid4().hex[:16]
     csv_texto = ("sku;produto_pai_id;nome;marca;unidade_venda;quantidade_embalagem;unidade_embalagem\n"
                  f"{codigo};{pai_id};Água em Lote;Marca Real;garrafa;1,5;litro\n")
     payload = CatalogoCSV(chave_idempotencia=chave, csv_texto=csv_texto)
@@ -410,7 +439,7 @@ def test_mysql_catalogo_idempotente_com_duas_importacoes_concorrentes():
         db.close()
 
 
-def test_mysql_checkout_idempotente_com_duas_transacoes_concorrentes(monkeypatch):
+def test_checkout_idempotente_com_duas_transacoes_concorrentes(monkeypatch):
     """Lock da organização + chave única impedem dois checkouts para a mesma ação."""
     from concurrent.futures import ThreadPoolExecutor
     from threading import Barrier
@@ -428,10 +457,10 @@ def test_mysql_checkout_idempotente_com_duas_transacoes_concorrentes(monkeypatch
     finally:
         db.close()
     monkeypatch.setattr(settings, "BILLING_ENABLED", True)
-    monkeypatch.setattr(settings, "STRIPE_SECRET_KEY", "sk_test_mysql_mock")
-    monkeypatch.setattr(settings, "STRIPE_WEBHOOK_SECRET", "whsec_mysql_mock")
-    monkeypatch.setattr(settings, "STRIPE_PRICE_PRO", "price_mysql_pro")
-    monkeypatch.setattr(settings, "STRIPE_PRICE_BUSINESS", "price_mysql_business")
+    monkeypatch.setattr(settings, "STRIPE_SECRET_KEY", "sk_test_banco_real_mock")
+    monkeypatch.setattr(settings, "STRIPE_WEBHOOK_SECRET", "whsec_banco_real_mock")
+    monkeypatch.setattr(settings, "STRIPE_PRICE_PRO", "price_banco_real_pro")
+    monkeypatch.setattr(settings, "STRIPE_PRICE_BUSINESS", "price_banco_real_business")
     requests = []
     def provider(method, path, campos=None, *, idempotency=None):
         requests.append((method, path, idempotency))
@@ -440,17 +469,17 @@ def test_mysql_checkout_idempotente_com_duas_transacoes_concorrentes(monkeypatch
             return {"id": price, "currency": "brl", "active": True,
                     "unit_amount": 1000, "recurring": {"interval": "month", "interval_count": 1}}
         if method == "POST" and path == "/v1/checkout/sessions":
-            return {"id": "cs_test_mysql_unique", "status": "open",
-                    "url": "https://checkout.stripe.com/c/pay/mysql"}
+            return {"id": "cs_test_banco_real_unique", "status": "open",
+                    "url": "https://checkout.stripe.com/c/pay/banco-real"}
         if method == "GET" and path.startswith("/v1/checkout/sessions/"):
-            return {"id": "cs_test_mysql_unique", "status": "open",
-                    "url": "https://checkout.stripe.com/c/pay/mysql"}
+            return {"id": "cs_test_banco_real_unique", "status": "open",
+                    "url": "https://checkout.stripe.com/c/pay/banco-real"}
         raise AssertionError(path)
     monkeypatch.setattr("routers.billing.stripe_request", provider)
     monkeypatch.setattr("routers.billing.preco_mensal_validado",
                         lambda plano, periodicidade="mensal": {"plano": plano, "centavos": 1000, "periodicidade": periodicidade})
     barrier = Barrier(2)
-    chave = "checkout-mysql-2026-unique"
+    chave = "checkout-banco-real-2026-unique"
 
     def executar():
         db = SessionLocal()
@@ -474,7 +503,7 @@ def test_mysql_checkout_idempotente_com_duas_transacoes_concorrentes(monkeypatch
         db.close()
 
 
-def test_mysql_free_quota_concorrente_nao_passa_de_cinco():
+def test_free_quota_concorrente_nao_passa_de_cinco():
     """Simula duas novas criações concorrentes após quatro eventos Free."""
     _setup_url()
     from concurrent.futures import ThreadPoolExecutor
@@ -528,6 +557,37 @@ def test_mysql_free_quota_concorrente_nao_passa_de_cinco():
         assert db.query(Churrasco).filter_by(usuario_id=user_id).count() == 5
         db.query(Churrasco).filter_by(usuario_id=user_id).delete()
         db.query(Usuario).filter_by(id=user_id).delete()
+        db.commit()
+    finally:
+        db.close()
+
+
+def test_cota_profissional_free_conta_com_lock_do_usuario():
+    """A cota de clientes do plano Free conta com o usuário bloqueado, sem erro de dialeto."""
+    _setup_url()
+    from fastapi import HTTPException
+    from database.connection import SessionLocal
+    from models import ClienteProfissional, Usuario
+    from routers.profissional import cota
+    from services.auth import hash_senha
+
+    db = SessionLocal()
+    try:
+        u = Usuario(nome="Profissional Free", email=f"prof-{uuid.uuid4().hex}@example.com",
+                    senha_hash=hash_senha("SenhaProfissional123"), papel="usuario")
+        db.add(u); db.commit()
+        uid = u.id
+        for n in range(3):
+            cota(db, u, ClienteProfissional, 3)
+            db.add(ClienteProfissional(usuario_id=uid, nome=f"Cliente {n}"))
+            db.commit()
+        with pytest.raises(HTTPException) as exc:
+            cota(db, u, ClienteProfissional, 3)
+        assert exc.value.status_code == 409
+        assert exc.value.detail["codigo"] == "LIMITE_PROFISSIONAL_FREE"
+        db.rollback()
+        db.query(ClienteProfissional).filter_by(usuario_id=uid).delete()
+        db.query(Usuario).filter_by(id=uid).delete()
         db.commit()
     finally:
         db.close()

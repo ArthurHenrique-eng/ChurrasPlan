@@ -102,7 +102,7 @@ print(f"Banco MySQL de teste pronto: {database}")
         Assert-Success "alembic check"
 
         Write-Host "== MySQL: testes reais ==" -ForegroundColor Cyan
-        python -m pytest -q tests_mysql
+        python -m pytest -q tests_banco_real
         Assert-Success "pytest MySQL"
         Pop-Location
     }

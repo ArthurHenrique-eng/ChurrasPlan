@@ -243,9 +243,9 @@ def upgrade():
     if "planos_assinatura" in sa.inspect(bind).get_table_names():
         existentes = {r[0] for r in bind.execute(sa.text("SELECT slug FROM planos_assinatura")).all()}
         if "gratuito" not in existentes:
-            bind.execute(sa.text("INSERT INTO planos_assinatura (slug,nome,publico_alvo,preco_mensal,ativo) VALUES ('gratuito','Gratuito','usuario',0,1)"))
+            bind.execute(sa.text("INSERT INTO planos_assinatura (slug,nome,publico_alvo,preco_mensal,ativo) VALUES ('gratuito','Gratuito','usuario',0,TRUE)"))
         if "parceiro" not in existentes:
-            bind.execute(sa.text("INSERT INTO planos_assinatura (slug,nome,publico_alvo,preco_mensal,ativo) VALUES ('parceiro','Parceiro','parceiro',0,1)"))
+            bind.execute(sa.text("INSERT INTO planos_assinatura (slug,nome,publico_alvo,preco_mensal,ativo) VALUES ('parceiro','Parceiro','parceiro',0,TRUE)"))
 
 
 def downgrade():

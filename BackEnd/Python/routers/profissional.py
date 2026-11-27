@@ -5,8 +5,9 @@ from decimal import Decimal
 from typing import Literal
 from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel, Field
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
-from database.connection import get_db
+from database.connection import contagem_com_bloqueio, get_db
 from models import ClienteProfissional, PropostaProfissional, Churrasco, Usuario
 from services.auth import usuario_atual, usuario_atual_com_csrf
 from services.entitlements_usuario import premium_usuario, exigir_premium_usuario
@@ -14,9 +15,17 @@ from services.entitlements_usuario import premium_usuario, exigir_premium_usuari
 router = APIRouter(prefix="/api/profissional", tags=["profissional"])
 
 
+def total_registros(db, usuario_id, modelo, *, bloqueio=False):
+    stmt = select(func.count(modelo.id)).where(modelo.usuario_id == usuario_id)
+    if bloqueio:
+        # Leitura corrente após o lock do usuário; ver contagem_com_bloqueio.
+        stmt = contagem_com_bloqueio(db, stmt)
+    return int(db.execute(stmt).scalar_one())
+
+
 def cota(db, usuario, modelo, limite):
     db.query(Usuario).filter_by(id=usuario.id).with_for_update().one()
-    if not premium_usuario(db, usuario.id) and db.query(modelo).filter_by(usuario_id=usuario.id).with_for_update().count() >= limite:
+    if not premium_usuario(db, usuario.id) and total_registros(db, usuario.id, modelo, bloqueio=True) >= limite:
         raise HTTPException(409, detail={"codigo": "LIMITE_PROFISSIONAL_FREE", "limite": limite,
                                         "mensagem": "Limite gratuito atingido. Os registros existentes continuam acessíveis."})
 
