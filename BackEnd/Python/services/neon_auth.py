@@ -72,8 +72,8 @@ CAMINHOS_PERMITIDOS: dict[str, frozenset[str]] = {
     "revoke-other-sessions": frozenset({"POST"}),
     "revoke-sessions": frozenset({"POST"}),
 }
-# Links de e-mail com token no caminho (redirecionam ao callbackURL).
-PREFIXOS_GET_PERMITIDOS = ("reset-password/",)
+# Os links dos e-mails (verificação e troca de senha) apontam para o domínio do
+# Neon, que redireciona ao callbackURL; por isso nenhum caminho com token passa aqui.
 CHAVES_SECRETAS = frozenset({"token", "access_token", "refresh_token", "accessToken", "refreshToken", "idToken"})
 CABECALHOS_REPASSADOS = ("user-agent", "content-type", "accept", "accept-language")
 
@@ -410,14 +410,16 @@ def apagar_cookies_neon(resposta: Response, request: Request) -> None:
 
 # ---------------------------------------------------------------- proxy ---
 
-def _caminho_permitido(caminho: str, metodo: str) -> bool:
-    metodos = CAMINHOS_PERMITIDOS.get(caminho)
-    if metodos is not None:
-        return metodo in metodos
-    return metodo == "GET" and any(
-        caminho.startswith(p) and "/" not in caminho[len(p):] and 0 < len(caminho) - len(p) <= 256
-        for p in PREFIXOS_GET_PERMITIDOS
-    )
+def _caminho_permitido(caminho: str, metodo: str) -> str | None:
+    """Devolve o caminho da lista fechada quando o pedido é permitido.
+
+    A URL repassada ao Neon e os logs usam só esse valor da lista, nunca o
+    texto que veio do navegador.
+    """
+    for permitido, metodos in CAMINHOS_PERMITIDOS.items():
+        if permitido == caminho and metodo in metodos:
+            return permitido
+    return None
 
 
 def _reescrever_set_cookie(cabecalho: str) -> str | None:
@@ -458,7 +460,8 @@ async def encaminhar(request: Request, caminho: str) -> Response:
     metodo = request.method.upper()
     if not neon_ativo():
         raise HTTPException(status_code=404, detail="Recurso não encontrado.")
-    if not _caminho_permitido(caminho, metodo):
+    alvo = _caminho_permitido(caminho, metodo)
+    if alvo is None:
         raise HTTPException(status_code=404, detail="Recurso não encontrado.")
     origem = (request.headers.get("origin") or "").rstrip("/")
     confiaveis = origens_confiaveis()
@@ -475,16 +478,16 @@ async def encaminhar(request: Request, caminho: str) -> Response:
     cookies = _cookies_neon(request)
     if cookies:
         cabecalhos["cookie"] = cookies
-    url = f"{settings.NEON_AUTH_BASE_URL}/{caminho}"
+    url = f"{settings.NEON_AUTH_BASE_URL}/{alvo}"
     try:
         async with _cliente_assincrono() as cliente:
             resposta = await cliente.request(metodo, url, params=request.query_params, content=corpo or None,
                                              headers=cabecalhos, follow_redirects=False)
     except httpx.HTTPError as erro:
-        logger.warning("neon_auth: proxy %s falhou (%s)", caminho, type(erro).__name__)
+        logger.warning("neon_auth: proxy %s falhou (%s)", alvo, type(erro).__name__)
         raise HTTPException(status_code=502, detail="Login temporariamente indisponível.") from None
 
-    if caminho in {"sign-out", "revoke-sessions", "revoke-session", "change-password"}:
+    if alvo in {"sign-out", "revoke-sessions", "revoke-session", "change-password"}:
         esquecer_sessao(request)
     conteudo = resposta.content
     tipo = resposta.headers.get("content-type", "")

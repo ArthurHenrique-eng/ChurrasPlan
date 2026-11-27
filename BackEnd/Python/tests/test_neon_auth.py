@@ -176,7 +176,8 @@ def test_proxy_recusa_caminhos_e_metodos_fora_da_lista(client, neon):
     bloqueados = [
         ("GET", "admin/list-users"), ("POST", "admin/set-role"), ("POST", "organization/create"),
         ("POST", "delete-user"), ("POST", "get-session"), ("GET", "sign-in/email"),
-        ("GET", "reset-password/abc/def"), ("GET", "list-accounts"), ("POST", "verify-password"),
+        ("GET", "reset-password/abc/def"), ("GET", "reset-password/token123"), ("GET", "list-accounts"),
+        ("POST", "verify-password"), ("GET", "get-session%2F..%2Fadmin%2Flist-users"),
     ]
     for metodo, caminho in bloqueados:
         r = client.request(metodo, f"/api/auth/neon/{caminho}", headers={"origin": ORIGEM})
@@ -492,12 +493,12 @@ def test_reescrever_set_cookie():
 
 
 def test_caminho_permitido():
-    assert neon_auth._caminho_permitido("sign-in/email", "POST")
-    assert not neon_auth._caminho_permitido("sign-in/email", "GET")
-    assert neon_auth._caminho_permitido("reset-password/abc123", "GET")
-    assert not neon_auth._caminho_permitido("reset-password/abc/def", "GET")
-    assert not neon_auth._caminho_permitido("reset-password/", "GET")
-    assert not neon_auth._caminho_permitido("admin/impersonate-user", "POST")
+    assert neon_auth._caminho_permitido("sign-in/email", "POST") == "sign-in/email"
+    assert neon_auth._caminho_permitido("sign-in/email", "GET") is None
+    for caminho in ("reset-password/abc123", "reset-password/../admin/list-users", "get-session/../admin/list-users",
+                    "sign-in/email?x=1", "admin/impersonate-user", ""):
+        assert neon_auth._caminho_permitido(caminho, "GET") is None, caminho
+        assert neon_auth._caminho_permitido(caminho, "POST") is None, caminho
 
 
 def test_limpar_segredos():
