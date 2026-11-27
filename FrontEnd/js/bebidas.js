@@ -6,10 +6,10 @@ function renderizarBebidasNaoAlcoolicas() {
     const container = document.getElementById("lista-bebidas-na");
     const ativas = new Set(estadoAtual.bebidas.nao_alcoolicas_ativas || []);
     container.innerHTML = CATALOGO_BEBIDAS_NAO_ALCOOLICAS.map((bebida) => `
-        <div class="item-config">
+        <label class="item-config">
             <input type="checkbox" data-bebida="${bebida.chave}" ${ativas.has(bebida.chave) ? "checked" : ""}>
             <span class="item-config__nome">${escaparHTML(bebida.nome)}</span>
-        </div>`).join("");
+        </label>`).join("");
 }
 
 function coletarBebidasNaoAlcoolicasAtivas() {

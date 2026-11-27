@@ -1,0 +1,1362 @@
+/* Áreas de trabalho =========================================================
+   Painel do parceiro (B2B), área profissional, administração, operação e
+   onde comprar.
+   Depende de css/ds.css. Os scripts dessas telas geram marcação com nomes
+   antigos (account-form, basket-row, saas-item, partner-stat, admin-*);
+   eles são estilizados aqui para que a lógica em js/ continue intacta. */
+
+/* 1. Estrutura ============================================================= */
+
+/* Os painéis chegam depois da API. Ocupar a altura da tela desde o início
+   mantém o rodapé abaixo da dobra, então ele não é empurrado na frente do
+   usuário quando o conteúdo aparece. */
+.app-main.workspace {
+  min-height: 100vh;
+}
+
+.workspace .page-header {
+  padding-bottom: var(--s-6);
+}
+
+.workspace .page-header h1 {
+  max-width: 24ch;
+}
+
+.workspace .app-content > * + * {
+  margin-top: var(--s-5);
+}
+
+.workspace-sections {
+  display: grid;
+  gap: var(--s-5);
+}
+
+/* Seções: título e texto de apoio */
+.workspace .account-section > h2,
+.workspace .saas-card > h2 {
+  margin-bottom: var(--s-2);
+  font-size: var(--fs-20);
+  font-weight: 720;
+  font-stretch: var(--semi-narrow);
+}
+
+.workspace .account-section > .cartao__titulo + .texto-suave,
+.workspace .account-section > h2 + .texto-suave,
+.workspace .saas-card > h2 + p {
+  max-width: 70ch;
+  color: var(--text-2);
+  font-size: var(--fs-15);
+}
+
+.workspace .account-section > .texto-suave + .texto-suave {
+  margin-top: var(--s-2);
+}
+
+.workspace .account-section > h3,
+.workspace .saas-card > h3 {
+  margin-top: var(--s-6);
+  margin-bottom: var(--s-2);
+  font-size: var(--fs-16);
+  font-weight: 680;
+}
+
+.workspace .account-section > .cartao__titulo {
+  margin-bottom: var(--s-3);
+}
+
+.workspace .account-section code {
+  font-size: 0.82em;
+}
+
+/* Rótulo de passo numerado (1, 2, 3) dos cadastros do parceiro */
+.step-badge {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--carvao-900);
+  color: var(--branco);
+  font-size: var(--fs-14);
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+  flex: none;
+}
+
+.workspace-divider {
+  margin: var(--s-6) 0 var(--s-4);
+  padding-top: var(--s-5);
+  border-top: 1px solid var(--border);
+  font-size: var(--fs-16);
+  font-weight: 680;
+}
+
+/* 2. Formulários (labels que envolvem os campos) =========================== */
+
+.account-form,
+.workspace .saas-card form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: var(--s-4) var(--s-5);
+  align-items: end;
+  margin-top: var(--s-4);
+}
+
+.account-form .full,
+.account-form > button,
+.workspace .saas-card form > button[type="submit"],
+.workspace .saas-full {
+  grid-column: 1 / -1;
+}
+
+.account-form label,
+.workspace .saas-card form label,
+.workspace .account-section > label {
+  display: grid;
+  gap: 6px;
+  align-content: start;
+  min-width: 0;
+  color: var(--text);
+  font-size: var(--fs-14);
+  font-weight: 600;
+}
+
+.workspace .account-section > label {
+  max-width: 420px;
+  margin-top: var(--s-3);
+}
+
+/* Linhas de caixa de seleção dentro dos formulários */
+.account-form label:has(> input[type="checkbox"]),
+.workspace .saas-card form label:has(> input[type="checkbox"]),
+.workspace .saas-card .check {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  color: var(--text-2);
+  font-weight: 450;
+  line-height: 1.5;
+  cursor: pointer;
+}
+
+.account-form label:has(> input[type="checkbox"]) > input,
+.workspace .saas-card form label:has(> input[type="checkbox"]) > input {
+  margin-top: 1px;
+}
+
+.account-form > .btn,
+.account-form > .botao,
+.workspace .saas-card form > button {
+  justify-self: start;
+}
+
+.account-form > .botao--primario,
+.account-form > .btn--primary {
+  min-width: 220px;
+}
+
+/* Campo que precisa de mais largura (ex.: produto genérico com nomes longos) */
+@media (min-width: 760px) {
+  .account-form .span-2 {
+    grid-column: span 2;
+  }
+}
+
+/* Campos de texto longo ocupam a linha inteira */
+.account-form label:has(> textarea),
+.workspace .saas-card form label:has(> textarea) {
+  grid-column: 1 / -1;
+}
+
+/* Linha de ações: envio + "Pré-visualizar sem importar" (js/parceiro-lancamento.js) */
+.account-form > .form-actions .botao--primario {
+  min-width: 220px;
+}
+
+#feedback-piloto-msg:empty {
+  display: none;
+}
+
+.account-form textarea {
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  font-size: var(--fs-14);
+}
+
+/* Botões sem classe gerados pelos scripts das áreas de trabalho */
+.workspace button:not([class]) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--text);
+  font-size: var(--fs-14);
+  font-weight: 650;
+  line-height: 1.2;
+  box-shadow: var(--sh-1);
+  transition: background-color var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease);
+}
+
+.workspace button:not([class]):hover {
+  background: var(--cinza-100);
+}
+
+.workspace button:not([class]):disabled {
+  opacity: 0.5;
+  box-shadow: none;
+}
+
+.workspace form > button[type="submit"]:not([class]) {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--branco);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 1px 2px rgba(102, 20, 8, 0.25);
+}
+
+.workspace form > button[type="submit"]:not([class]):hover {
+  border-color: var(--primary-hover);
+  background: var(--primary-hover);
+}
+
+/* Ações perigosas recolhidas (encerrar ou transferir organização) */
+.workspace details {
+  margin-top: var(--s-5);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+}
+
+.workspace details > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  min-height: 48px;
+  padding: 0 var(--s-4);
+  font-weight: 650;
+}
+
+.workspace details > summary::after {
+  content: "";
+  width: 16px;
+  height: 16px;
+  background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") center / contain no-repeat;
+  transition: transform var(--t) var(--ease);
+}
+
+.workspace details[open] > summary::after {
+  transform: rotate(180deg);
+}
+
+.workspace details > :not(summary) {
+  margin-inline: var(--s-4);
+}
+
+.workspace details > :last-child {
+  margin-bottom: var(--s-4);
+}
+
+.workspace details > p {
+  color: var(--text-2);
+  font-size: var(--fs-14);
+}
+
+/* 3. Listas de registros =================================================== */
+
+.basket-table {
+  display: grid;
+  gap: 0;
+  margin-top: var(--s-3);
+  color: var(--text-2);
+  font-size: var(--fs-14);
+}
+
+.basket-table:empty {
+  display: none;
+}
+
+.basket-row {
+  display: grid;
+  justify-items: start;
+  gap: 4px;
+  padding: var(--s-3) 0;
+  border-top: 1px solid var(--border);
+  color: var(--text-2);
+  font-size: var(--fs-14);
+  line-height: 1.5;
+}
+
+.basket-row:first-child {
+  border-top: 0;
+}
+
+.basket-row > br {
+  display: none;
+}
+
+.basket-row > strong {
+  color: var(--text);
+  font-size: var(--fs-15);
+}
+
+.basket-row > small,
+.basket-row > span,
+.basket-row > p {
+  color: var(--text-2);
+  font-size: var(--fs-14);
+}
+
+.basket-row > div {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2);
+  margin-top: var(--s-2);
+}
+
+.basket-row > button {
+  margin-top: var(--s-2);
+}
+
+.basket-row label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  font-size: var(--fs-13);
+  font-weight: 600;
+}
+
+.basket-row select {
+  width: auto;
+  min-height: 40px;
+}
+
+.basket-table .empty-state {
+  padding: var(--s-6) var(--s-5);
+}
+
+/* Itens da área profissional e da operação */
+.saas-item {
+  padding: var(--s-4) 0;
+  border-top: 1px solid var(--border);
+  color: var(--text-2);
+  font-size: var(--fs-14);
+}
+
+.saas-item:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.saas-item h3 {
+  margin: 0 0 2px;
+  color: var(--text);
+  font-size: var(--fs-16);
+  font-weight: 680;
+}
+
+.saas-item > p {
+  margin-top: 2px;
+  font-variant-numeric: tabular-nums;
+}
+
+.saas-item > small {
+  display: block;
+  margin-top: var(--s-2);
+  color: var(--text-3);
+}
+
+.saas-item .actions,
+.row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2) var(--s-3);
+  margin-top: var(--s-3);
+}
+
+.saas-item .actions label,
+.saas-item > label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  font-size: var(--fs-13);
+  font-weight: 600;
+}
+
+.saas-item select {
+  width: auto;
+  min-height: 40px;
+}
+
+.saas-item > button {
+  margin-top: var(--s-3);
+}
+
+.saas-item details {
+  margin-top: var(--s-3);
+}
+
+.row-actions:not(:has(> :not([hidden]))) {
+  display: none;
+}
+
+/* 4. Indicadores =========================================================== */
+
+.partner-stats,
+.admin-metrics,
+#fundador-metricas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--s-3);
+}
+
+.partner-stats:empty {
+  display: none;
+}
+
+.partner-stat,
+.admin-metrics article,
+#fundador-metricas article {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: var(--s-2);
+  min-height: 96px;
+  padding: var(--s-4);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface);
+}
+
+.partner-stat strong,
+.admin-metrics strong,
+#fundador-metricas h3 {
+  order: 2;
+  color: var(--carvao-950);
+  font-size: clamp(1.75rem, 1.4rem + 1vw, 2.25rem);
+  font-weight: 800;
+  font-stretch: 75%;
+  line-height: 1;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.partner-stat span,
+.admin-metrics span,
+#fundador-metricas strong {
+  order: 1;
+  color: var(--text-2);
+  font-size: var(--fs-13);
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.admin-metrics {
+  margin-bottom: var(--s-5);
+}
+
+.admin-metrics > .empty-state {
+  grid-column: 1 / -1;
+}
+
+.partner-note {
+  margin-top: var(--s-4);
+  padding: var(--s-3) var(--s-4);
+  border-left: 3px solid var(--brasa-600);
+  border-radius: 0 var(--r-sm) var(--r-sm) 0;
+  background: var(--brasa-50);
+  color: var(--brasa-800);
+  font-size: var(--fs-14);
+}
+
+.partner-note:empty {
+  display: none;
+}
+
+/* 5. Painel do parceiro ==================================================== */
+
+.org-toolbar {
+  display: grid;
+  gap: var(--s-2) var(--s-6);
+  align-items: end;
+}
+
+@media (min-width: 760px) {
+  .org-toolbar {
+    grid-template-columns: minmax(0, 360px) minmax(0, 1fr);
+  }
+}
+
+.org-toolbar label {
+  display: grid;
+  gap: 6px;
+  font-size: var(--fs-14);
+  font-weight: 600;
+}
+
+.org-toolbar__info {
+  display: grid;
+  gap: 2px;
+  color: var(--text-2);
+  font-size: var(--fs-14);
+}
+
+.org-toolbar__info:not(:has(p:not(:empty))) {
+  display: none;
+}
+
+.org-toolbar__info p:empty {
+  display: none;
+}
+
+/* Cadastros 1-2-3: formulário e, abaixo, o que já foi cadastrado */
+.partner-steps {
+  display: grid;
+  gap: var(--s-5);
+}
+
+.partner-steps .cartao__titulo h2 {
+  font-size: var(--fs-18);
+}
+
+.partner-onboarding ul,
+#onboarding-parceiro ul {
+  display: grid;
+  gap: var(--s-2);
+  margin: var(--s-3) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+#onboarding-parceiro li {
+  margin: 0;
+  padding: var(--s-2) var(--s-3);
+  border-radius: var(--r-sm);
+  background: var(--cinza-50);
+  font-size: var(--fs-14);
+}
+
+#relatorio-comercial {
+  margin-top: var(--s-4);
+}
+
+#relatorio-comercial > p:first-child {
+  margin-bottom: var(--s-2);
+}
+
+#billing-planos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: var(--s-3);
+  margin-top: var(--s-4);
+}
+
+#billing-planos:empty {
+  display: none;
+}
+
+#billing-planos .basket-row {
+  align-content: start;
+  padding: var(--s-4);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+}
+
+#billing-planos .basket-row > strong {
+  font-size: var(--fs-16);
+}
+
+#billing-resumo {
+  margin-top: var(--s-4);
+  color: var(--text);
+  font-size: var(--fs-15);
+}
+
+#billing-resumo:empty {
+  display: none;
+}
+
+#importar-csv-resultado,
+#catalogo-resultado,
+#equipe-token-dev,
+#feedback-piloto-msg {
+  margin-top: var(--s-3);
+  overflow-wrap: anywhere;
+}
+
+#importar-csv-resultado:empty,
+#catalogo-resultado:empty,
+#equipe-token-dev:empty,
+#feedback-piloto-msg:empty {
+  display: none;
+}
+
+/* 6. Administração ========================================================= */
+
+.admin-section-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--s-3) var(--s-5);
+  margin-bottom: var(--s-4);
+}
+
+.admin-section-head h2 {
+  margin-bottom: 4px;
+  font-size: var(--fs-20);
+  font-stretch: var(--semi-narrow);
+}
+
+.admin-section-head .cartao__titulo {
+  margin-bottom: var(--s-2);
+}
+
+.admin-section-head .cartao__titulo h2 {
+  margin-bottom: 0;
+}
+
+.admin-filter {
+  align-items: center;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.admin-metric-skeleton {
+  height: 96px;
+  margin: 0;
+  border-radius: var(--r-md);
+}
+
+.admin-metric-skeleton--wide {
+  grid-column: span 2;
+}
+
+/* Funis e retenção chegam depois (mais de 1.700 px no desktop). A reserva
+   mantém as seções seguintes abaixo da dobra até lá, em vez de empurrá-las na
+   frente do usuário; 60vh limita o vazio caso a API falhe. */
+#fundador-limitacoes:empty {
+  min-height: 60vh;
+}
+
+.admin-section-head p {
+  max-width: 62ch;
+  color: var(--text-2);
+  font-size: var(--fs-14);
+}
+
+.admin-section-head input[type="search"] {
+  width: min(100%, 300px);
+}
+
+.admin-table td strong {
+  display: block;
+  color: var(--text);
+}
+
+.admin-table td small {
+  display: block;
+  color: var(--text-3);
+}
+
+.admin-table select {
+  width: auto;
+  min-height: 38px;
+}
+
+.admin-table .botao {
+  min-height: 36px;
+  padding: 0 12px;
+  font-size: var(--fs-13);
+}
+
+.admin-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+}
+
+.audit-list {
+  display: grid;
+}
+
+.audit-list article {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s-4);
+  padding: var(--s-3) 0;
+  border-top: 1px solid var(--border);
+}
+
+.audit-list article:first-child {
+  border-top: 0;
+}
+
+.audit-list strong {
+  display: block;
+  color: var(--text);
+  font-size: var(--fs-14);
+}
+
+.audit-list span,
+.audit-list time {
+  color: var(--text-3);
+  font-size: var(--fs-13);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Tabelas da operação (funis e cenários) */
+.saas-table-scroll,
+#cenarios-resultado:has(table) {
+  margin-top: var(--s-3);
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+}
+
+#cenarios-resultado > p {
+  margin-top: var(--s-3);
+  color: var(--text-2);
+  font-size: var(--fs-14);
+}
+
+#fundador-limitacoes {
+  margin-top: var(--s-5);
+  color: var(--text-2);
+  font-size: var(--fs-14);
+}
+
+#fundador-limitacoes > h3 {
+  margin-top: var(--s-6);
+  color: var(--text);
+  font-size: var(--fs-16);
+}
+
+#fundador-limitacoes > h3:first-child {
+  margin-top: 0;
+}
+
+#fundador-limitacoes ul {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
+  gap: 4px var(--s-5);
+  margin-top: var(--s-2);
+  padding-left: 1.1em;
+}
+
+#fundador-limitacoes li strong {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+#fundador-limitacoes > p {
+  margin-top: var(--s-3);
+}
+
+/* Indicadores do fundador: 2 colunas no celular e 4 no desktop (7 cartões, o de
+   texto ocupa 2 vagas e fecha a grade) */
+#fundador-metricas {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (min-width: 760px) {
+  #fundador-metricas {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+#fundador-metricas article.is-text {
+  grid-column: span 2;
+}
+
+/* Valor em texto (ex.: "Receita real") não usa o número condensado gigante */
+#fundador-metricas article.is-text h3 {
+  font-size: var(--fs-18);
+  font-stretch: 87.5%;
+  line-height: 1.25;
+  overflow-wrap: normal;
+}
+
+.task-item > div {
+  flex: 1 1 14rem;
+  min-width: 0;
+}
+
+.task-item > div span {
+  color: var(--text-3);
+}
+
+#operacao-alertas {
+  padding: var(--s-3) var(--s-4);
+  border-radius: var(--r-sm);
+  background: var(--cinza-50);
+  color: var(--text);
+  font-size: var(--fs-14);
+  overflow-wrap: anywhere;
+}
+
+#operacao-alertas:empty {
+  display: none;
+}
+
+#tarefas-lista {
+  margin-top: var(--s-3);
+}
+
+#tarefas-lista .saas-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-2) var(--s-4);
+}
+
+/* 7. Área profissional ===================================================== */
+
+.pro-grid {
+  display: grid;
+  gap: var(--s-5);
+  align-items: start;
+}
+
+@media (min-width: 900px) {
+  .pro-grid {
+    grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+  }
+}
+
+.pro-col {
+  display: grid;
+  gap: var(--s-5);
+  min-width: 0;
+}
+
+.form-note {
+  margin-top: var(--s-4);
+  color: var(--text-3);
+  font-size: var(--fs-13);
+}
+
+.pro-list > .empty-state {
+  padding: var(--s-6) var(--s-5);
+  font-size: var(--fs-14);
+}
+
+/* Cliente: nome e contato à esquerda, ação à direita */
+.client-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-2) var(--s-4);
+}
+
+.client-item > div {
+  min-width: 0;
+}
+
+.client-item > p,
+.client-item > div > p {
+  overflow-wrap: anywhere;
+}
+
+.client-item > button {
+  margin-top: 0;
+}
+
+.workspace button[data-excluir-cliente] {
+  border-color: transparent;
+  background: transparent;
+  color: var(--perigo-600);
+  box-shadow: none;
+}
+
+.workspace button[data-excluir-cliente]:hover {
+  background: var(--perigo-50);
+}
+
+/* Proposta: título + status, números lado a lado, ações */
+.proposal-item__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-2) var(--s-3);
+}
+
+.proposal-figures {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
+  gap: var(--s-3);
+  margin: var(--s-3) 0 0;
+  padding: var(--s-3) 0;
+  border-top: 1px dashed var(--border-strong);
+  border-bottom: 1px dashed var(--border-strong);
+}
+
+.proposal-figures dt {
+  color: var(--text-3);
+  font-size: var(--fs-13);
+  font-weight: 600;
+}
+
+.proposal-figures dd {
+  margin: 2px 0 0;
+  color: var(--carvao-950);
+  font-size: var(--fs-20);
+  font-weight: 800;
+  font-stretch: 75%;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+/* 8. Avisos flutuantes (js/ui.js recolhe após alguns segundos) ============== */
+
+body [data-toast] {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--s-6) + env(safe-area-inset-bottom, 0px));
+  z-index: 70;
+  width: max-content;
+  max-width: min(560px, calc(100% - 32px));
+  margin: 0;
+  box-shadow: var(--sh-3);
+  transform: translateX(-50%);
+  transition: opacity var(--t) var(--ease), transform var(--t) var(--ease);
+  animation: toast-in var(--t-slow) var(--ease);
+  cursor: default;
+}
+
+body p[data-toast] {
+  padding: 12px 18px;
+  border-radius: var(--r-md);
+  background: var(--carvao-900);
+  color: var(--branco);
+  font-size: var(--fs-15);
+  line-height: 1.45;
+}
+
+body [data-toast]:empty {
+  display: none;
+}
+
+body [data-toast].is-dismissed {
+  opacity: 0;
+  transform: translate(-50%, 12px);
+  pointer-events: none;
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 12px);
+  }
+}
+
+/* 9. Onde comprar ========================================================== */
+
+.buy-shell > * + * {
+  margin-top: var(--s-5);
+}
+
+.buy-shell > .mensagem {
+  margin-bottom: 0;
+}
+
+.location-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--s-3) var(--s-5);
+}
+
+.location-bar > .btn {
+  flex: none;
+}
+
+.location-search {
+  position: relative;
+  display: grid;
+  flex: 1 1 320px;
+  gap: 6px;
+  min-width: 0;
+}
+
+/* Sugestões de endereço (js/onde-comprar.js) */
+.location-search__results {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  left: 0;
+  z-index: 30;
+  display: grid;
+  margin-top: 4px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  box-shadow: var(--sh-2);
+}
+
+.location-search__results:empty {
+  display: none;
+}
+
+/* .workspace na frente: vence o estilo de botões sem classe da seção 2 */
+.workspace .location-search__results button {
+  justify-content: flex-start;
+  min-height: 44px;
+  padding: 10px 14px;
+  border: 0;
+  border-top: 1px solid var(--cinza-150);
+  border-radius: 0;
+  background: none;
+  color: var(--text);
+  font-size: var(--fs-14);
+  font-weight: 500;
+  text-align: left;
+  box-shadow: none;
+}
+
+.workspace .location-search__results button:first-child {
+  border-top: 0;
+}
+
+.workspace .location-search__results button:hover,
+.workspace .location-search__results button:focus-visible {
+  background: var(--cinza-100);
+}
+
+.location-search__empty {
+  padding: 10px 14px;
+  color: var(--text-3);
+  font-size: var(--fs-14);
+}
+
+/* Ordenação dos estabelecimentos */
+.market-toolbar {
+  display: flex;
+  gap: 4px;
+  width: fit-content;
+  max-width: 100%;
+  padding: 4px;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--cinza-100);
+  scrollbar-width: none;
+}
+
+.market-toolbar::-webkit-scrollbar {
+  display: none;
+}
+
+.workspace .market-toolbar button {
+  flex: none;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--text-2);
+  font-size: var(--fs-14);
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: none;
+  transition: background-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
+}
+
+.workspace .market-toolbar button:hover {
+  background: rgba(255, 255, 255, 0.6);
+  color: var(--text);
+}
+
+.workspace .market-toolbar button.active {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--sh-1);
+}
+
+@media (max-width: 560px) {
+  .market-toolbar {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .workspace .market-toolbar button {
+    white-space: normal;
+  }
+}
+
+/* Mapa e lista lado a lado */
+.map-grid {
+  display: grid;
+  gap: var(--s-5);
+  margin-top: var(--s-5);
+}
+
+@media (min-width: 960px) {
+  .map-grid {
+    grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  }
+}
+
+.map-canvas {
+  position: relative;
+  height: clamp(320px, 56vh, 540px);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--cinza-100);
+}
+
+/* Antes do MapLibre: aviso centralizado sobre a textura da grelha */
+.map-canvas:not(.maplibregl-map) {
+  display: grid;
+  place-items: center;
+  background: var(--cinza-100) var(--grill-soft);
+  color: var(--text-2);
+  font-size: var(--fs-14);
+  text-align: center;
+}
+
+.map-canvas:not(.maplibregl-map) > span {
+  max-width: 34ch;
+  padding: var(--s-6);
+}
+
+.buy-page .maplibregl-popup-content {
+  padding: 10px 12px;
+  border-radius: var(--r-sm);
+  font-family: var(--font);
+  font-size: var(--fs-13);
+  line-height: 1.45;
+  box-shadow: var(--sh-2);
+}
+
+.market-column__title {
+  margin-bottom: var(--s-3);
+  font-size: var(--fs-16);
+}
+
+.market-list {
+  display: grid;
+  align-content: start;
+  gap: var(--s-2);
+  max-height: 540px;
+  overflow-y: auto;
+}
+
+.market-card {
+  display: grid;
+  gap: 4px;
+  padding: var(--s-4);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: var(--text-2);
+  font-size: var(--fs-14);
+}
+
+/* Lugares da Geoapify: não são parceiros cadastrados */
+.market-card--external {
+  border-style: dashed;
+  background: var(--cinza-50);
+}
+
+.market-card__heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-2);
+}
+
+.market-card__heading h3 {
+  color: var(--text);
+  font-size: var(--fs-15);
+}
+
+.market-card__source {
+  flex: none;
+  color: var(--text-3);
+  font-size: var(--fs-12);
+}
+
+.market-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 12px;
+  color: var(--text-2);
+  font-size: var(--fs-13);
+}
+
+.market-card .inline-link {
+  font-weight: 600;
+}
+
+/* Comparação da lista */
+.optimized-box {
+  display: grid;
+  gap: 6px;
+  margin-bottom: var(--s-4);
+  padding: var(--s-5);
+  border: 1px solid var(--kraft-100);
+  border-radius: var(--r-md);
+  background: var(--kraft-50);
+}
+
+.optimized-box .eyebrow {
+  margin-bottom: 0;
+}
+
+.optimized-box > strong {
+  color: var(--carvao-950);
+  font-size: clamp(2rem, 1.6rem + 1.4vw, 2.5rem);
+  font-weight: 800;
+  font-stretch: 75%;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.basket-items {
+  color: var(--text-2);
+  font-size: var(--fs-14);
+  line-height: 1.6;
+}
+
+.buy-page .basket-row {
+  justify-items: stretch;
+}
+
+.buy-page .basket-row > .basket-row__top {
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: nowrap;
+  gap: var(--s-4);
+  margin-top: 0;
+}
+
+.basket-row__top strong {
+  color: var(--text);
+  font-size: var(--fs-15);
+}
+
+.basket-row__top > strong {
+  flex: none;
+  font-size: var(--fs-18);
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+}
+
+.buy-page .basket-row > .basket-items {
+  display: block;
+  margin-top: 2px;
+}
+
+/* 10. Responsivo ============================================================ */
+
+@media (max-width: 720px) {
+  /* Tabelas da administração viram cartões com rótulos */
+  .admin-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+
+  .admin-table,
+  .admin-table tbody,
+  .admin-table tr,
+  .admin-table td {
+    display: block;
+  }
+
+  .admin-table tr {
+    padding: var(--s-3) var(--s-4);
+    border-top: 1px solid var(--border);
+  }
+
+  .admin-table tr:first-child {
+    border-top: 0;
+  }
+
+  .admin-table td {
+    display: grid;
+    grid-template-columns: 96px minmax(0, 1fr);
+    gap: var(--s-3);
+    align-items: center;
+    padding: 6px 0;
+    border: 0;
+  }
+
+  .admin-table td::before {
+    content: attr(data-label);
+    color: var(--text-3);
+    font-size: var(--fs-13);
+    font-weight: 600;
+  }
+
+  .admin-table td[colspan] {
+    display: block;
+  }
+
+  .admin-table td[colspan]::before {
+    content: none;
+  }
+
+  .admin-section-head input[type="search"] {
+    width: 100%;
+  }
+
+  .account-form > .botao--primario,
+  .account-form > .btn--primary,
+  .account-form > .botao,
+  .account-form > .form-actions > .botao,
+  .workspace .saas-card form > button {
+    width: 100%;
+    min-width: 0;
+    padding-top: 10px;
+    padding-bottom: 10px;
+    white-space: normal;
+  }
+
+  /* Tabelas em cartões: conteúdo na 2ª coluna, selos e botões no tamanho natural */
+  .admin-table td {
+    justify-items: start;
+    row-gap: 2px;
+  }
+
+  .admin-table td > small {
+    grid-column: 2;
+  }
+
+  .audit-list article {
+    flex-direction: column;
+    gap: 2px;
+  }
+}
+
+@media print {
+  .section-index,
+  [data-toast],
+  .account-form,
+  .workspace form {
+    display: none !important;
+  }
+}

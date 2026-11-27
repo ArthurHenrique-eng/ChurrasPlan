@@ -1,0 +1,6 @@
+# Arquivos do container Nginx usado no Docker Compose e no CI. Na Vercel o
+# site é publicado como estático (vercel.json fixa "framework": null), então
+# eles não precisam ir para o deploy nem ficar públicos.
+Dockerfile
+nginx.conf
+security-headers.conf

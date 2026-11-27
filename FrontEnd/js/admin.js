@@ -124,7 +124,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     document.getElementById("admin-form-estabelecimento").addEventListener("submit", async (event) => {
         event.preventDefault();
-        const botao = event.currentTarget.querySelector('button[type="submit"]');
+        // currentTarget vira null depois do primeiro await; guardar o formulário aqui.
+        const formulario = event.currentTarget;
+        const botao = formulario.querySelector('button[type="submit"]');
         botao.disabled = true;
         try {
             let latitude = coordenadaAdmin("admin-est-lat", 90);
@@ -156,7 +158,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 horario_funcionamento: null,
             });
 
-            event.currentTarget.reset();
+            formulario.reset();
             await Promise.all([carregarEstabelecimentosAdmin(), carregarDashboardAdmin()]);
             adminMensagem("Estabelecimento cadastrado e verificado.", "sucesso");
         } catch (e) {

@@ -90,6 +90,10 @@ ChurrasPlan/
 ├── FrontEnd/
 │   ├── assets/
 │   ├── css/
+│   │   ├── ds.css      # design system Brasa: tokens e componentes
+│   │   └── pages/      # um CSS por grupo de páginas
+│   ├── fonts/          # Archivo variável (OFL)
+│   ├── guias/          # gerado por scripts/build_seo.py
 │   ├── js/
 │   ├── manifest.webmanifest
 │   └── sw.js
@@ -169,6 +173,8 @@ python -m http.server 5500
 ```
 
 Acesse `http://127.0.0.1:5500`.
+
+O visual segue o design system Brasa (`FrontEnd/css/ds.css` mais um CSS por grupo em `FrontEnd/css/pages/`). Mapa de páginas, contratos preservados e regras para novas telas estão na [seção 20 da memória técnica](docs/ChurrasPlanSaaS.md#20-frontend-design-system-brasa-27112026).
 
 ## Health checks
 

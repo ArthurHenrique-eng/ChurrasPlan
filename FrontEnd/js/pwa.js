@@ -49,4 +49,11 @@
     window.addEventListener("online", renderNetwork);
     window.addEventListener("offline", renderNetwork);
     document.addEventListener("DOMContentLoaded", renderNetwork);
+    // offline.html: "Tentar novamente" sem onclick inline, que a CSP
+    // (script-src 'self') bloqueia.
+    document.addEventListener("DOMContentLoaded", () => {
+        document.querySelectorAll("[data-recarregar]").forEach((botao) => {
+            botao.addEventListener("click", () => location.reload());
+        });
+    });
 })();

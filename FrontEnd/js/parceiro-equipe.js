@@ -4,6 +4,10 @@ const ChurrasPlanEquipe = (() => {
     const el = (id) => document.getElementById(id);
     const seguro = (s) => escaparHTML(String(s ?? ""));
     const PAPEIS = ["proprietario", "gestor", "editor", "leitor"];
+    // Só para exibição: os valores enviados à API continuam os códigos acima.
+    const ROTULOS_PAPEL = { proprietario: "proprietário", gestor: "gestor", editor: "editor", leitor: "leitor" };
+    const PLANOS_EXIBICAO = { free: "Gratuito", pro: "Pro", business: "Business" };
+    const papelTexto = (p) => ROTULOS_PAPEL[p] || String(p ?? "");
 
     function guardarOrganizacao(id) {
         ChurrasPlanAPI.definirOrganizacaoAtiva(id);
@@ -25,7 +29,7 @@ const ChurrasPlanEquipe = (() => {
         localizar.disabled = !permissaoEdicao();
         el("equipe-painel").hidden = !orgAtiva || !podeGerir();
         el("org-perfil").textContent = orgAtiva
-            ? `Seu papel: ${perfil()}.` : "Visão administrativa global; selecione uma organização para gerir a equipe.";
+            ? `Seu papel: ${papelTexto(perfil())}.` : "Visão administrativa global; selecione uma organização para gerir a equipe.";
         for (const opt of el("equipe-papel").options) {
             opt.disabled = perfil() === "gestor" && !["editor", "leitor"].includes(opt.value);
         }
@@ -40,14 +44,14 @@ const ChurrasPlanEquipe = (() => {
                 const me = Number(m.usuario_id) === Number(usuario.id);
                 const operavel = !me && (perfil() === "proprietario" || ["editor", "leitor"].includes(m.papel));
                 const opcoes = PAPEIS.filter(p => perfil() === "proprietario" || ["editor", "leitor"].includes(p))
-                    .map(p => `<option value="${p}" ${m.papel === p ? "selected" : ""}>${seguro(p)}</option>`).join("");
+                    .map(p => `<option value="${p}" ${m.papel === p ? "selected" : ""}>${seguro(papelTexto(p))}</option>`).join("");
                 const botoes = operavel
                     ? `<label>Alterar papel <select data-membro-papel="${Number(m.usuario_id)}">${opcoes}</select></label>
                        <button type="button" data-alterar-membro="${Number(m.usuario_id)}">Salvar papel</button>
                        <button type="button" data-remover-membro="${Number(m.usuario_id)}">Remover acesso</button>`
                     : `<small>Sem permissão para alterar esta conta</small>`;
                 return `<div class="basket-row"><strong>${seguro(m.nome)}</strong>
-                    <small>${seguro(m.email)} · ${seguro(m.papel)}${me ? " · você" : ""}</small>
+                    <small>${seguro(m.email)} · ${seguro(papelTexto(m.papel))}${me ? " · você" : ""}</small>
                     <div>${botoes}</div></div>`;
             }).join("") : '<p class="texto-suave">Nenhum membro encontrado.</p>';
     }
@@ -57,7 +61,7 @@ const ChurrasPlanEquipe = (() => {
             ? convites.map((c) => {
                 const gerenciavel = perfil() === "proprietario" || ["editor", "leitor"].includes(c.papel);
                 return `<div class="basket-row"><strong>${seguro(c.email)}</strong>
-                    <small>${seguro(c.papel)} · expira em ${seguro(new Date(c.expira_em).toLocaleDateString("pt-BR"))}</small>
+                    <small>${seguro(papelTexto(c.papel))} · expira em ${seguro(new Date(c.expira_em).toLocaleDateString("pt-BR"))}</small>
                     ${gerenciavel ? `<button type="button" data-revogar-convite="${Number(c.id)}">Revogar convite</button>` : ""}</div>`;
             }).join("") : '<p class="texto-suave">Não há convites pendentes.</p>';
     }
@@ -68,7 +72,7 @@ const ChurrasPlanEquipe = (() => {
         const limites = await ChurrasPlanAPI.entitlementsParceiro();
         const equipe = limites.equipe;
         el("org-limites").textContent = equipe
-            ? `Plano ${limites.plano.toUpperCase()}; equipe: ${equipe.ativos} membro(s) + ${equipe.convites_pendentes} convite(s) / ${equipe.limite} vaga(s).`
+            ? `Plano ${PLANOS_EXIBICAO[limites.plano] || String(limites.plano || "").toUpperCase()}; equipe: ${equipe.ativos} membro(s) + ${equipe.convites_pendentes} convite(s) / ${equipe.limite} vaga(s).`
             : "";
         if (!podeGerir()) return;
         const [membros, convites] = await Promise.all([
@@ -99,7 +103,7 @@ const ChurrasPlanEquipe = (() => {
         orgs = await ChurrasPlanAPI.organizacoesParceiro();
         const sel = el("org-seletor");
         sel.innerHTML = (user.papel === "admin" ? '<option value="">Visão administrativa global</option>' : "")
-            + orgs.map(o => `<option value="${Number(o.id)}">${seguro(o.nome)} (${seguro(o.papel)})</option>`).join("");
+            + orgs.map(o => `<option value="${Number(o.id)}">${seguro(o.nome)} (${seguro(papelTexto(o.papel))})</option>`).join("");
         let salvo = null;
         try { salvo = sessionStorage.getItem("churrasplan_organizacao_id"); } catch { /* ignorar */ }
         const escolhido = orgs.find(o => String(o.id) === salvo)

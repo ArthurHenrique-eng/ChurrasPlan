@@ -1,0 +1,656 @@
+/* Páginas comerciais ========================================================
+   planos.html (planos e assinaturas) e parceiros.html (ChurrasPlan Parceiros).
+   Depende de css/ds.css. Planos são etiquetas de preço em papel kraft, como
+   as do balcão do açougue; a página de parceiros mostra a oferta dentro da
+   comanda de quem está planejando. */
+
+.commercial-main {
+  padding-bottom: var(--s-8);
+}
+
+/* A marca do cabeçalho de planos mantém o texto "ChurrasPlan" para leitores
+   de tela e testes (o logotipo é decorativo dentro do link rotulado). */
+.planos-brand-name {
+  display: inline-flex;
+  align-items: center;
+}
+
+/* 1. Abertura ============================================================ */
+
+.commercial-hero {
+  padding: clamp(40px, 7vw, 88px) 0 clamp(28px, 4vw, 48px);
+}
+
+.commercial-hero h1 {
+  max-width: 15ch;
+  font-size: clamp(2.625rem, 1.6rem + 4.4vw, 4.75rem);
+  font-weight: 800;
+  font-stretch: 75%;
+  line-height: 0.96;
+  letter-spacing: -0.02em;
+}
+
+.commercial-lead {
+  max-width: 54ch;
+  margin-top: var(--s-5);
+  color: var(--text-2);
+  font-size: var(--fs-18);
+  line-height: 1.6;
+}
+
+.commercial-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-3) var(--s-5);
+  margin-top: var(--s-6);
+}
+
+/* Planos: título à esquerda, periodicidade à direita */
+.pricing-hero {
+  display: grid;
+  gap: var(--s-6);
+}
+
+@media (min-width: 900px) {
+  .pricing-hero {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+  }
+}
+
+.pricing-hero .sandbox-warning {
+  grid-column: 1 / -1;
+  max-width: 760px;
+}
+
+.period-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-3);
+  justify-self: start;
+  padding: 6px 6px 6px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  box-shadow: var(--sh-1);
+}
+
+.period-switch label {
+  color: var(--text-2);
+  white-space: nowrap;
+}
+
+.period-switch select {
+  width: auto;
+  min-width: 132px;
+  min-height: 40px;
+  font-weight: 650;
+}
+
+/* Aviso de checkout (js/planos.js) */
+.planos-feedback {
+  margin-top: var(--s-5);
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--aco-600, var(--carvao-700));
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--text);
+  font-size: var(--fs-15);
+}
+
+.planos-feedback[data-tipo="erro"] {
+  border-color: #f1c8c1;
+  border-left-color: var(--perigo-600);
+  background: var(--perigo-50);
+  color: var(--perigo-700);
+}
+
+/* 2. Seções de planos ===================================================== */
+
+.pricing-section {
+  margin-top: clamp(40px, 6vw, 72px);
+}
+
+.pricing-section__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-2) var(--s-8);
+  margin-bottom: var(--s-8);
+  padding-top: var(--s-5);
+  border-top: 2px solid var(--carvao-900);
+}
+
+.pricing-section__head h2 {
+  font-size: clamp(1.5rem, 1.15rem + 1.3vw, 2.125rem);
+  font-weight: 780;
+  font-stretch: 80%;
+  line-height: 1.05;
+  letter-spacing: -0.01em;
+}
+
+.pricing-section__head p {
+  max-width: 52ch;
+  color: var(--text-2);
+}
+
+.planos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+  gap: var(--s-6);
+  align-items: stretch;
+}
+
+/* Etiqueta de preço --------------------------------------------------------- */
+.plano-card {
+  --tag-bg: var(--kraft-50);
+  --tag-line: #ead6bd;
+  --tag-ink: var(--carvao-950);
+  --tag-soft: var(--text-2);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  min-width: 0;
+  padding: 52px clamp(20px, 3vw, 32px) clamp(20px, 3vw, 28px);
+  border: 1px solid var(--tag-line);
+  border-radius: var(--r-lg);
+  background: var(--tag-bg);
+  color: var(--tag-soft);
+  box-shadow: 0 1px 1px rgba(28, 25, 22, 0.04), 0 14px 30px -22px rgba(74, 48, 20, 0.45);
+  transform-origin: 50% 24px;
+}
+
+/* Furo da etiqueta */
+.plano-card::before {
+  content: "";
+  position: absolute;
+  top: 17px;
+  left: 50%;
+  width: 14px;
+  height: 14px;
+  margin-left: -7px;
+  border: 1px solid var(--tag-line);
+  border-radius: 50%;
+  background: var(--bg);
+  box-shadow: inset 0 1px 2px rgba(28, 25, 22, 0.18);
+}
+
+.plano-tag {
+  color: var(--vinho);
+  font-size: var(--fs-13);
+  font-weight: 650;
+}
+
+.plano-card h3 {
+  color: var(--tag-ink);
+  font-size: clamp(1.75rem, 1.5rem + 0.9vw, 2.125rem);
+  font-weight: 800;
+  font-stretch: 80%;
+  line-height: 1;
+  letter-spacing: -0.01em;
+}
+
+/* Preço e o estado da consulta ao Stripe Test, separados por picote */
+.plano-valor {
+  display: grid;
+  gap: 6px;
+  padding-bottom: var(--s-4);
+  border-bottom: 1px dashed var(--tag-line);
+}
+
+.plano-preco {
+  color: var(--tag-ink);
+  font-size: clamp(2.25rem, 1.8rem + 1.6vw, 3rem);
+  font-weight: 800;
+  font-stretch: 75%;
+  line-height: 1;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* "Carregando..." e "Indisponível no teste" não usam o número gigante */
+.plano-preco.is-indisponivel {
+  font-size: var(--fs-18);
+  font-weight: 650;
+  font-stretch: 100%;
+  line-height: 1.4;
+  letter-spacing: 0;
+  color: var(--tag-soft);
+}
+
+.plano-lista {
+  display: grid;
+  gap: 8px;
+  margin: var(--s-1) 0 0;
+  padding: 0;
+  list-style: none;
+  color: var(--tag-ink);
+  font-size: var(--fs-15);
+}
+
+.plano-lista li {
+  margin: 0;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  line-height: 1.45;
+}
+
+.plano-lista li::before {
+  content: "";
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin-top: 1px;
+  border-radius: 50%;
+  background: var(--erva-50) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232b6a47' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 12.5 4 4L18 8'/%3E%3C/svg%3E") center / 11px no-repeat;
+}
+
+.plano-complemento {
+  font-size: var(--fs-14);
+}
+
+.plano-acao {
+  display: grid;
+  gap: var(--s-2);
+  margin-top: auto;
+  padding-top: var(--s-3);
+}
+
+.plano-card .plano-cta {
+  width: 100%;
+  white-space: normal;
+}
+
+/* As notas podem citar variáveis longas (STRIPE_PRICE_...) */
+.plano-nota {
+  color: var(--tag-soft);
+  font-size: var(--fs-13);
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+/* Premium: etiqueta escura, a única que muda de cor */
+.plano-card--destaque {
+  --tag-bg: var(--carvao-900);
+  --tag-line: rgba(255, 255, 255, 0.16);
+  --tag-ink: var(--branco);
+  --tag-soft: rgba(255, 255, 255, 0.72);
+  box-shadow: 0 1px 1px rgba(28, 25, 22, 0.1), 0 22px 40px -24px rgba(28, 25, 22, 0.7);
+}
+
+.plano-card--destaque .plano-tag {
+  color: var(--kraft);
+}
+
+.plano-card--destaque .plano-lista li::before {
+  background-color: rgba(228, 195, 159, 0.16);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23e4c39f' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 12.5 4 4L18 8'/%3E%3C/svg%3E");
+}
+
+.plano-card--destaque .plano-cta:disabled {
+  opacity: 0.6;
+}
+
+/* Etiquetas balançam uma vez ao carregar, presas pelo furo */
+@media (prefers-reduced-motion: no-preference) {
+  .planos-grid .plano-card {
+    animation: tag-swing 900ms cubic-bezier(0.3, 1.4, 0.5, 1) both;
+  }
+
+  .planos-grid .plano-card:nth-child(2) {
+    animation-delay: 90ms;
+  }
+
+  .pricing-section + .pricing-section .plano-card {
+    animation-delay: 160ms;
+  }
+
+  .pricing-section + .pricing-section .plano-card:nth-child(2) {
+    animation-delay: 250ms;
+  }
+}
+
+@keyframes tag-swing {
+  0% {
+    opacity: 0;
+    transform: rotate(-2.4deg) translateY(-6px);
+  }
+
+  45% {
+    opacity: 1;
+    transform: rotate(1.1deg);
+  }
+
+  75% {
+    transform: rotate(-0.4deg);
+  }
+
+  100% {
+    transform: none;
+  }
+}
+
+/* 3. Como funciona (sequência real: plano, conta, pagamento, liberação) === */
+
+.pricing-steps {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: var(--s-6) var(--s-8);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: passo;
+}
+
+.pricing-steps li {
+  margin: 0;
+  counter-increment: passo;
+  padding-top: var(--s-4);
+  border-top: 1px solid var(--border-strong);
+}
+
+.pricing-steps li::before {
+  content: counter(passo);
+  display: block;
+  margin-bottom: var(--s-3);
+  color: var(--brasa-600);
+  font-size: 2.75rem;
+  font-weight: 800;
+  font-stretch: 75%;
+  line-height: 0.9;
+}
+
+.pricing-steps h3 {
+  color: var(--text);
+  font-size: var(--fs-18);
+  font-weight: 700;
+  font-stretch: 90%;
+}
+
+.pricing-steps p {
+  margin-top: var(--s-2);
+  color: var(--text-2);
+  font-size: var(--fs-15);
+}
+
+.pricing-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2) var(--s-6);
+  margin-top: var(--s-8);
+}
+
+/* 4. ChurrasPlan Parceiros ================================================ */
+
+.partner-hero {
+  display: grid;
+  gap: clamp(32px, 6vw, 72px);
+  align-items: center;
+}
+
+@media (min-width: 960px) {
+  .partner-hero {
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+  }
+}
+
+/* Comanda de exemplo: a oferta do parceiro dentro da lista de compras */
+.offer-example {
+  margin: 0;
+  justify-self: center;
+  width: min(100%, 440px);
+}
+
+.offer-example figcaption {
+  margin-top: var(--s-3);
+  color: var(--text-3);
+  font-size: var(--fs-13);
+  text-align: center;
+}
+
+.offer-ticket {
+  border-top: 6px solid transparent;
+  border-image: var(--grill) 1;
+}
+
+.offer-list {
+  display: grid;
+  margin: var(--s-4) 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--fs-15);
+}
+
+.offer-list li {
+  margin: 0;
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s-4);
+  padding: 10px 0;
+  border-bottom: 1px solid var(--cinza-150);
+  color: var(--text);
+}
+
+.offer-list li span:last-child {
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.offer-match {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 2px var(--s-4);
+  align-items: center;
+  margin-top: var(--s-5);
+  padding: var(--s-4);
+  border: 1px solid var(--kraft-100);
+  border-radius: var(--r-md);
+  background: var(--kraft-50);
+}
+
+.offer-match__label {
+  grid-column: 1 / -1;
+  color: var(--vinho);
+  font-size: var(--fs-13);
+  font-weight: 650;
+}
+
+.offer-match strong {
+  color: var(--text);
+  font-size: var(--fs-16);
+}
+
+.offer-match__meta {
+  grid-column: 1;
+  color: var(--text-2);
+  font-size: var(--fs-13);
+}
+
+.offer-price {
+  grid-column: 2;
+  grid-row: 2 / span 2;
+  color: var(--carvao-950);
+  font-size: 2rem;
+  font-weight: 800;
+  font-stretch: 75%;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.offer-price small {
+  margin-left: 2px;
+  color: var(--text-2);
+  font-size: var(--fs-14);
+  font-weight: 600;
+  font-stretch: 100%;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .offer-ticket {
+    animation: offer-print 700ms var(--ease) 120ms both;
+  }
+
+  .offer-match {
+    animation: offer-stamp 420ms var(--ease) 760ms both;
+  }
+}
+
+@keyframes offer-print {
+  from {
+    clip-path: inset(0 0 100% 0);
+  }
+
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@keyframes offer-stamp {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+}
+
+/* Para cada tipo de negócio: colunas com fio no topo, sem caixas */
+.business-section {
+  margin-top: clamp(32px, 5vw, 64px);
+}
+
+.business-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  gap: var(--s-8);
+}
+
+.business-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  padding-top: var(--s-4);
+  border-top: 1px solid var(--border-strong);
+}
+
+.business-card h3 {
+  color: var(--text);
+  font-size: var(--fs-20);
+  font-weight: 720;
+  font-stretch: 88%;
+}
+
+.business-card p {
+  color: var(--text-2);
+}
+
+.business-card > .text-button {
+  align-self: flex-start;
+  margin-top: auto;
+  margin-left: -4px;
+}
+
+/* Formulário de interesse */
+.lead-section {
+  position: relative;
+  display: grid;
+  gap: var(--s-8);
+  margin-top: clamp(48px, 7vw, 88px);
+  padding: calc(clamp(24px, 4vw, 48px) + 6px) clamp(20px, 4vw, 48px) clamp(24px, 4vw, 48px);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+}
+
+/* Faixa de grelha no topo (border-image pintaria as quatro bordas) */
+.lead-section::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 6px;
+  background: var(--grill);
+}
+
+@media (min-width: 960px) {
+  .lead-section {
+    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+    align-items: start;
+  }
+}
+
+.lead-section h2 {
+  font-size: clamp(1.75rem, 1.3rem + 1.8vw, 2.5rem);
+  font-weight: 780;
+  font-stretch: 80%;
+  line-height: 1.04;
+  letter-spacing: -0.01em;
+}
+
+.lead-section__copy p {
+  margin-top: var(--s-4);
+  color: var(--text-2);
+}
+
+.lead-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr));
+  gap: var(--s-4) var(--s-5);
+}
+
+.lead-form label:not(.legal-check) {
+  display: grid;
+  gap: 6px;
+  align-content: start;
+}
+
+.lead-form .saas-full {
+  grid-column: 1 / -1;
+}
+
+.lead-form > button {
+  grid-column: 1 / -1;
+  justify-self: start;
+  min-width: 220px;
+}
+
+.lead-msg {
+  margin-top: var(--s-4);
+  color: var(--text);
+  font-weight: 600;
+}
+
+.lead-msg:empty {
+  display: none;
+}
+
+@media (max-width: 560px) {
+  .lead-form > button {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .offer-price {
+    font-size: 1.75rem;
+  }
+}
+
+@media print {
+  .period-switch,
+  .plano-acao,
+  .plano-cta,
+  .lead-section {
+    display: none !important;
+  }
+
+  .plano-card {
+    break-inside: avoid;
+    box-shadow: none;
+  }
+}

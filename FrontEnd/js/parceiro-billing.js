@@ -4,6 +4,18 @@ const ChurrasPlanBilling = (() => {
     const esc = v => escaparHTML(String(v ?? ""));
     let estado = null;
     let catalogo = [];
+    // Rótulos de exibição; os códigos do Stripe continuam intactos no estado.
+    const ROTULOS_PLANO = { free: "Gratuito", pro: "Pro", business: "Business" };
+    const ROTULOS_STATUS = {
+        sem_assinatura: "sem assinatura", active: "ativa", trialing: "em período de teste",
+        past_due: "pagamento pendente", canceled: "cancelada", unpaid: "não paga",
+        incomplete: "incompleta", incomplete_expired: "expirada", paused: "pausada",
+    };
+    const ROTULOS_FATURA = { draft: "rascunho", open: "em aberto", paid: "paga", uncollectible: "incobrável", void: "anulada" };
+    const rotulo = (mapa, valor) => mapa[valor] || String(valor ?? "").replace(/_/g, " ");
+    const valorFatura = (centavos, moeda) => String(moeda || "brl").toLowerCase() === "brl"
+        ? formatar(centavos || 0)
+        : `${String(moeda).toUpperCase()} ${(Number(centavos || 0) / 100).toFixed(2)}`;
 
     const formatar = cents => (Number(cents) / 100).toLocaleString("pt-BR", {
         style: "currency", currency: "BRL",
@@ -18,7 +30,7 @@ const ChurrasPlanBilling = (() => {
         const alterar = !!estado?.beneficios_ativos;
         el("billing-planos").innerHTML = catalogo.map(plano => {
             const atual = alterar && estado.plano === plano.plano && estado.periodicidade === plano.periodicidade;
-            return `<article class="basket-row"><strong>${esc(plano.plano.toUpperCase())} — ${formatar(plano.centavos)} / ${plano.periodicidade === "anual" ? "ano" : "mês"}</strong>
+            return `<article class="basket-row"><strong>${esc(rotulo(ROTULOS_PLANO, plano.plano))} — ${formatar(plano.centavos)} / ${plano.periodicidade === "anual" ? "ano" : "mês"}</strong>
                 <small>Preço real configurado no Stripe Test, sem cobrança em produção.</small>
                 <button type="button" data-billing-plano="${esc(plano.plano)}" data-billing-periodicidade="${esc(plano.periodicidade)}" ${atual || estado?.cancelamento_agendado ? "disabled" : ""}>
                   ${atual ? "Plano atual" : alterar ? "Solicitar troca" : "Testar contratação"}
@@ -30,7 +42,7 @@ const ChurrasPlanBilling = (() => {
         const fim = estado?.periodo_fim_em
             ? new Date(estado.periodo_fim_em + "Z").toLocaleString("pt-BR")
             : "—";
-        el("billing-resumo").textContent = `Plano: ${estado?.plano || "free"} (${estado?.periodicidade || "mensal"}). Status Stripe: ${estado?.status || "sem_assinatura"}. Benefícios: ${estado?.beneficios_ativos ? "ativos" : "inativos"}. Válido até: ${fim}.`
+        el("billing-resumo").textContent = `Plano: ${rotulo(ROTULOS_PLANO, estado?.plano || "free")} (${estado?.periodicidade || "mensal"}). Status Stripe: ${rotulo(ROTULOS_STATUS, estado?.status || "sem_assinatura")}. Benefícios: ${estado?.beneficios_ativos ? "ativos" : "inativos"}. Válido até: ${fim}.`
             + (estado?.tolerancia_ate ? " Pagamento pendente com tolerância limitada." : "")
             + (estado?.cancelamento_agendado ? " Cancelamento agendado para o fim do período." : "");
         el("billing-sincronizar").hidden = !estado?.checkout_habilitado || !estado?.status || estado.status === "sem_assinatura";
@@ -57,7 +69,7 @@ const ChurrasPlanBilling = (() => {
         renderizarPlanos();
         el("billing-faturas").innerHTML = faturas.map(f => `<div class="basket-row">
             <strong>Fatura ${esc(f.id)}</strong>
-            <small>${esc(f.status)} · ${esc(f.moeda)} ${Number(f.total_centavos || 0) / 100} · pago ${Number(f.pago_centavos || 0) / 100}</small>
+            <small>${esc(rotulo(ROTULOS_FATURA, f.status))} · ${esc(valorFatura(f.total_centavos, f.moeda))} · pago ${esc(valorFatura(f.pago_centavos, f.moeda))}</small>
         </div>`).join("") || '<p class="texto-suave">Nenhuma fatura registrada no Stripe Test.</p>';
     }
 
