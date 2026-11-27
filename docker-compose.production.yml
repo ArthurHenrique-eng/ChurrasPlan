@@ -1,6 +1,6 @@
 services:
   db:
-    image: postgres:17
+    image: postgres:18
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-churrasplan}
@@ -9,7 +9,7 @@ services:
       TZ: UTC
       PGTZ: UTC
     volumes:
-    - churrasplan_postgres_prod:/var/lib/postgresql/data
+    - churrasplan_postgres_prod:/var/lib/postgresql
     healthcheck:
       test:
       - CMD-SHELL

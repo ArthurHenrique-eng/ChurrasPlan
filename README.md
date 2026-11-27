@@ -133,7 +133,7 @@ Swagger:
 http://localhost:8080/docs
 ```
 
-A stack sobe PostgreSQL 17, aplica migrations, garante o catálogo genérico e carrega registros de **referência de planejamento** em desenvolvimento, inicia FastAPI e serve o frontend via Nginx.
+A stack sobe PostgreSQL 18, aplica migrations, garante o catálogo genérico e carrega registros de **referência de planejamento** em desenvolvimento, inicia FastAPI e serve o frontend via Nginx.
 
 Os preços de desenvolvimento existem somente para exercitar orçamento, custo por pessoa e divisão. Para desabilitá-los:
 
@@ -308,7 +308,7 @@ node --check FrontEnd/sw.js
 
 `.github/workflows/ci.yml` executa:
 1. backend em SQLite;
-2. migrations/testes contra PostgreSQL 17 real e, por compatibilidade, MySQL 8.4 real;
+2. migrations/testes contra PostgreSQL 18 real e, por compatibilidade, MySQL 8.4 real;
 3. frontend estático;
 4. auditoria de dependências/segurança;
 5. build das imagens Docker e validação de compose;

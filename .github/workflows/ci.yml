@@ -38,7 +38,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: postgres:17
+        image: postgres:18
         env:
           POSTGRES_USER: churrasplan
           POSTGRES_PASSWORD: pg_ci
@@ -225,7 +225,7 @@ jobs:
     needs: [backend-unit, postgres-real, mysql-real, frontend-static, security-static, docker-build]
     services:
       postgres:
-        image: postgres:17
+        image: postgres:18
         env:
           POSTGRES_USER: churrasplan
           POSTGRES_PASSWORD: pg_e2e

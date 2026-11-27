@@ -32,7 +32,7 @@ Princípio central: o backend é a fonte de verdade de cálculos, persistência,
 |---|---|
 | Frontend | HTML/CSS/JavaScript modular e PWA em `FrontEnd/`, SW e MapLibre GL |
 | API | FastAPI, API v6.10.0, Pydantic, SQLAlchemy; `BackEnd/Python/main.py`, `routers/`, `schemas/`, `services/` |
-| Persistência | PostgreSQL (Neon em produção, PostgreSQL 17 em Docker/CI) via psycopg 3; MySQL 8.4 mantido como compatibilidade; SQLite para unidade; Alembic até `20261012_0024` (seção 10.1) |
+| Persistência | PostgreSQL (Neon 18 em produção, PostgreSQL 18 em Docker/CI) via psycopg 3; MySQL 8.4 mantido como compatibilidade; SQLite para unidade; Alembic até `20261012_0024` (seção 10.1) |
 | Tenant B2B | `models/organizacao.py`, `routers/parceiros.py`, `equipe.py`, `operacao_b2b.py`, `comercial_b2b.py` |
 | Direitos | `services/entitlements.py` (B2B) e `entitlements_usuario.py` (B2C) |
 | Stripe TEST | `routers/billing.py`, `billing_usuario.py`, `services/billing.py`, `billing_usuario.py` |
@@ -216,7 +216,7 @@ docker compose -f docker-compose.dev.yml up --build
 # Swagger proxied: http://localhost:8080/docs
 ~~~
 
-A composição de desenvolvimento cria PostgreSQL 17, aguarda readiness, aplica alembic upgrade head, carrega seed demo por padrão (LOAD_DEMO_DATA=false para desabilitar), inicia FastAPI e depois Nginx. Nunca usar senhas/defaults de desenvolvimento na produção.
+A composição de desenvolvimento cria PostgreSQL 18, aguarda readiness, aplica alembic upgrade head, carrega seed demo por padrão (LOAD_DEMO_DATA=false para desabilitar), inicia FastAPI e depois Nginx. Nunca usar senhas/defaults de desenvolvimento na produção.
 
 **Execução separada sem Docker:**
 ~~~bash
@@ -243,7 +243,7 @@ Frontend local: http://127.0.0.1:5500; API local: http://127.0.0.1:8000. A API n
 
 **Motivo:** o MySQL gratuito do Aiven foi encerrado (host deixou de resolver em 26–27/11/2026) e a API no Render parou de subir, porque `alembic upgrade head` roda antes do uvicorn. O Render não oferece MySQL gerenciado; o PostgreSQL gratuito do Neon é permanente e tem região AWS us-east-1, próxima do Render (Virgínia). Decisão do proprietário em 27/11/2026.
 
-**Estado:** IMPLEMENTADO na branch `claude/project-thread-8zeflo` (PR para `main`); TESTADO em PostgreSQL 16 local e no CI (PostgreSQL 17). NÃO está em produção até o merge e a troca de `DATABASE_URL` no Render.
+**Estado:** IMPLEMENTADO na branch `claude/project-thread-8zeflo` (PR para `main`); TESTADO em PostgreSQL 16 local e no CI (PostgreSQL 18, a mesma versão do Neon: 18.7, região aws-us-east-1, fuso padrão GMT). NÃO está em produção até o merge e a troca de `DATABASE_URL` no Render.
 
 **Conexão:**
 - `DATABASE_URL` aceita a URL do provedor como vem (`postgresql://` ou `postgres://`); `config.normalizar_database_url` troca o prefixo para `postgresql+psycopg://` (psycopg 3, `psycopg[binary]`). Parâmetros como `sslmode=require` seguem para o libpq.

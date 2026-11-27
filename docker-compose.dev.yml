@@ -1,6 +1,6 @@
 services:
   db:
-    image: postgres:17
+    image: postgres:18
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-churrasplan}
@@ -11,7 +11,7 @@ services:
     ports:
     - ${POSTGRES_PORT:-5432}:5432
     volumes:
-    - churrasplan_postgres:/var/lib/postgresql/data
+    - churrasplan_postgres:/var/lib/postgresql
     healthcheck:
       test:
       - CMD-SHELL
