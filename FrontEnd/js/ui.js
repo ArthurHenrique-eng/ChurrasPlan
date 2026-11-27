@@ -97,7 +97,9 @@
             links.forEach((link) => {
                 const alvo = document.getElementById(decodeURIComponent(link.hash.slice(1)));
                 const oculto = !alvo || alvo.hidden || alvo.closest("[hidden]") !== null || getComputedStyle(alvo).display === "none";
-                link.hidden = oculto;
+                // Só grava quando muda: reescrever o mesmo atributo gera outra
+                // mutação e prenderia o observador em um laço infinito.
+                if (link.hidden !== oculto) link.hidden = oculto;
             });
         };
         sincronizarVisibilidade();
@@ -143,6 +145,31 @@
         });
     }
 
+    // Avisos flutuantes ([data-toast]): aparecem quando o texto muda e se
+    // recolhem depois de alguns segundos. O texto continua no elemento, então
+    // leitores de tela e testes seguem encontrando a mensagem.
+    function iniciarAvisosFlutuantes() {
+        const avisos = document.querySelectorAll("[data-toast]");
+        if (!avisos.length || !("MutationObserver" in window)) return;
+        avisos.forEach((aviso) => {
+            let timer = 0;
+            const recolher = () => aviso.classList.add("is-dismissed");
+            const agendar = () => {
+                window.clearTimeout(timer);
+                aviso.classList.remove("is-dismissed");
+                const texto = aviso.textContent.trim();
+                if (!texto) return;
+                timer = window.setTimeout(recolher, Math.min(15000, Math.max(6000, texto.length * 70)));
+            };
+            new MutationObserver(agendar).observe(aviso, { childList: true, characterData: true, subtree: true });
+            aviso.addEventListener("mouseenter", () => window.clearTimeout(timer));
+            aviso.addEventListener("mouseleave", () => {
+                if (!aviso.classList.contains("is-dismissed")) timer = window.setTimeout(recolher, 3000);
+            });
+            aviso.addEventListener("click", recolher);
+        });
+    }
+
     function iniciar() {
         try { iniciarCabecalho(); } catch { /* interface opcional */ }
         try { iniciarMenuMovel(); } catch { /* interface opcional */ }
@@ -150,6 +177,7 @@
         try { iniciarIndiceSecoes(); } catch { /* interface opcional */ }
         try { iniciarValoresVivos(); } catch { /* interface opcional */ }
         try { iniciarSliders(); } catch { /* interface opcional */ }
+        try { iniciarAvisosFlutuantes(); } catch { /* interface opcional */ }
     }
 
     window.ChurrasPlanUI = { preencherSlider };
