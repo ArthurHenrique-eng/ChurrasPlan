@@ -32,7 +32,7 @@ Princípio central: o backend é a fonte de verdade de cálculos, persistência,
 |---|---|
 | Frontend | HTML/CSS/JavaScript modular e PWA em `FrontEnd/`, SW e MapLibre GL |
 | API | FastAPI, API v6.10.0, Pydantic, SQLAlchemy; `BackEnd/Python/main.py`, `routers/`, `schemas/`, `services/` |
-| Persistência | MySQL 8.4 em Docker/CI, SQLite para unidade; Alembic até `20261012_0024` |
+| Persistência | MySQL 8.4 em Docker/CI, SQLite para unidade; Alembic até `20261127_0025` |
 | Tenant B2B | `models/organizacao.py`, `routers/parceiros.py`, `equipe.py`, `operacao_b2b.py`, `comercial_b2b.py` |
 | Direitos | `services/entitlements.py` (B2B) e `entitlements_usuario.py` (B2C) |
 | Stripe TEST | `routers/billing.py`, `billing_usuario.py`, `services/billing.py`, `billing_usuario.py` |
@@ -143,6 +143,22 @@ O subsistema combina **estabelecimentos e preços próprios/verificados** com **
 
 **PWA:** manifest, ícones 192/512/maskable, service worker, cache controlado apenas para assets/páginas públicas, fallback offline e indicador de conectividade. **Não** cachear respostas /api nem páginas privadas como fallback. Não existe sincronização offline garantida para escritas, checkout, conta ou checklist.
 
+### 7.1 Login pelo Neon Auth (`AUTH_PROVIDER=neon`, desligado por padrão)
+
+Decisão de 27/11/2026: o login inteiro passa para o Neon Auth (Better Auth gerenciado). O backend está pronto atrás da chave `AUTH_PROVIDER`; o padrão continua `local`, então publicar este código não muda produção. Falta a tela de login nova (frontend) e a virada abaixo.
+
+- **Proxy no mesmo domínio:** o navegador fala só com `/api/auth/neon/*`, que repassa uma lista fechada de caminhos do Better Auth a `NEON_AUTH_BASE_URL` (cadastro, entrada por e-mail ou Google, saída, sessão, verificação de e-mail, troca e recuperação de senha, sessões). Admin, organização, `delete-user`, `list-accounts` e `verify-password` não passam (404). POST exige `Origin` em `CORS_ORIGINS`/`PUBLIC_APP_URL`; corpo até 16 KB. O cookie `__Secure-neon-auth.session_token` volta reescrito para o domínio do app (`Path=/; Secure; SameSite=Lax; HttpOnly`, sem `Domain`/`Partitioned`); tokens do corpo e o JWT `set-auth-jwt` são descartados, então o JavaScript nunca vê credencial. O Vercel já leva `/api` ao Render, por isso não há cookie de terceiros.
+- **Sessão espelho:** cada pedido valida o cookie no `get-session` do Neon (cache `NEON_AUTH_CACHE_SEGUNDOS`, padrão 60 s; resposta nula fica 10 s) e mantém uma linha em `sessoes_usuario` com o SHA-256 do cookie, o CSRF ligado à sessão (HMAC de `SECURITY_PEPPER`, entregue por `GET /api/auth/me`) e o `mfa_verificado_em`. As dependências `usuario_atual*` e os routers não mudaram. Sessão revogada aqui não volta, mesmo que o Neon ainda a aceite. Neon fora do ar responde 503 (falha fechada).
+- **Contas:** `usuarios.neon_auth_user_id` (migration `20261127_0025`, que também torna `senha_hash` opcional). Uma conta antiga só é assumida quando o Neon diz que o e-mail está verificado; senão 409 `EMAIL_NAO_VERIFICADO`. Conta nova nasce sem senha local e só usa a API depois de `POST /api/auth/consentimentos` (Termos e Privacidade; senão 403 `CADASTRO_INCOMPLETO`). O Neon não importa hashes de senha: quem já tem conta cria a senha no Neon com o mesmo e-mail (cadastro ou recuperação de senha) e, com o e-mail verificado, cai na mesma conta, com os mesmos dados.
+- **Rotas antigas de senha** (`register`, `login`, `verify-email`, `forgot-password`, `reset-password`) respondem 410 `LOGIN_NEON` com o provedor Neon.
+- **Reautenticação** (configurar/revogar/substituir MFA, transferir propriedade, encerrar organização, excluir conta) usa o `verify-password` do Neon; conta só Google confirma com sessão aberta há até 10 minutos.
+- **MFA:** o TOTP de admin continua no backend (`MFA_REQUIRED_ADMIN`). Ativar ou substituir MFA revoga as outras sessões aqui e no Neon.
+- **Exclusão de conta:** apaga a linha em `neon_auth."user"` do mesmo banco (sessões e contas do Neon caem em cascata) quando o banco é PostgreSQL; em MySQL fica um aviso no log e a remoção é feita no console do Neon.
+- **Admin:** a pessoa entra pelo login do Neon com e-mail verificado e é promovida com `scripts/create_admin.py` (a senha informada ao script não é usada com o provedor Neon).
+- **Variáveis:** `AUTH_PROVIDER` (`local` ou `neon`), `NEON_AUTH_BASE_URL` (HTTPS obrigatório em produção; é a "Auth URL" do branch no console do Neon), `NEON_AUTH_CACHE_SEGUNDOS`.
+- **Virada, cada passo com autorização:** (1) banco de produção no PostgreSQL do Neon (PR da migração), porque os dados de login ficam no mesmo banco; (2) Neon Auth de produção com verificação de e-mail ligada, envio de e-mail próprio, domínio do app como confiável, plugin de organização desligado e Google com credenciais próprias; (3) frontend novo publicado; (4) no Render, `AUTH_PROVIDER=neon` e `NEON_AUTH_BASE_URL`; (5) aviso aos usuários sobre recriar a senha. **Reversão:** `AUTH_PROVIDER=local`; contas nascidas no Neon ficam sem senha local e usam "esqueci a senha".
+- **Evidência:** `tests/test_neon_auth.py` (Neon Auth simulado) e prova real contra o Neon Auth do branch `dev` em 27/11/2026: cadastro, `/me`, aceite, churrasco criado, `verify-password` certo e errado, logout encerrando no Neon, novo login na mesma conta, origem estranha e rota de admin recusadas, conta antiga não tomada com e-mail não verificado.
+
 **Pendências legais/operacionais para produção comercial:** definir controlador/razão social/CNPJ, canal de privacidade e encarregado quando aplicável; bases legais e prazos de retenção; subprocessadores reais e acordos; resposta a incidentes e titulares; backups/retenção; política pública revisada juridicamente. Controles técnicos não equivalem a conformidade organizacional concluída.
 
 ## 8. SaaS Stripe TEST e direitos dos planos
@@ -173,7 +189,7 @@ Preço vem do Stripe Test e é validado no servidor: modo teste, moeda BRL, Pric
 
 ## 9. Schema e Alembic — linha completa até 0024
 
-**Head `20261012_0024` na branch SaaS.** Alembic é fonte de verdade e `BackEnd/Python/sql/schema.sql` referência de instalação nova; não aplicar SQL manualmente em banco versionado.
+**Head `20261127_0025` na branch SaaS.** Alembic é fonte de verdade e `BackEnd/Python/sql/schema.sql` referência de instalação nova; não aplicar SQL manualmente em banco versionado.
 
 | Migration | O que evoluiu |
 |---|---|
@@ -201,6 +217,7 @@ Preço vem do Stripe Test e é validado no servidor: modo teste, moeda BRL, Pric
 | `20261012_0022` | titularidade da outbox e deduplicação HMAC das interações |
 | `20261012_0023` | GTIN validado e EAN único por organização |
 | `20261012_0024` | contexto pseudônimo e índice para funis agregados |
+| `20261127_0025` | vínculo `usuarios.neon_auth_user_id` e `senha_hash` opcional (login pelo Neon Auth) |
 
 **Migração/rollback:** preservar FKs e dados legados, não atribuir a uma organização SKUs de dono incerto; ensaiar `upgrade head`, `alembic check`, downgrade/upgrade, MySQL real e dados de cópia em staging. Downgrade das migrações SaaS pode apagar grants, convites, auditorias, campanhas, lotes idempotentes, modelos e registros locais de Billing, **mas não cancela assinatura remota no Stripe**. Realizar backup, avaliação de impacto e conciliação externa antes de reverter. Testes SQLite não substituem FK, charset, InnoDB e concorrência MySQL.
 

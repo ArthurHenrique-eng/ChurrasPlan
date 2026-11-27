@@ -36,7 +36,8 @@ def test_mysql_schema_head_e_utf8mb4():
     with engine.connect() as conn:
         head = conn.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
         charset = conn.execute(text("SELECT @@character_set_database")).scalar_one()
-    assert head == "20261012_0024"
+    assert head == "20261127_0025"
+    assert "neon_auth_user_id" in {c["name"] for c in insp.get_columns("usuarios")}
     assert str(charset).lower() == "utf8mb4"
 
 

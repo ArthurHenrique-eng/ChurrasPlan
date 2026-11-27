@@ -10,7 +10,9 @@ class Usuario(Base):
     id = Column(Integer, primary_key=True, index=True)
     nome = Column(String(120), nullable=False)
     email = Column(String(160), nullable=False, unique=True, index=True)
-    senha_hash = Column(String(255), nullable=False)
+    # Opcional: contas do Neon Auth não guardam senha local.
+    senha_hash = Column(String(255), nullable=True)
+    neon_auth_user_id = Column(String(36), nullable=True, unique=True, index=True)
     papel = Column(String(20), nullable=False, default="usuario", server_default="usuario", index=True)  # usuario | parceiro | admin
     plano = Column(String(30), nullable=False, default="gratuito", server_default="gratuito")
     ativo = Column(Boolean, nullable=False, default=True, server_default="1")

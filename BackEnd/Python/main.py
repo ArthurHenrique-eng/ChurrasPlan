@@ -16,7 +16,7 @@ from sqlalchemy import text
 
 from middleware.security import SecurityHeadersMiddleware
 from services.limites_http import limitar_http
-from routers import mfa, operacoes, growth, profissional, retencao, assistente, telemetria
+from routers import mfa, neon_auth, operacoes, growth, profissional, retencao, assistente, telemetria
 
 from config import settings, validar_configuracao_producao
 from database.connection import engine, Base
@@ -64,6 +64,7 @@ app.include_router(estabelecimentos.router)
 app.include_router(precos.router)
 app.include_router(lista_compras.router)
 app.include_router(auth.router)
+app.include_router(neon_auth.router)
 app.include_router(mfa.router)
 app.include_router(operacoes.router)
 app.include_router(growth.router)

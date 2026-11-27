@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+import logging
 from datetime import datetime
 from urllib.parse import quote
 from decimal import Decimal
 
-from fastapi import APIRouter, Depends, HTTPException, Response
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from sqlalchemy.orm import Session, joinedload
 
 from config import settings
@@ -14,8 +15,10 @@ from models import (
     Usuario,
 )
 from schemas.privacidade import ExclusaoContaIn, PreferenciaMarketingIn
-from services.auth import limpar_cookies, usuario_atual, usuario_atual_com_csrf, verificar_senha
+from services.auth import confirmar_senha, limpar_cookies, usuario_atual, usuario_atual_com_csrf
 from services.billing import stripe_request
+
+logger = logging.getLogger("churrasplan.privacidade")
 
 router = APIRouter(prefix="/api/privacidade", tags=["privacidade-lgpd"])
 
@@ -146,13 +149,14 @@ def exportar_meus_dados(usuario: Usuario = Depends(usuario_atual), db: Session =
 @router.delete("/minha-conta")
 def excluir_minha_conta(
     payload: ExclusaoContaIn,
+    request: Request,
     response: Response,
     usuario: Usuario = Depends(usuario_atual_com_csrf),
     db: Session = Depends(get_db),
 ):
     if payload.confirmacao.strip().upper() != "EXCLUIR":
         raise HTTPException(status_code=422, detail="Digite EXCLUIR para confirmar a exclusão definitiva.")
-    if not verificar_senha(payload.senha, usuario.senha_hash):
+    if not confirmar_senha(request, usuario, payload.senha):
         raise HTTPException(status_code=403, detail="Senha incorreta.")
 
     # Remover o usuário antes de encerrar a assinatura remota poderia deixar
@@ -190,7 +194,15 @@ def excluir_minha_conta(
     db.query(Preco).filter(Preco.criado_por_usuario_id == usuario.id).update(
         {Preco.criado_por_usuario_id: None}, synchronize_session=False
     )
+    neon_user_id = usuario.neon_auth_user_id
     db.delete(usuario)
     limpar_cookies(response)
+    if settings.AUTH_PROVIDER == "neon":
+        # O login também é dado pessoal: apaga o usuário do Neon Auth no mesmo commit.
+        from services.neon_auth import apagar_cookies_neon, esquecer_sessao, remover_usuario_neon
+        if neon_user_id and not remover_usuario_neon(db, neon_user_id):
+            logger.warning("privacidade: usuário do Neon Auth não removido automaticamente; remover no console")
+        esquecer_sessao(request)
+        apagar_cookies_neon(response, request)
     db.commit()
     return {"mensagem": "Conta e dados pessoais associados foram excluídos."}

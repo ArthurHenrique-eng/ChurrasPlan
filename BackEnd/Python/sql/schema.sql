@@ -90,7 +90,8 @@ CREATE TABLE usuarios (
 	id INTEGER NOT NULL AUTO_INCREMENT,
 	nome VARCHAR(120) NOT NULL,
 	email VARCHAR(160) NOT NULL,
-	senha_hash VARCHAR(255) NOT NULL,
+	senha_hash VARCHAR(255),
+	neon_auth_user_id VARCHAR(36),
 	papel VARCHAR(20) NOT NULL DEFAULT 'usuario',
 	plano VARCHAR(30) NOT NULL DEFAULT 'gratuito',
 	ativo BOOL NOT NULL DEFAULT '1',
@@ -101,6 +102,7 @@ CREATE TABLE usuarios (
 	PRIMARY KEY (id)
 )ENGINE=InnoDB;
 CREATE UNIQUE INDEX ix_usuarios_email ON usuarios (email);
+CREATE UNIQUE INDEX ix_usuarios_neon_auth_user_id ON usuarios (neon_auth_user_id);
 CREATE INDEX ix_usuarios_id ON usuarios (id);
 CREATE INDEX ix_usuarios_papel ON usuarios (papel);
 

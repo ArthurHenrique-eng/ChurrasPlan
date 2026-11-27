@@ -54,6 +54,13 @@ class Settings:
     REQUIRE_EMAIL_VERIFICATION: bool = os.getenv("REQUIRE_EMAIL_VERIFICATION", "true" if APP_ENV == "production" else "false").lower() in {"1", "true", "yes"}
     PUBLIC_APP_URL: str = os.getenv("PUBLIC_APP_URL", "http://127.0.0.1:5500")
 
+    # Provedor de login. "local" = senha Argon2id e sessão própria (padrão);
+    # "neon" = Neon Auth (Better Auth gerenciado) atrás do proxy /api/auth/neon,
+    # com sessão espelho local para CSRF e MFA. Veja services/neon_auth.py.
+    AUTH_PROVIDER: str = os.getenv("AUTH_PROVIDER", "local").strip().lower()
+    NEON_AUTH_BASE_URL: str | None = (os.getenv("NEON_AUTH_BASE_URL") or "").strip().rstrip("/") or None
+    NEON_AUTH_CACHE_SEGUNDOS: int = int(os.getenv("NEON_AUTH_CACHE_SEGUNDOS", "60"))
+
     # SMTP é opcional em desenvolvimento. Em produção, configure um provedor
     # para verificação de e-mail e recuperação de senha.
     SMTP_HOST: str | None = os.getenv("SMTP_HOST")
@@ -331,6 +338,13 @@ def validar_configuracao_producao(configuracao: Settings = settings) -> None:
                 erros.append("NEON_SELARRT_URL deve usar HTTPS em produção")
             if len(segredo_selo) < 32:
                 erros.append("REALTIME_SELO_SEGREDO deve possuir pelo menos 32 caracteres aleatórios")
+    provedor = getattr(configuracao, "AUTH_PROVIDER", "local")
+    if provedor not in {"local", "neon"}:
+        erros.append("AUTH_PROVIDER deve ser local ou neon")
+    if provedor == "neon":
+        base_neon = getattr(configuracao, "NEON_AUTH_BASE_URL", None)
+        if not base_neon or not base_neon.lower().startswith("https://"):
+            erros.append("NEON_AUTH_BASE_URL deve usar HTTPS quando AUTH_PROVIDER=neon")
     if not configuracao.TRUSTED_HOSTS or "*" in configuracao.TRUSTED_HOSTS:
         erros.append("TRUSTED_HOSTS deve listar hosts explícitos em produção")
     if len(configuracao.SECURITY_PEPPER) < 32 or configuracao.SECURITY_PEPPER == "dev-only-change-me":
