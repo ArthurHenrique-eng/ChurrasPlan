@@ -167,6 +167,22 @@ jobs:
       - name: Frontend CSP security contract
         run: node scripts/test_frontend_csp.mjs
 
+  neon-functions:
+    name: Neon Functions (Node)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: neon
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "22"
+      - name: Install pinned dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: selarrt signature, validation and sealing
+        run: npm test
+
 
   security-static:
     name: Security audit

@@ -45,7 +45,8 @@ def test_schema_head_e_codificacao_utf8():
             charset = conn.execute(text(
                 "SELECT pg_encoding_to_char(encoding) FROM pg_database WHERE datname = current_database()"
             )).scalar_one()
-    assert head == "20261012_0024"
+    assert head == "20261127_0025"
+    assert "neon_auth_user_id" in {c["name"] for c in insp.get_columns("usuarios")}
     assert str(charset).lower() in {"utf8mb4", "utf8"}
 
 

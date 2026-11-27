@@ -44,6 +44,19 @@ updates:
         patterns:
           - "*"
 
+  # Configuração do Neon e Function `selarrt`. @neon/realtime ainda é preview
+  # (0.x): revisar cada atualização com `npm test` e a prova no branch dev.
+  - package-ecosystem: npm
+    directory: "/neon"
+    schedule:
+      interval: monthly
+      timezone: America/Sao_Paulo
+    open-pull-requests-limit: 2
+    groups:
+      neon-packages:
+        patterns:
+          - "*"
+
   - package-ecosystem: docker
     directories:
       - "/BackEnd/Python"

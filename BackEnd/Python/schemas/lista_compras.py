@@ -43,3 +43,15 @@ class ListaComprasItemUpdate(BaseModel):
     comprado: bool
     valor_pago_total: Optional[float] = Field(default=None, ge=0, le=10_000_000)
     estabelecimento_compra_id: Optional[int] = None
+
+
+class ConsultaSeladaOut(BaseModel):
+    """Consulta selada do Neon Realtime: token de portador curto, nunca em URL ou log."""
+    capability: str
+    queryFingerprint: str
+    expiresAt: int
+
+
+class ListaAoVivoOut(BaseModel):
+    url: str
+    consulta_selada: ConsultaSeladaOut

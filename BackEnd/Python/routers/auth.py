@@ -1,18 +1,18 @@
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy.orm import Session
 
 from config import settings
 from database.connection import get_db
 from models import ConsentimentoUsuario, Usuario
 from schemas.auth import (
-    AuthOut, EsqueciSenhaIn, LoginIn, MensagemOut, RedefinirSenhaIn,
+    AuthOut, ConsentimentosIniciaisIn, EsqueciSenhaIn, LoginIn, MensagemOut, RedefinirSenhaIn,
     RegistroUsuarioIn, UsuarioOut, VerificarEmailIn,
 )
 from services.auth import (
     consumir_token_usuario, criar_sessao, criar_token_usuario, enviar_email,
-    hash_senha, limpar_cookies, normalizar_email, revogar_sessao_atual,
+    hash_senha, hash_token, limpar_cookies, normalizar_email, revogar_sessao_atual,
     usuario_atual, usuario_atual_com_csrf, validar_email_simples, verificar_senha,
 )
 from services.seguranca import registrar_evento, verificar_limite
@@ -20,8 +20,18 @@ from services.seguranca import registrar_evento, verificar_limite
 router = APIRouter(prefix="/api/auth", tags=["autenticacao"])
 
 
+def _login_local():
+    """Rotas de senha própria deixam de existir quando o login é do Neon Auth."""
+    if settings.AUTH_PROVIDER == "neon":
+        raise HTTPException(status_code=410, detail={
+            "codigo": "LOGIN_NEON",
+            "mensagem": "Cadastro, entrada e senha agora são feitos pelo login do ChurrasPlan em /api/auth/neon.",
+        })
+
+
 @router.post("/register", response_model=AuthOut, status_code=201)
 def registrar(payload: RegistroUsuarioIn, request: Request, response: Response, db: Session = Depends(get_db)):
+    _login_local()
     email = normalizar_email(payload.email)
     chave_rate = verificar_limite(
         db, request, tipo="register", limite=settings.RATE_LIMIT_REGISTER_ATTEMPTS, adicional=email
@@ -76,6 +86,7 @@ def registrar(payload: RegistroUsuarioIn, request: Request, response: Response, 
 
 @router.post("/login", response_model=AuthOut)
 def login(payload: LoginIn, request: Request, response: Response, db: Session = Depends(get_db)):
+    _login_local()
     email = normalizar_email(payload.email)
     chave_rate = verificar_limite(
         db, request, tipo="login", limite=settings.RATE_LIMIT_LOGIN_ATTEMPTS, adicional=email
@@ -100,24 +111,66 @@ def login(payload: LoginIn, request: Request, response: Response, db: Session = 
 
 @router.post("/logout", response_model=MensagemOut)
 def logout(
+    request: Request,
     response: Response,
     usuario: Usuario = Depends(usuario_atual_com_csrf),
     db: Session = Depends(get_db),
-    session_cookie: str | None = Cookie(default=None, alias=settings.SESSION_COOKIE_NAME),
 ):
-    revogar_sessao_atual(db, session_cookie)
+    revogar_sessao_atual(db, request)
     limpar_cookies(response)
+    if settings.AUTH_PROVIDER == "neon":
+        from services.neon_auth import apagar_cookies_neon, encerrar_no_neon
+        encerrar_no_neon(request)
+        apagar_cookies_neon(response, request)
     db.commit()
     return MensagemOut(mensagem="Sessão encerrada.")
 
 
 @router.get("/me", response_model=UsuarioOut)
-def me(usuario: Usuario = Depends(usuario_atual)):
+def me(request: Request, response: Response, usuario: Usuario = Depends(usuario_atual)):
+    if settings.AUTH_PROVIDER == "neon":
+        # Com o Neon Auth, o cookie de CSRF nasce aqui, ligado à sessão atual.
+        from services.neon_auth import COOKIE_SESSAO, csrf_da_sessao
+        csrf = csrf_da_sessao(hash_token(request.cookies.get(COOKIE_SESSAO, "")))
+        response.set_cookie(
+            settings.CSRF_COOKIE_NAME, csrf, httponly=False, secure=settings.COOKIE_SECURE,
+            samesite="lax", max_age=settings.SESSION_DAYS * 86400, path="/",
+        )
     return usuario
+
+
+@router.post("/consentimentos", response_model=MensagemOut)
+def consentimentos_iniciais(
+    payload: ConsentimentosIniciaisIn,
+    usuario: Usuario = Depends(usuario_atual_com_csrf),
+    db: Session = Depends(get_db),
+):
+    """Registra os aceites do cadastro de uma conta criada pelo Neon Auth."""
+    if settings.AUTH_PROVIDER != "neon":
+        raise HTTPException(status_code=404, detail="Recurso não encontrado.")
+    if not payload.aceite_termos or not payload.aceite_privacidade:
+        raise HTTPException(status_code=422, detail="É necessário aceitar os Termos de Uso e a Política de Privacidade.")
+    existentes = {c.tipo for c in db.query(ConsentimentoUsuario).filter_by(usuario_id=usuario.id)}
+    novos = [
+        ConsentimentoUsuario(usuario_id=usuario.id, tipo=tipo, versao=versao, concedido=concedido, origem="cadastro")
+        for tipo, versao, concedido in (
+            ("termos", settings.TERMS_VERSION, True),
+            ("privacidade", settings.PRIVACY_VERSION, True),
+            ("marketing", "v1", bool(payload.aceite_marketing)),
+        )
+        if tipo not in existentes
+    ]
+    if novos and payload.aceite_analytics:
+        from services.analytics import atribuir_cadastro
+        atribuir_cadastro(db, usuario, payload.referral_codigo)
+    db.add_all(novos)
+    db.commit()
+    return MensagemOut(mensagem="Cadastro concluído.")
 
 
 @router.post("/verify-email", response_model=MensagemOut)
 def verificar_email(payload: VerificarEmailIn, db: Session = Depends(get_db)):
+    _login_local()
     usuario = consumir_token_usuario(db, payload.token, "verificar_email")
     if not usuario:
         raise HTTPException(status_code=400, detail="Token inválido ou expirado.")
@@ -128,6 +181,7 @@ def verificar_email(payload: VerificarEmailIn, db: Session = Depends(get_db)):
 
 @router.post("/forgot-password", response_model=MensagemOut)
 def esqueci_senha(payload: EsqueciSenhaIn, request: Request, db: Session = Depends(get_db)):
+    _login_local()
     email = normalizar_email(payload.email)
     chave_rate = verificar_limite(
         db, request, tipo="forgot_password", limite=settings.RATE_LIMIT_PUBLIC_ATTEMPTS, adicional=email
@@ -147,6 +201,7 @@ def esqueci_senha(payload: EsqueciSenhaIn, request: Request, db: Session = Depen
 
 @router.post("/reset-password", response_model=MensagemOut)
 def redefinir_senha(payload: RedefinirSenhaIn, db: Session = Depends(get_db)):
+    _login_local()
     usuario = consumir_token_usuario(db, payload.token, "redefinir_senha")
     if not usuario:
         raise HTTPException(status_code=400, detail="Token inválido ou expirado.")

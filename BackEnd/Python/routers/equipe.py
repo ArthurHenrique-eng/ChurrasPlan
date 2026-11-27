@@ -3,7 +3,7 @@ import smtplib
 from datetime import timedelta
 from urllib.parse import quote
 
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from sqlalchemy.orm import Session
 
 from config import settings
@@ -253,15 +253,15 @@ class TransferirPropriedadeIn(BaseModel):
 
 
 @router.post('/equipe/transferir-propriedade')
-def transferir_propriedade(payload: TransferirPropriedadeIn,
+def transferir_propriedade(payload: TransferirPropriedadeIn, request: Request,
         usuario: Usuario = Depends(exigir_papeis('parceiro', 'admin', mutacao=True)),
         db: Session = Depends(get_db), organizacao_id: int | None = Header(None, alias='X-Organizacao-ID')):
-    from services.auth import verificar_senha
+    from services.auth import confirmar_senha
     org = selecionar_organizacao(db, usuario, organizacao_id)
     if org is None:
         raise HTTPException(409, detail='Selecione a organização.')
     org, ator = exigir_gestao(db, usuario, org.id)
-    if ator.papel != 'proprietario' or not verificar_senha(payload.senha, usuario.senha_hash):
+    if ator.papel != 'proprietario' or not confirmar_senha(request, usuario, payload.senha):
         raise HTTPException(403, detail='Somente o proprietário com senha confirmada pode transferir a organização.')
     if payload.novo_usuario_id == usuario.id:
         raise HTTPException(422, detail='Escolha outro membro ativo.')
@@ -284,17 +284,17 @@ class EncerrarOrganizacaoIn(BaseModel):
 
 
 @router.post('/organizacao/encerrar')
-def encerrar_organizacao(payload: EncerrarOrganizacaoIn,
+def encerrar_organizacao(payload: EncerrarOrganizacaoIn, request: Request,
         usuario: Usuario = Depends(exigir_papeis('parceiro','admin',mutacao=True)),
         db: Session = Depends(get_db), organizacao_id: int | None = Header(None,alias='X-Organizacao-ID')):
-    from services.auth import verificar_senha
+    from services.auth import confirmar_senha
     from models import AssinaturaOrganizacao, Estabelecimento, Produto
     from services.billing import stripe_request
     from urllib.parse import quote
     org=selecionar_organizacao(db,usuario,organizacao_id)
     if org is None:raise HTTPException(409,detail='Selecione uma organização.')
     org,ator=exigir_gestao(db,usuario,org.id)
-    if ator.papel!='proprietario' or not verificar_senha(payload.senha,usuario.senha_hash):
+    if ator.papel!='proprietario' or not confirmar_senha(request, usuario, payload.senha):
         raise HTTPException(403,detail='Proprietário e senha confirmada são necessários.')
     assinatura=db.query(AssinaturaOrganizacao).filter_by(organizacao_id=org.id).first()
     if assinatura and assinatura.stripe_subscription_id:

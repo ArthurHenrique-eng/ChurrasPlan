@@ -33,7 +33,7 @@ Princípio central: o backend é a fonte de verdade de cálculos, persistência,
 |---|---|
 | Frontend | HTML/CSS/JavaScript modular e PWA em `FrontEnd/`; design system Brasa (`css/ds.css` + `css/pages/`, seção 20), SW v7.0.0 e MapLibre GL |
 | API | FastAPI, API v6.10.0, Pydantic, SQLAlchemy; `BackEnd/Python/main.py`, `routers/`, `schemas/`, `services/` |
-| Persistência | PostgreSQL (Neon 18 em produção, PostgreSQL 18 em Docker/CI) via psycopg 3; MySQL 8.4 mantido como compatibilidade; SQLite para unidade; Alembic até `20261012_0024` (seção 10.1) |
+| Persistência | PostgreSQL (Neon 18 em produção, PostgreSQL 18 em Docker/CI) via psycopg 3; MySQL 8.4 mantido como compatibilidade; SQLite para unidade; Alembic até `20261127_0025` (seção 10.1) |
 | Tenant B2B | `models/organizacao.py`, `routers/parceiros.py`, `equipe.py`, `operacao_b2b.py`, `comercial_b2b.py` |
 | Direitos | `services/entitlements.py` (B2B) e `entitlements_usuario.py` (B2C) |
 | Stripe TEST | `routers/billing.py`, `billing_usuario.py`, `services/billing.py`, `billing_usuario.py` |
@@ -144,6 +144,22 @@ O subsistema combina **estabelecimentos e preços próprios/verificados** com **
 
 **PWA:** manifest, ícones 192/512/maskable, service worker, cache controlado apenas para assets/páginas públicas, fallback offline e indicador de conectividade. **Não** cachear respostas /api nem páginas privadas como fallback. Não existe sincronização offline garantida para escritas, checkout, conta ou checklist.
 
+### 7.1 Login pelo Neon Auth (`AUTH_PROVIDER=neon`, desligado por padrão)
+
+Decisão de 27/11/2026: o login inteiro passa para o Neon Auth (Better Auth gerenciado). O backend está pronto atrás da chave `AUTH_PROVIDER`; o padrão continua `local`, então publicar este código não muda produção. Falta a tela de login nova (frontend) e a virada abaixo.
+
+- **Proxy no mesmo domínio:** o navegador fala só com `/api/auth/neon/*`, que repassa uma lista fechada de caminhos do Better Auth a `NEON_AUTH_BASE_URL` (cadastro, entrada por e-mail ou Google, saída, sessão, verificação de e-mail, troca e recuperação de senha, sessões). Admin, organização, `delete-user`, `list-accounts` e `verify-password` não passam (404). POST exige `Origin` em `CORS_ORIGINS`/`PUBLIC_APP_URL`; corpo até 16 KB. O cookie `__Secure-neon-auth.session_token` volta reescrito para o domínio do app (`Path=/; Secure; SameSite=Lax; HttpOnly`, sem `Domain`/`Partitioned`); tokens do corpo e o JWT `set-auth-jwt` são descartados, então o JavaScript nunca vê credencial. O Vercel já leva `/api` ao Render, por isso não há cookie de terceiros.
+- **Sessão espelho:** cada pedido valida o cookie no `get-session` do Neon (cache `NEON_AUTH_CACHE_SEGUNDOS`, padrão 60 s; resposta nula fica 10 s) e mantém uma linha em `sessoes_usuario` com o SHA-256 do cookie, o CSRF ligado à sessão (HMAC de `SECURITY_PEPPER`, entregue por `GET /api/auth/me`) e o `mfa_verificado_em`. As dependências `usuario_atual*` e os routers não mudaram. Sessão revogada aqui não volta, mesmo que o Neon ainda a aceite. Neon fora do ar responde 503 (falha fechada).
+- **Contas:** `usuarios.neon_auth_user_id` (migration `20261127_0025`, que também torna `senha_hash` opcional). Uma conta antiga só é assumida quando o Neon diz que o e-mail está verificado; senão 409 `EMAIL_NAO_VERIFICADO`. Conta nova nasce sem senha local e só usa a API depois de `POST /api/auth/consentimentos` (Termos e Privacidade; senão 403 `CADASTRO_INCOMPLETO`). O Neon não importa hashes de senha: quem já tem conta cria a senha no Neon com o mesmo e-mail (cadastro ou recuperação de senha) e, com o e-mail verificado, cai na mesma conta, com os mesmos dados.
+- **Rotas antigas de senha** (`register`, `login`, `verify-email`, `forgot-password`, `reset-password`) respondem 410 `LOGIN_NEON` com o provedor Neon.
+- **Reautenticação** (configurar/revogar/substituir MFA, transferir propriedade, encerrar organização, excluir conta) usa o `verify-password` do Neon; conta só Google confirma com sessão aberta há até 10 minutos.
+- **MFA:** o TOTP de admin continua no backend (`MFA_REQUIRED_ADMIN`). Ativar ou substituir MFA revoga as outras sessões aqui e no Neon.
+- **Exclusão de conta:** apaga a linha em `neon_auth."user"` do mesmo banco (sessões e contas do Neon caem em cascata) quando o banco é PostgreSQL; em MySQL fica um aviso no log e a remoção é feita no console do Neon.
+- **Admin:** a pessoa entra pelo login do Neon com e-mail verificado e é promovida com `scripts/create_admin.py` (a senha informada ao script não é usada com o provedor Neon).
+- **Variáveis:** `AUTH_PROVIDER` (`local` ou `neon`), `NEON_AUTH_BASE_URL` (HTTPS obrigatório em produção; é a "Auth URL" do branch no console do Neon), `NEON_AUTH_CACHE_SEGUNDOS`.
+- **Virada, cada passo com autorização:** (1) banco de produção no PostgreSQL do Neon, porque os dados de login ficam no mesmo banco (feito em 27/11/2026, PR #51); (2) Neon Auth de produção com verificação de e-mail ligada, envio de e-mail próprio, domínio do app como confiável, plugin de organização desligado e Google com credenciais próprias; (3) frontend novo publicado; (4) no Render, `AUTH_PROVIDER=neon` e `NEON_AUTH_BASE_URL`; (5) aviso aos usuários sobre recriar a senha. **Reversão:** `AUTH_PROVIDER=local`; contas nascidas no Neon ficam sem senha local e usam "esqueci a senha".
+- **Evidência:** `tests/test_neon_auth.py` (Neon Auth simulado) e prova real contra o Neon Auth do branch `dev` em 27/11/2026: cadastro, `/me`, aceite, churrasco criado, `verify-password` certo e errado, logout encerrando no Neon, novo login na mesma conta, origem estranha e rota de admin recusadas, conta antiga não tomada com e-mail não verificado.
+
 **Pendências legais/operacionais para produção comercial:** definir controlador/razão social/CNPJ, canal de privacidade e encarregado quando aplicável; bases legais e prazos de retenção; subprocessadores reais e acordos; resposta a incidentes e titulares; backups/retenção; política pública revisada juridicamente. Controles técnicos não equivalem a conformidade organizacional concluída.
 
 ## 8. SaaS Stripe TEST e direitos dos planos
@@ -174,7 +190,7 @@ Preço vem do Stripe Test e é validado no servidor: modo teste, moeda BRL, Pric
 
 ## 9. Schema e Alembic — linha completa até 0024
 
-**Head `20261012_0024` na branch SaaS.** Alembic é fonte de verdade e `BackEnd/Python/sql/schema.sql` referência de instalação nova; não aplicar SQL manualmente em banco versionado.
+**Head `20261127_0025` na branch SaaS.** Alembic é fonte de verdade e `BackEnd/Python/sql/schema.sql` referência de instalação nova; não aplicar SQL manualmente em banco versionado.
 
 | Migration | O que evoluiu |
 |---|---|
@@ -202,6 +218,7 @@ Preço vem do Stripe Test e é validado no servidor: modo teste, moeda BRL, Pric
 | `20261012_0022` | titularidade da outbox e deduplicação HMAC das interações |
 | `20261012_0023` | GTIN validado e EAN único por organização |
 | `20261012_0024` | contexto pseudônimo e índice para funis agregados |
+| `20261127_0025` | vínculo `usuarios.neon_auth_user_id` e `senha_hash` opcional (login pelo Neon Auth) |
 
 **Migração/rollback:** preservar FKs e dados legados, não atribuir a uma organização SKUs de dono incerto; ensaiar `upgrade head`, `alembic check`, downgrade/upgrade, banco real (PostgreSQL e MySQL) e dados de cópia em staging. Downgrade das migrações SaaS pode apagar grants, convites, auditorias, campanhas, lotes idempotentes, modelos e registros locais de Billing, **mas não cancela assinatura remota no Stripe**. Realizar backup, avaliação de impacto e conciliação externa antes de reverter. Testes SQLite não substituem FK, charset, locks e concorrência de um banco real.
 
@@ -653,3 +670,35 @@ QA adicional do painel do fundador: quatro funis e retenção renderizados em 14
 - `planos.js` mostra nomes de variáveis `STRIPE_PRICE_*` quando um preço não está configurado; convém escondê-los em produção.
 - `FrontEnd/Dockerfile`: `RUN apk upgrade --no-cache` numa camada cacheável pode reaproveitar pacotes antigos em builds com cache.
 - `sitemap.xml`, `robots.txt` e os canônicos estão gerados com `http://localhost:8080`, e `robots.txt` bloqueia a indexação (`Disallow: /`). A Vercel publica `FrontEnd/` como está, sem build; antes de abrir a indexação, rodar `scripts/build_seo.py --base-url` com a URL pública e publicar o resultado. Situação anterior a esta revisão.
+
+## 21. Serviços do Neon (Realtime, Functions, Auth e AI Gateway)
+
+**Estado em 27/11/2026:** fases 1 e 3 do plano de integração IMPLEMENTADAS nesta branch; Auth e AI Gateway PLANEJADOS, aguardando decisões do proprietário (modelo de login e orçamento/privacidade de IA). Pré-requisito: migração MySQL para PostgreSQL/Neon (PR próprio). Projeto Neon `restless-union-65574984`, organização `org-dawn-surf-23799882`.
+
+**Arquitetura que não deve regredir:** a API FastAPI continua dona de sessão, CSRF, MFA, autorização e regras. O navegador nunca recebe segredo do Realtime, nunca escolhe SQL e só assina consultas que a API autorizou.
+
+**O que existe:**
+- `neon/neon.ts`: configuração declarativa (`@neon/config`): Auth e AI Gateway declarados para não serem desligados por `neon deploy`; `preview.realtime.allowedOrigins` com o frontend; Function `selarrt`; branches novos com TTL de 7 dias.
+- `neon/functions/selarrt-handler.ts`: Function que sela consultas de uma lista fechada (hoje só `lista_compras_itens`, filtrada por `lista_compras_id`). Aceita apenas `POST /selar` com corpo até 2 KB, assinado com HMAC-SHA256 de `{timestamp}.{corpo}` (cabeçalhos `x-churrasplan-ts` e `x-churrasplan-assinatura`, janela de 60 s, comparação em tempo constante). Parâmetros inteiros positivos e exatos. Responde a consulta selada (cifrada, cerca de 60 s de validade) com `cache-control: no-store`.
+- `BackEnd/Python/services/realtime_neon.py` e `POST /api/lista-compras/{churrasco_id}/ao-vivo`: exige sessão e CSRF, só o dono do churrasco recebe; chama a Function com timeout de 5 s e devolve `{url, consulta_selada}`. Qualquer falha ou falta de configuração vira 503 sem vazar detalhes; a tela continua usando a lista carregada pela API.
+- Frontend: ainda não consome o endpoint (depende do redesign em revisão). Vai precisar do cliente `@neon/realtime/client` servido localmente, `connect-src` para o host `wss://…rt…neon.tech` na CSP e renovação da consulta selada a cada 45 s.
+
+**Variáveis (nunca no Git):**
+
+| Onde | Variável | Observação |
+|---|---|---|
+| API (Render) | `NEON_REALTIME_URL` | `wss://` do Realtime do branch. |
+| API (Render) | `NEON_SELARRT_URL` | `https://` da Function `selarrt`. |
+| API e Function | `REALTIME_SELO_SEGREDO` | Segredo compartilhado, 32+ caracteres, gerado só para isso. |
+| Function | `NEON_REALTIME_SECRET` | Segredo do Realtime do branch; o Neon não injeta nas Functions. |
+| Function | `NEON_REALTIME_DB` | Opcional, padrão `neondb`. |
+
+Em produção a API recusa iniciar com só parte das três variáveis, com URL sem TLS ou com segredo curto. Sem nenhuma delas o recurso fica desligado.
+
+**Como aplicar (sempre primeiro num branch de testes):** em `neon/`, `npm ci`, exportar `REALTIME_SELO_SEGREDO` e `NEON_REALTIME_SECRET` do branch alvo e rodar `npx neon@latest deploy`. Mudar `allowedOrigins` num branch que já tem Realtime exige `--update-existing`. O branch `production` só recebe deploy com autorização do proprietário. A CLI precisa de `NEON_API_KEY` em ambiente sem navegador.
+
+**Limites conhecidos:** Realtime está em preview; não funciona em tabelas com RLS; só consultas determinísticas de leitura. Functions rodam Node.js 24 e, no plano Free, têm 10 h ativas e 1 milhão de invocações por projeto e mês.
+
+**Comprovação (27/11/2026):** `npm test` em `neon/` com 10 testes aprovados (inclui vetor HMAC conhecido, igual ao teste Python); 15 testes novos em `tests/test_realtime_neon.py` aprovados; suíte backend completa com a correção de compatibilidade aprovada. Prova ponta a ponta no branch `dev` do Neon, banco descartável `prova_realtime`: o mesmo handler da Function selou a consulta da lista 42 a partir de um pedido assinado como a API faz; o cliente Realtime recebeu só os itens da lista 42, recebeu em cerca de 6 s a marcação de compra (`valor_pago_total` 189.90) e o item inserido, não recebeu a mudança na lista 99. Com renovação a cada 45 s, a assinatura seguiu ativa e entregou uma compra feita 3 s depois de a primeira consulta selada expirar. **Function hospedada (27/11/2026, 22:51 UTC):** deploy da `selarrt` no branch `dev` pela API do Neon (bundle esbuild `index.mjs`, `nodejs24`, `NEON_REALTIME_DB=prova_realtime`), URL `https://br-jolly-wave-bbgog18x-selarrt.compute.c-15.us-east-1.aws.neon.tech/`. Na URL pública: sem assinatura, segredo errado e assinatura de 10 minutos atrás deram 401, consulta fora da lista deu 400; a consulta selada pela Function hospedada entregou ao cliente Realtime a compra do item 4 cerca de 5 s depois do `UPDATE`, ignorou a mudança na lista 99 e renovou aos 45 s. A API local com `NEON_SELARRT_URL` apontando para essa URL respondeu 200 em `POST /api/lista-compras/{id}/ao-vivo` (e 403 sem CSRF), o que confirma a assinatura Python contra a Function real. **Não comprovado:** Function no branch `production` (exige autorização) e a tela consumindo o fluxo.
+
+**Próximo passo:** com autorização, deploy da Function no branch `production` e as três variáveis da API no Render; com o redesign mesclado, ligar a tela da lista de compras ao vivo.

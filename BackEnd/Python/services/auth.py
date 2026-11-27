@@ -185,12 +185,39 @@ def _buscar_sessao(db: Session, segredo: str | None) -> SessaoUsuario | None:
     return sessao
 
 
+def _provedor_neon() -> bool:
+    return settings.AUTH_PROVIDER == "neon"
+
+
+def tem_cookie_sessao(request: Request) -> bool:
+    if _provedor_neon():
+        from services.neon_auth import COOKIE_SESSAO
+        return bool(request.cookies.get(COOKIE_SESSAO))
+    return bool(request.cookies.get(settings.SESSION_COOKIE_NAME))
+
+
+def sessao_da_requisicao(request: Request, db: Session) -> SessaoUsuario | None:
+    """Sessão do pedido: própria (AUTH_PROVIDER=local) ou espelho do Neon Auth."""
+    if _provedor_neon():
+        from services.neon_auth import sessao_espelho
+        return sessao_espelho(db, request)
+    return _buscar_sessao(db, request.cookies.get(settings.SESSION_COOKIE_NAME))
+
+
+def confirmar_senha(request: Request, usuario: Usuario, senha: str) -> bool:
+    """Reconfirma a senha antes de ações sensíveis, no provedor de login ativo."""
+    if _provedor_neon():
+        from services.neon_auth import confirmar_senha as confirmar_no_neon
+        return confirmar_no_neon(request, senha)
+    return bool(usuario.senha_hash) and verificar_senha(senha, usuario.senha_hash)
+
+
 def usuario_opcional(
     request: Request,
     db: Session = Depends(get_db),
     session_cookie: str | None = Cookie(default=None, alias=settings.SESSION_COOKIE_NAME),
 ) -> Usuario | None:
-    sessao = _buscar_sessao(db, session_cookie)
+    sessao = sessao_da_requisicao(request, db)
     if sessao:
         _verificar_mfa(request, db, sessao)
     return sessao.usuario if sessao else None
@@ -201,7 +228,7 @@ def usuario_atual(
     db: Session = Depends(get_db),
     session_cookie: str | None = Cookie(default=None, alias=settings.SESSION_COOKIE_NAME),
 ) -> Usuario:
-    sessao = _buscar_sessao(db, session_cookie)
+    sessao = sessao_da_requisicao(request, db)
     if not sessao:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Faça login para acessar este recurso.")
     _verificar_mfa(request, db, sessao)
@@ -215,7 +242,7 @@ def usuario_atual_com_csrf(
     csrf_cookie: str | None = Cookie(default=None, alias=settings.CSRF_COOKIE_NAME),
     csrf_header: str | None = Header(default=None, alias="X-CSRF-Token"),
 ) -> Usuario:
-    sessao = _buscar_sessao(db, session_cookie)
+    sessao = sessao_da_requisicao(request, db)
     if not sessao:
         raise HTTPException(status_code=401, detail="Faça login para acessar este recurso.")
     if not csrf_cookie or not csrf_header or not hmac.compare_digest(csrf_cookie, csrf_header):
@@ -227,10 +254,31 @@ def usuario_atual_com_csrf(
 
 
 def _verificar_mfa(request: Request, db: Session, sessao: SessaoUsuario) -> None:
-    if request.url.path.startswith("/api/auth/mfa") or request.url.path in {"/api/auth/me", "/api/auth/logout"}:
+    if request.url.path.startswith("/api/auth/mfa") or request.url.path in {
+        "/api/auth/me", "/api/auth/logout", "/api/auth/consentimentos",
+    }:
         return
+    if _provedor_neon():
+        _exigir_cadastro_concluido(db, sessao.usuario)
     from services.mfa import exigir_mfa
     exigir_mfa(db, sessao)
+
+
+def _exigir_cadastro_concluido(db: Session, usuario: Usuario) -> None:
+    """Conta criada pelo Neon Auth só usa a API depois de aceitar Termos e Privacidade."""
+    from models import ConsentimentoUsuario
+    aceites = {
+        tipo for (tipo,) in db.query(ConsentimentoUsuario.tipo).filter(
+            ConsentimentoUsuario.usuario_id == usuario.id,
+            ConsentimentoUsuario.tipo.in_(("termos", "privacidade")),
+            ConsentimentoUsuario.concedido.is_(True),
+        )
+    }
+    if aceites != {"termos", "privacidade"}:
+        raise HTTPException(status_code=403, detail={
+            "codigo": "CADASTRO_INCOMPLETO",
+            "mensagem": "Aceite os Termos de Uso e a Política de Privacidade para continuar.",
+        })
 
 
 
@@ -241,9 +289,9 @@ def usuario_opcional_com_csrf(
     csrf_cookie: str | None = Cookie(default=None, alias=settings.CSRF_COOKIE_NAME),
     csrf_header: str | None = Header(default=None, alias="X-CSRF-Token"),
 ) -> Usuario | None:
-    if not session_cookie:
+    if not tem_cookie_sessao(request):
         return None
-    sessao = _buscar_sessao(db, session_cookie)
+    sessao = sessao_da_requisicao(request, db)
     if not sessao:
         raise HTTPException(status_code=401, detail="Sessão inválida ou expirada.")
     if not csrf_cookie or not csrf_header or not hmac.compare_digest(csrf_cookie, csrf_header):
@@ -264,8 +312,8 @@ def exigir_papeis(*papeis: str, mutacao: bool = False):
     return _dep
 
 
-def revogar_sessao_atual(db: Session, segredo: str | None) -> None:
-    sessao = _buscar_sessao(db, segredo)
+def revogar_sessao_atual(db: Session, request: Request) -> None:
+    sessao = sessao_da_requisicao(request, db)
     if sessao:
         sessao.revogada = True
         db.flush()

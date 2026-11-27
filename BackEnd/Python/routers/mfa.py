@@ -1,11 +1,11 @@
 import pyotp
-from fastapi import APIRouter, Cookie, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 from config import settings
 from database.connection import get_db
 from models import CredencialMFA, RecuperacaoMFA, Usuario
-from services.auth import usuario_atual, usuario_atual_com_csrf, verificar_senha, _buscar_sessao, agora
+from services.auth import agora, confirmar_senha, sessao_da_requisicao, usuario_atual, usuario_atual_com_csrf
 from services.criptografia import cifrar
 from services.mfa import consumir_codigo, gerar_recuperacao
 from services.seguranca import registrar_auditoria, verificar_limite, registrar_evento
@@ -25,11 +25,17 @@ class RevogarMFA(SenhaMFA, CodigoMFA):
     pass
 
 
+def _encerrar_no_neon(request: Request, caminho: str) -> None:
+    """Com o Neon Auth, revogar sessões locais também encerra as do Neon."""
+    if settings.AUTH_PROVIDER == "neon":
+        from services.neon_auth import encerrar_no_neon
+        encerrar_no_neon(request, caminho)
+
+
 @router.get("/status")
-def status_mfa(usuario: Usuario = Depends(usuario_atual), db: Session = Depends(get_db),
-               cookie: str | None = Cookie(None, alias=settings.SESSION_COOKIE_NAME)):
+def status_mfa(request: Request, usuario: Usuario = Depends(usuario_atual), db: Session = Depends(get_db)):
     credencial = db.get(CredencialMFA, usuario.id)
-    sessao = _buscar_sessao(db, cookie)
+    sessao = sessao_da_requisicao(request, db)
     return {"ativo": bool(credencial and credencial.ativo),
             "obrigatorio": usuario.papel == "admin" and settings.MFA_REQUIRED_ADMIN,
             "verificado_em": sessao.mfa_verificado_em,
@@ -37,8 +43,9 @@ def status_mfa(usuario: Usuario = Depends(usuario_atual), db: Session = Depends(
 
 
 @router.post("/configurar")
-def configurar(payload: SenhaMFA, usuario: Usuario = Depends(usuario_atual_com_csrf), db: Session = Depends(get_db)):
-    if not verificar_senha(payload.senha, usuario.senha_hash):
+def configurar(payload: SenhaMFA, request: Request, usuario: Usuario = Depends(usuario_atual_com_csrf),
+               db: Session = Depends(get_db)):
+    if not confirmar_senha(request, usuario, payload.senha):
         raise HTTPException(401, detail="Senha inválida.")
     credencial = db.query(CredencialMFA).filter_by(usuario_id=usuario.id).with_for_update().first()
     if credencial and credencial.ativo:
@@ -66,20 +73,19 @@ def _confirmar(db: Session, request: Request, usuario: Usuario, codigo: str, *, 
 
 @router.post("/ativar")
 def ativar(payload: CodigoMFA, request: Request, usuario: Usuario = Depends(usuario_atual_com_csrf),
-           db: Session = Depends(get_db), cookie: str | None = Cookie(None, alias=settings.SESSION_COOKIE_NAME)):
+           db: Session = Depends(get_db)):
     credencial = db.get(CredencialMFA, usuario.id)
     if credencial and credencial.ativo:
         raise HTTPException(409, detail="MFA já ativo.")
+    # A sessão atual já foi validada pelo dependency; as demais são revogadas.
+    atual = sessao_da_requisicao(request, db)
     credencial = _confirmar(db, request, usuario, payload.codigo, ativar=True)
     credencial.ativo = True
     for sessao in usuario.sessoes:
-        sessao.revogada = True
-    atual = _buscar_sessao(db, cookie)
-    # A sessão atual já foi validada pelo dependency; revogar as demais.
-    from models import SessaoUsuario
-    from services.auth import hash_token
-    atual = db.query(SessaoUsuario).filter_by(token_hash=hash_token(cookie)).one()
-    atual.revogada, atual.mfa_verificado_em = False, agora()
+        if sessao.id != atual.id:
+            sessao.revogada = True
+    atual.mfa_verificado_em = agora()
+    _encerrar_no_neon(request, "revoke-other-sessions")
     codigos = gerar_recuperacao(db, usuario.id)
     registrar_auditoria(db, usuario, acao="mfa_ativado", entidade="usuarios", entidade_id=usuario.id)
     db.commit()
@@ -88,9 +94,9 @@ def ativar(payload: CodigoMFA, request: Request, usuario: Usuario = Depends(usua
 
 @router.post("/verificar")
 def verificar(payload: CodigoMFA, request: Request, usuario: Usuario = Depends(usuario_atual_com_csrf),
-              db: Session = Depends(get_db), cookie: str | None = Cookie(None, alias=settings.SESSION_COOKIE_NAME)):
+              db: Session = Depends(get_db)):
     _confirmar(db, request, usuario, payload.codigo)
-    _buscar_sessao(db, cookie).mfa_verificado_em = agora()
+    sessao_da_requisicao(request, db).mfa_verificado_em = agora()
     db.commit()
     return {"verificado": True}
 
@@ -99,13 +105,14 @@ def verificar(payload: CodigoMFA, request: Request, usuario: Usuario = Depends(u
 def revogar(payload: RevogarMFA, request: Request, usuario: Usuario = Depends(usuario_atual_com_csrf), db: Session = Depends(get_db)):
     if usuario.papel == "admin" and settings.MFA_REQUIRED_ADMIN:
         raise HTTPException(409, detail="MFA é obrigatório para administradores. Cadastre um novo autenticador por recuperação assistida.")
-    if not verificar_senha(payload.senha, usuario.senha_hash):
+    if not confirmar_senha(request, usuario, payload.senha):
         raise HTTPException(401, detail="Senha inválida.")
     _confirmar(db, request, usuario, payload.codigo)
     db.query(RecuperacaoMFA).filter_by(usuario_id=usuario.id).delete()
     db.query(CredencialMFA).filter_by(usuario_id=usuario.id).delete()
     for sessao in usuario.sessoes:
         sessao.revogada = True
+    _encerrar_no_neon(request, "revoke-sessions")
     registrar_auditoria(db, usuario, acao="mfa_revogado", entidade="usuarios", entidade_id=usuario.id)
     db.commit()
     return {"mensagem": "MFA revogado. Entre novamente."}
@@ -113,16 +120,17 @@ def revogar(payload: RevogarMFA, request: Request, usuario: Usuario = Depends(us
 
 @router.post("/substituir")
 def substituir(payload: RevogarMFA, request: Request, usuario: Usuario = Depends(usuario_atual_com_csrf),
-               db: Session = Depends(get_db), cookie: str | None = Cookie(None, alias=settings.SESSION_COOKIE_NAME)):
-    if not verificar_senha(payload.senha, usuario.senha_hash):
+               db: Session = Depends(get_db)):
+    if not confirmar_senha(request, usuario, payload.senha):
         raise HTTPException(401, detail="Senha inválida.")
     credencial = _confirmar(db, request, usuario, payload.codigo)
     segredo = pyotp.random_base32()
     credencial.segredo_cifrado, credencial.ativo, credencial.ultimo_passo = cifrar(segredo), False, -1
-    atual = _buscar_sessao(db, cookie)
+    atual = sessao_da_requisicao(request, db)
     for sessao in usuario.sessoes:
         if sessao.id != atual.id:
             sessao.revogada = True
+    _encerrar_no_neon(request, "revoke-other-sessions")
     atual.mfa_verificado_em = None
     registrar_auditoria(db, usuario, acao="mfa_substituicao_iniciada", entidade="usuarios", entidade_id=usuario.id)
     db.commit()

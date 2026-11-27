@@ -2,12 +2,13 @@ from datetime import datetime, UTC
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from config import CATALOGO_PRODUTOS_PADRAO
+from config import CATALOGO_PRODUTOS_PADRAO, settings
 from database.connection import get_db
 from models import Churrasco, Estabelecimento, ListaCompras, ListaComprasItem, Usuario
-from schemas.lista_compras import ListaComprasItemOut, ListaComprasItemUpdate, ListaComprasOut
-from services.auth import usuario_opcional, usuario_opcional_com_csrf
+from schemas.lista_compras import ListaAoVivoOut, ListaComprasItemOut, ListaComprasItemUpdate, ListaComprasOut
+from services.auth import usuario_atual_com_csrf, usuario_opcional, usuario_opcional_com_csrf
 from services.precos_referencia import obter_preco_referencia
+from services.realtime_neon import RealtimeIndisponivel, realtime_configurado, selar_consulta
 
 router = APIRouter(prefix="/api/lista-compras", tags=["lista-compras"])
 
@@ -94,6 +95,28 @@ def obter_lista_compras(churrasco_id: int, db: Session = Depends(get_db), usuari
         raise HTTPException(status_code=404, detail="Lista de compras não encontrada para este churrasco")
     _acesso(lista, usuario)
     return _out(lista)
+
+
+@router.post("/{churrasco_id}/ao-vivo", response_model=ListaAoVivoOut)
+def lista_ao_vivo(churrasco_id: int, db: Session = Depends(get_db), usuario: Usuario = Depends(usuario_atual_com_csrf)):
+    """Entrega a consulta selada do Neon Realtime para acompanhar a lista ao vivo.
+
+    Só o dono do churrasco recebe a consulta, e ela traz apenas os itens desta
+    lista. A tela renova o pedido antes de a consulta expirar (cerca de 60 s).
+    O middleware de segurança já marca as respostas de /api/ como no-store.
+    """
+    lista = db.query(ListaCompras).filter(ListaCompras.churrasco_id == churrasco_id).first()
+    if not lista:
+        raise HTTPException(status_code=404, detail="Lista de compras não encontrada para este churrasco")
+    if lista.churrasco.usuario_id != usuario.id:
+        raise HTTPException(status_code=403, detail="A lista ao vivo está disponível apenas para o dono do churrasco.")
+    if not realtime_configurado():
+        raise HTTPException(status_code=503, detail="Lista ao vivo indisponível no momento.")
+    try:
+        selada = selar_consulta("lista_compras_itens", {"lista_id": lista.id})
+    except RealtimeIndisponivel:
+        raise HTTPException(status_code=503, detail="Lista ao vivo indisponível no momento.") from None
+    return {"url": settings.NEON_REALTIME_URL, "consulta_selada": selada}
 
 
 @router.put("/item/{item_id}", response_model=ListaComprasItemOut)

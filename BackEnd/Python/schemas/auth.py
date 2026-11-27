@@ -54,6 +54,15 @@ class RedefinirSenhaIn(BaseModel):
     nova_senha: str = Field(min_length=10, max_length=128)
 
 
+class ConsentimentosIniciaisIn(BaseModel):
+    """Aceites do cadastro quando a conta nasce no Neon Auth."""
+    aceite_termos: bool = False
+    aceite_privacidade: bool = False
+    aceite_marketing: bool = False
+    aceite_analytics: bool = False
+    referral_codigo: str | None = Field(None, max_length=48, pattern=r"^[A-Za-z0-9_-]+$")
+
+
 class MensagemOut(BaseModel):
     mensagem: str
     dev_token: str | None = None
