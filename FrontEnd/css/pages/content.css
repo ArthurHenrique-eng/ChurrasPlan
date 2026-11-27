@@ -1,0 +1,549 @@
+/* Páginas de conteúdo e apoio ===============================================
+   convite.html (resposta do convidado), privacidade.html, termos.html,
+   cookies.html, offline.html e guias/*.html (gerados por
+   scripts/build_seo.py). Depende de css/ds.css. */
+
+.content-main {
+  padding-bottom: var(--s-8);
+}
+
+/* 1. Texto longo: documentos legais e guias ============================== */
+
+.prose-page {
+  width: min(var(--w-text), 100% - 2 * var(--gutter));
+  margin-inline: auto;
+  padding-top: clamp(32px, 6vw, 72px);
+}
+
+.prose-page h1 {
+  font-size: clamp(2.25rem, 1.5rem + 3vw, 3.75rem);
+  font-weight: 800;
+  font-stretch: 75%;
+  line-height: 0.98;
+  letter-spacing: -0.02em;
+}
+
+/* Versão e situação do documento, entre fios */
+.prose-lead {
+  margin-top: var(--s-5);
+  padding-block: var(--s-4);
+  border-block: 1px solid var(--border);
+  color: var(--text-2);
+  font-size: var(--fs-15);
+  line-height: 1.6;
+}
+
+.prose {
+  margin-top: var(--s-8);
+  line-height: 1.7;
+}
+
+.prose h2 {
+  margin: var(--s-10) 0 var(--s-3);
+  font-size: var(--fs-24);
+  font-stretch: 85%;
+}
+
+.prose > h2:first-child {
+  margin-top: 0;
+}
+
+.prose p + p {
+  margin-top: 1em;
+}
+
+.prose ul,
+.prose ol {
+  margin: var(--s-3) 0 0;
+  padding-left: 1.3em;
+}
+
+.prose li + li {
+  margin-top: 0.4em;
+}
+
+.prose li::marker {
+  color: var(--brasa-600);
+}
+
+.prose * + ul,
+.prose ul + p {
+  margin-top: var(--s-3);
+}
+
+/* Outros documentos, ao fim do texto */
+.prose-related {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-1) var(--s-5);
+  margin-top: var(--s-12);
+  padding-top: var(--s-5);
+  border-top: 2px solid var(--carvao-900);
+}
+
+.prose-related > p {
+  width: 100%;
+  color: var(--text-3);
+  font-size: var(--fs-13);
+}
+
+.prose-related .text-button {
+  margin-left: -4px;
+}
+
+/* Preferência de métricas (cookies.html) */
+.prose-panel {
+  margin-top: var(--s-10);
+  padding: var(--s-6);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  box-shadow: var(--sh-1);
+}
+
+.prose-panel h2 {
+  font-size: var(--fs-20);
+}
+
+.prose-panel p {
+  margin-top: var(--s-2);
+  color: var(--text-2);
+}
+
+.prose-panel .btn {
+  margin-top: var(--s-5);
+}
+
+/* 2. Guias ================================================================ */
+
+.guide-lead {
+  margin-top: var(--s-5);
+  color: var(--text-2);
+  font-size: var(--fs-18);
+  line-height: 1.65;
+}
+
+/* Exemplo calculado: a comanda do ChurrasPlan dentro do guia */
+.guide-example {
+  margin-top: var(--s-10);
+}
+
+.guide-example .ticket {
+  border-top: 6px solid transparent;
+  border-image: var(--grill) 1;
+}
+
+.guide-example h2 {
+  font-size: var(--fs-20);
+  font-stretch: 88%;
+}
+
+.guide-example__params {
+  margin-top: var(--s-2);
+  color: var(--text-2);
+  font-size: var(--fs-15);
+}
+
+.guide-example__total {
+  display: block;
+  margin-top: var(--s-4);
+  color: var(--carvao-950);
+  font-size: clamp(2.5rem, 2rem + 2vw, 3.25rem);
+  font-weight: 800;
+  font-stretch: 75%;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.guide-example__total small {
+  display: block;
+  margin-top: 6px;
+  color: var(--text-2);
+  font-size: var(--fs-14);
+  font-weight: 550;
+  font-stretch: 100%;
+}
+
+.guide-example table {
+  margin-top: var(--s-5);
+  font-variant-numeric: tabular-nums;
+}
+
+.guide-example td:last-child,
+.guide-example th:last-child {
+  text-align: right;
+}
+
+.guide-example__note {
+  margin-top: var(--s-4);
+  color: var(--text-3);
+  font-size: var(--fs-13);
+  line-height: 1.5;
+}
+
+.guide-cta {
+  margin-top: var(--s-8);
+}
+
+.guide-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
+  gap: 0 var(--s-6);
+  margin: var(--s-4) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.guide-list li {
+  margin: 0;
+  border-top: 1px solid var(--border);
+}
+
+.guide-list a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  min-height: 52px;
+  padding: var(--s-3) 0;
+  color: var(--text);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.guide-list a::after {
+  content: "";
+  flex: none;
+  width: 16px;
+  height: 16px;
+  background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m9 6 6 6-6 6'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m9 6 6 6-6 6'/%3E%3C/svg%3E") center / contain no-repeat;
+  opacity: 0.5;
+  transition: transform var(--t-fast) var(--ease), opacity var(--t-fast) var(--ease);
+}
+
+.guide-list a:hover {
+  color: var(--brasa-700);
+}
+
+.guide-list a:hover::after {
+  opacity: 1;
+  transform: translateX(2px);
+}
+
+.guide-more {
+  margin-top: var(--s-12);
+}
+
+.guide-more h2 {
+  font-size: var(--fs-20);
+}
+
+/* 3. Convite ============================================================== */
+
+.invite-topbar .site-header__inner {
+  justify-content: space-between;
+}
+
+.invite-layout {
+  display: grid;
+  gap: var(--s-8);
+  width: min(var(--w-page), 100% - 2 * var(--gutter));
+  margin-inline: auto;
+  padding-top: clamp(28px, 5vw, 64px);
+}
+
+@media (min-width: 980px) {
+  .invite-layout {
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+    align-items: start;
+    gap: var(--s-16);
+  }
+
+  .invite-intro {
+    position: sticky;
+    top: calc(var(--header-h) + var(--s-8));
+  }
+}
+
+.invite-intro h1 {
+  max-width: 13ch;
+  font-size: clamp(2.375rem, 1.6rem + 3.4vw, 4rem);
+  font-weight: 800;
+  font-stretch: 75%;
+  line-height: 0.98;
+  letter-spacing: -0.02em;
+}
+
+.invite-intro p {
+  max-width: 44ch;
+  margin-top: var(--s-4);
+  color: var(--text-2);
+  font-size: var(--fs-18);
+  line-height: 1.6;
+}
+
+.invite-ticket {
+  padding-top: var(--s-6);
+  border-top: 6px solid transparent;
+  border-image: var(--grill) 1;
+}
+
+/* Cabeçalho da comanda: nome do churrasco e dados do evento (js/convite.js) */
+.invite-event {
+  padding-bottom: var(--s-5);
+  border-bottom: 1px dashed var(--border-strong);
+}
+
+.invite-event__title {
+  margin-top: var(--s-1);
+  font-size: clamp(1.625rem, 1.3rem + 1.4vw, 2.125rem);
+  font-weight: 800;
+  font-stretch: 78%;
+  line-height: 1.05;
+}
+
+.invite-facts {
+  display: grid;
+  gap: 4px;
+  margin: var(--s-3) 0 0;
+  padding: 0;
+  list-style: none;
+  color: var(--text-2);
+  font-size: var(--fs-15);
+}
+
+.invite-facts li {
+  margin: 0;
+}
+
+.invite-facts li:first-child {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.invite-event__text {
+  margin-top: var(--s-3);
+  color: var(--text-2);
+}
+
+.invite-loading {
+  display: grid;
+  gap: var(--s-2);
+}
+
+.invite-loading p {
+  margin-top: var(--s-2);
+  color: var(--text-3);
+  font-size: var(--fs-14);
+}
+
+.invite-form {
+  display: grid;
+  gap: var(--s-5);
+  padding-top: var(--s-5);
+}
+
+/* Vou / Talvez / Não vou */
+.invite-choice {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.invite-choice legend {
+  margin-bottom: 6px;
+  padding: 0;
+  color: var(--text);
+  font-size: var(--fs-14);
+  font-weight: 600;
+}
+
+.segmented-response {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--s-2);
+}
+
+.segmented-response label {
+  position: relative;
+  display: block;
+  cursor: pointer;
+}
+
+/* O rádio continua focável pelo teclado; o clique vai pelo rótulo */
+.segmented-response input {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.segmented-response span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 0 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--text);
+  font-size: var(--fs-15);
+  font-weight: 650;
+  text-align: center;
+  transition: background-color var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
+}
+
+.segmented-response label:hover span {
+  background: var(--cinza-100);
+}
+
+.segmented-response input:checked + span {
+  border-color: var(--brasa-600);
+  background: var(--brasa-50);
+  color: var(--brasa-800);
+  box-shadow: inset 0 0 0 1px var(--brasa-600);
+}
+
+.segmented-response input:focus-visible + span {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* Preferências e restrições (recolhível) */
+.invite-details {
+  border-top: 1px solid var(--border);
+}
+
+.invite-details > summary {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 10px;
+  padding: var(--s-4) 32px 0 0;
+  color: var(--text);
+  font-weight: 650;
+  cursor: pointer;
+  list-style: none;
+}
+
+.invite-details > summary::-webkit-details-marker {
+  display: none;
+}
+
+.invite-details > summary small {
+  color: var(--text-3);
+  font-size: var(--fs-13);
+  font-weight: 450;
+}
+
+.invite-details > summary::after {
+  content: "";
+  position: absolute;
+  right: 4px;
+  top: calc(var(--s-4) + 2px);
+  width: 18px;
+  height: 18px;
+  background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") center / contain no-repeat;
+  transition: transform var(--t) var(--ease);
+}
+
+.invite-details[open] > summary::after {
+  transform: rotate(180deg);
+}
+
+.invite-details > summary:hover {
+  color: var(--brasa-700);
+}
+
+.invite-details__content {
+  display: grid;
+  gap: var(--s-4);
+  padding-top: var(--s-4);
+}
+
+.rsvp-checks {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
+  gap: var(--s-3) var(--s-5);
+}
+
+.rsvp-checks .legal-check:has(input:disabled) {
+  color: var(--text-3);
+  cursor: not-allowed;
+}
+
+.invite-form > .btn {
+  margin-top: var(--s-1);
+}
+
+.invite-ticket .mensagem {
+  margin: var(--s-5) 0 0;
+}
+
+.invite-note {
+  margin-top: var(--s-5);
+  padding-top: var(--s-4);
+  border-top: 1px solid var(--cinza-150);
+  color: var(--text-3);
+  font-size: var(--fs-13);
+  line-height: 1.5;
+}
+
+/* 4. Sem conexão ========================================================== */
+
+.offline-page {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: var(--s-8) var(--gutter);
+}
+
+.offline-card {
+  display: grid;
+  justify-items: start;
+  gap: var(--s-4);
+  width: min(100%, 460px);
+}
+
+.offline-card img {
+  width: 56px;
+  height: auto;
+}
+
+.offline-card h1 {
+  font-size: clamp(2rem, 1.6rem + 2vw, 2.75rem);
+  font-weight: 800;
+  font-stretch: 75%;
+  line-height: 1;
+}
+
+.offline-card p {
+  color: var(--text-2);
+}
+
+.offline-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-3) var(--s-5);
+  margin-top: var(--s-2);
+}
+
+@media print {
+  .prose-related,
+  .prose-panel,
+  .guide-cta {
+    display: none !important;
+  }
+}

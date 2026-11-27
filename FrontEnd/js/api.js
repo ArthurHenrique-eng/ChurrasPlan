@@ -1,4 +1,16 @@
 const TEMPO_LIMITE_API_MS = 15000;
+// No plano gratuito do Render, a API dorme depois de 15 minutos sem uso e leva
+// cerca de um minuto para voltar. Nesse intervalo o proxy segura a requisição
+// ou responde com erro. Ações como o login esperam a API responder em
+// /api/health antes de enviar os dados.
+const TEMPO_MAXIMO_ACORDAR_API_MS = 90000;
+const TEMPO_TENTATIVA_SAUDE_MS = 20000;
+const INTERVALO_TENTATIVAS_SAUDE_MS = 3000;
+// O Render só desliga a API depois de 15 minutos sem tráfego, então uma
+// resposta recente dispensa a checagem.
+const API_ACORDADA_POR_MS = 5 * 60 * 1000;
+let apiRespondeuEm = 0;
+let esperaApiAcordar = null;
 const CAMPOS_DATA_UTC = new Set(["criado_em", "atualizado_em", "ultimo_login_em", "email_verificado_em", "data_evento", "periodo_fim_em", "sincronizado_em", "expira_em", "verificado_em", "inicio_em", "fim_em", "tolerancia_ate", "quando"]);
 function normalizarDatasServidor(valor, chave = "") {
     if (typeof valor === "string" && CAMPOS_DATA_UTC.has(chave) && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?$/.test(valor)) return valor + "Z";
@@ -11,6 +23,68 @@ function lerCookie(nome) {
     const prefixo = `${encodeURIComponent(nome)}=`;
     const parte = document.cookie.split(";").map((item) => item.trim()).find((item) => item.startsWith(prefixo));
     return parte ? decodeURIComponent(parte.slice(prefixo.length)) : null;
+}
+
+// Converte o "detail" da API em texto para a interface. O corpo completo
+// continua disponível em erro.body para quem precisar do código do erro.
+function mensagemErroApi(detalhe) {
+    if (typeof detalhe === "string") return detalhe;
+    if (Array.isArray(detalhe)) return "Alguns dados enviados não são válidos. Confira e tente novamente.";
+    if (detalhe && typeof detalhe === "object") {
+        if (typeof detalhe.mensagem === "string" && detalhe.mensagem) return detalhe.mensagem;
+        if (detalhe.codigo === "LIMITE_MEMBROS_ATINGIDO") return "O limite de membros do plano foi atingido.";
+        if (detalhe.codigo === "RECURSO_PLANO_NECESSARIO") return "Este recurso não está incluído no plano atual.";
+    }
+    return JSON.stringify(detalhe);
+}
+
+function erroSemConexaoApi(causa) {
+    const rede = new Error("Não foi possível conectar à API do ChurrasPlan.");
+    if (causa) rede.cause = causa;
+    return rede;
+}
+
+async function sondarApi() {
+    const limite = Date.now() + TEMPO_MAXIMO_ACORDAR_API_MS;
+    while (Date.now() < limite) {
+        if (navigator.onLine === false) throw erroSemConexaoApi();
+        const controller = new AbortController();
+        const timer = window.setTimeout(() => controller.abort(), Math.min(TEMPO_TENTATIVA_SAUDE_MS, Math.max(1000, limite - Date.now())));
+        try {
+            // O parâmetro evita que um cache no caminho responda pela API dormindo.
+            const resposta = await fetch(`${API_BASE_URL}/api/health?t=${Date.now()}`, {
+                headers: { Accept: "application/json" },
+                cache: "no-store",
+                credentials: "omit",
+                signal: controller.signal,
+            });
+            // Enquanto acorda, o proxy pode devolver 502/503/504 ou uma página HTML.
+            const corpo = await resposta.json().catch(() => null);
+            if (resposta.ok && corpo?.status === "ok") {
+                apiRespondeuEm = Date.now();
+                return;
+            }
+        } catch (erro) {
+            // Sem rede ou API inacessível (TypeError) falha na hora, como antes.
+            // Um aborto aqui é só o tempo desta tentativa: tenta de novo.
+            if (erro instanceof TypeError) throw erroSemConexaoApi(erro);
+        } finally {
+            window.clearTimeout(timer);
+        }
+        const restante = limite - Date.now();
+        if (restante > 0) await new Promise((resolve) => window.setTimeout(resolve, Math.min(INTERVALO_TENTATIVAS_SAUDE_MS, restante)));
+    }
+    if (typeof ChurrasPlanTelemetria !== "undefined") ChurrasPlanTelemetria.registrar("timeout_api");
+    const erro = new Error("O servidor do ChurrasPlan não respondeu. Tente novamente em alguns minutos.");
+    erro.status = 503;
+    throw erro;
+}
+
+/** Resolve quando a API está respondendo; espera até 90 s se ela estiver acordando. */
+function aguardarApiDisponivel() {
+    if (Date.now() - apiRespondeuEm < API_ACORDADA_POR_MS) return Promise.resolve();
+    if (!esperaApiAcordar) esperaApiAcordar = sondarApi().finally(() => { esperaApiAcordar = null; });
+    return esperaApiAcordar;
 }
 
 async function requisitar(caminho, opcoes = {}) {
@@ -44,6 +118,9 @@ async function requisitar(caminho, opcoes = {}) {
 
         let corpo = null;
         try { corpo = await resposta.json(); } catch { /* resposta sem JSON */ }
+        // JSON abaixo de 500 vem da própria API (um 401 também conta). Erros do
+        // proxy e a página de espera do Render não marcam a API como acordada.
+        if (resposta.status < 500 && (corpo !== null || resposta.status === 204)) apiRespondeuEm = Date.now();
 
         if (!resposta.ok) {
             const detalhe = corpo && corpo.detail ? corpo.detail : `Erro ${resposta.status}`;
@@ -51,7 +128,7 @@ async function requisitar(caminho, opcoes = {}) {
                 const next = window.location.pathname.split("/").pop() + window.location.search;
                 window.location.assign("seguranca.html?next=" + encodeURIComponent(next));
             }
-            const erro = new Error(typeof detalhe === "string" ? detalhe : JSON.stringify(detalhe));
+            const erro = new Error(mensagemErroApi(detalhe));
             erro.status = resposta.status;
             erro.body = corpo;
             throw erro;
@@ -64,11 +141,7 @@ async function requisitar(caminho, opcoes = {}) {
             timeout.status = 408;
             throw timeout;
         }
-        if (erro instanceof TypeError) {
-            const rede = new Error("Não foi possível conectar à API do ChurrasPlan.");
-            rede.cause = erro;
-            throw rede;
-        }
+        if (erro instanceof TypeError) throw erroSemConexaoApi(erro);
         throw erro;
     } finally {
         window.clearTimeout(timer);

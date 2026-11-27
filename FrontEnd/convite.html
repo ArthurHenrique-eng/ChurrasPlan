@@ -1,69 +1,62 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
-  <head>
-    <meta charset="utf-8"/>
-    <meta content="width=device-width,initial-scale=1" name="viewport"/>
-    <title>Convite — ChurrasPlan</title>
-    <link href="favicon.svg" rel="icon" type="image/svg+xml"/>
-    <link href="css/unified-core.css" rel="stylesheet"/>
-    <link href="css/integracao-v3.css" rel="stylesheet"/>
-    <link href="css/production-v63.css" rel="stylesheet"/>
-    <meta name="theme-color" content="#6f7c59">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="mobile-web-app-capable" content="yes">
-    <link rel="manifest" href="manifest.webmanifest">
-    <link rel="apple-touch-icon" href="assets/pwa/icon-192.png">
-  <link rel="stylesheet" href="css/saas.css">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#a62210">
 <meta name="robots" content="noindex,nofollow">
+<title>Convite — ChurrasPlan</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="assets/pwa/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="stylesheet" href="css/ds.css">
+<link rel="stylesheet" href="css/pages/content.css">
 </head>
-  <body class="account-page invite-public-page">
-    <a class="skip-link" href="#main">Pular para o conteúdo</a>
-    <main id="main" class="account-shell invite-public-shell">
-      <header class="simple-topbar invite-public-topbar">
-        <a class="home-brand" href="index.html">
-          <img alt="" class="home-logo-icon" src="assets/logo-icon.png"/>
-          <img alt="ChurrasPlan" class="home-wordmark" src="assets/logo-wordmark.png"/>
-        </a>
-        <span class="invite-public-badge">Convite</span>
-      </header>
+<body class="invite-page">
+<a class="skip-link" href="#main">Pular para o conteúdo</a>
+<header class="site-header invite-topbar">
+  <div class="site-header__inner">
+    <a class="brand-lockup" href="index.html" aria-label="ChurrasPlan, página inicial">
+      <img class="brand-lockup__icon" src="assets/logo-icon-96.webp" alt="" width="38" height="36">
+      <img class="brand-lockup__wordmark" src="assets/logo-wordmark-320.webp" alt="ChurrasPlan" width="132" height="20">
+    </a>
+    <span class="status-pill">Convite</span>
+  </div>
+</header>
 
-      <section class="invite-public-intro">
-        <span class="eyebrow"><span></span>CHURRASPLAN CONVIDADOS</span>
-        <h1>Você foi convidado para um churrasco.</h1>
-        <p>Confirme sua presença e informe preferências alimentares para ajudar o organizador a planejar melhor.</p>
-      </section>
+<main id="main" class="content-main">
+  <div class="invite-layout">
+    <section class="invite-intro" aria-labelledby="convite-titulo">
+      <h1 id="convite-titulo">Você foi convidado para um churrasco.</h1>
+      <p>Confirme sua presença e informe preferências alimentares para ajudar o organizador a planejar melhor.</p>
+    </section>
 
-      <section class="auth-card rsvp-card invite-public-card" id="convite-card">
-        <div class="rsvp-event invite-event-card" id="convite-evento" aria-live="polite">
+    <div class="ticket-shadow">
+      <section class="ticket invite-ticket" id="convite-card" aria-label="Convite e resposta">
+        <div class="invite-event" id="convite-evento" aria-live="polite">
           <div class="invite-loading">
-            <strong>Carregando convite...</strong>
-            <span>Buscando os dados do evento.</span>
+            <span class="skeleton skeleton--title" aria-hidden="true"></span>
+            <span class="skeleton skeleton--line" aria-hidden="true"></span>
+            <p><strong>Carregando convite...</strong> Buscando os dados do evento.</p>
           </div>
         </div>
 
-        <form class="auth-form invite-rsvp-form" id="rsvp-form" hidden>
+        <form class="invite-form" id="rsvp-form" hidden>
           <div class="campo">
             <label for="rsvp-nome">Seu nome</label>
-            <input autocomplete="name" id="rsvp-nome" maxlength="120" required/>
+            <input autocomplete="name" id="rsvp-nome" maxlength="120" required>
           </div>
 
-          <div class="campo">
-            <label>Você vai?</label>
+          <fieldset class="invite-choice">
+            <legend>Você vai?</legend>
             <div class="segmented-response">
-              <label>
-                <input name="resposta" required type="radio" value="confirmado"/>
-                <span>Vou</span>
-              </label>
-              <label>
-                <input name="resposta" type="radio" value="talvez"/>
-                <span>Talvez</span>
-              </label>
-              <label>
-                <input name="resposta" type="radio" value="nao"/>
-                <span>Não vou</span>
-              </label>
+              <label><input name="resposta" required type="radio" value="confirmado"><span>Vou</span></label>
+              <label><input name="resposta" type="radio" value="talvez"><span>Talvez</span></label>
+              <label><input name="resposta" type="radio" value="nao"><span>Não vou</span></label>
             </div>
-          </div>
+          </fieldset>
 
           <div class="campo">
             <label for="rsvp-tipo">Tipo de convidado</label>
@@ -73,52 +66,55 @@
             </select>
           </div>
 
-          <details class="guest-details">
-            <summary>
-              <span>Preferências e restrições</span>
-              <small>opcional</small>
-            </summary>
-            <div class="guest-details__content">
+          <details class="invite-details">
+            <summary><span>Preferências e restrições</span><small>opcional</small></summary>
+            <div class="invite-details__content">
               <div class="rsvp-checks">
-                <label><input id="rsvp-alcool" type="checkbox"/> Consome bebida alcoólica</label>
-                <label><input id="rsvp-vegetariano" type="checkbox"/> Vegetariano</label>
-                <label><input id="rsvp-vegano" type="checkbox"/> Vegano</label>
-                <label><input id="rsvp-sem-bovina" type="checkbox"/> Não come carne bovina</label>
-                <label><input id="rsvp-sem-suina" type="checkbox"/> Não come carne suína</label>
-                <label><input id="rsvp-lactose" type="checkbox"/> Intolerância à lactose</label>
+                <label class="legal-check"><input id="rsvp-alcool" type="checkbox"><span>Consome bebida alcoólica</span></label>
+                <label class="legal-check"><input id="rsvp-vegetariano" type="checkbox"><span>Vegetariano</span></label>
+                <label class="legal-check"><input id="rsvp-vegano" type="checkbox"><span>Vegano</span></label>
+                <label class="legal-check"><input id="rsvp-sem-bovina" type="checkbox"><span>Não come carne bovina</span></label>
+                <label class="legal-check"><input id="rsvp-sem-suina" type="checkbox"><span>Não come carne suína</span></label>
+                <label class="legal-check"><input id="rsvp-lactose" type="checkbox"><span>Intolerância à lactose</span></label>
               </div>
-              <div class="campo" style="margin-top:14px">
+              <div class="campo">
                 <label for="rsvp-alergias">Alergias</label>
                 <textarea id="rsvp-alergias" maxlength="2000" rows="2" placeholder="Ex.: amendoim, camarão..."></textarea>
               </div>
-              <div class="campo" style="margin-top:10px">
+              <div class="campo">
                 <label for="rsvp-outras">Outras restrições</label>
                 <textarea id="rsvp-outras" maxlength="2000" rows="2"></textarea>
               </div>
             </div>
           </details>
 
-          <button class="botao botao--primario invite-submit" type="submit">Enviar resposta</button>
+          <button class="btn btn--primary btn--lg btn--block" type="submit">Enviar resposta</button>
         </form>
 
         <div class="mensagem auth-message" id="convite-mensagem" style="display:none" role="status" aria-live="polite"></div>
 
-        <div class="invite-public-footer">
-          <small>Seu nome e suas preferências são compartilhados com o organizador deste churrasco.</small>
-        </div>
+        <p class="invite-note">Seu nome e suas preferências são compartilhados com o organizador deste churrasco.</p>
       </section>
+    </div>
+  </div>
 
-      <noscript>
-        <div class="mensagem mensagem--erro" style="display:block">
-          Ative o JavaScript para abrir e responder este convite.
-        </div>
-      </noscript>
-    </main>
+  <noscript>
+    <div class="invite-layout">
+      <div class="mensagem mensagem--erro" style="display:block">Ative o JavaScript para abrir e responder este convite.</div>
+    </div>
+  </noscript>
+</main>
 
-    <script src="js/config.js"></script>
-    <script src="js/api.js"></script><script src="js/telemetria.js"></script>
-    <script src="js/convite.js"></script>
-    <script src="js/pwa.js"></script>
-  <script src="js/analytics.js"></script>
+<footer class="app-footer-mini">
+  <span>© 2026 ChurrasPlan</span>
+  <nav aria-label="Links legais"><a href="privacidade.html">Privacidade</a><a href="termos.html">Termos</a><a href="cookies.html">Cookies</a></nav>
+</footer>
+
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script src="js/telemetria.js"></script>
+<script src="js/convite.js"></script>
+<script src="js/pwa.js"></script>
+<script src="js/analytics.js"></script>
 </body>
 </html>

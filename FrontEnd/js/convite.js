@@ -125,9 +125,9 @@ function preencherRSVP(form, dados) {
 function mostrarFalhaConvite(mensagem) {
     const evento = document.getElementById("convite-evento");
     evento.innerHTML = `
-        <span class="eyebrow"><span></span>CONVITE INDISPONÍVEL</span>
-        <h1>Não foi possível abrir este convite.</h1>
-        <p>${conviteEscaparHTML(mensagem)}</p>
+        <p class="ticket__label">Convite indisponível</p>
+        <h2 class="invite-event__title">Não foi possível abrir este convite.</h2>
+        <p class="invite-event__text">${conviteEscaparHTML(mensagem)}</p>
     `;
     conviteMensagem(
         "Confira se o link foi copiado por completo e se o servidor do ChurrasPlan está acessível.",
@@ -164,9 +164,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         ].filter(Boolean);
 
         document.getElementById("convite-evento").innerHTML = `
-            <span class="eyebrow"><span></span>VOCÊ FOI CONVIDADO</span>
-            <h1>${conviteEscaparHTML(c.nome_churrasco || "Churrasco")}</h1>
-            <p>${partes.map(conviteEscaparHTML).join(" · ")}</p>
+            <p class="ticket__label">Convite</p>
+            <h2 class="invite-event__title">${conviteEscaparHTML(c.nome_churrasco || "Churrasco")}</h2>
+            <ul class="invite-facts">${partes.map((parte) => `<li>${conviteEscaparHTML(parte)}</li>`).join("")}</ul>
         `;
 
         form.hidden = false;

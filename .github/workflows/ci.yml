@@ -212,7 +212,7 @@ jobs:
         run: |
           docker run -d --rm --name churrasplan-frontend-headers -p 8080:80 --add-host backend:127.0.0.1 churrasplan-frontend-ci
           python scripts/wait_http.py http://127.0.0.1:8080/index.html
-          for asset in /js/seguranca.js /css/saas.css /assets/logo-wordmark.png /manifest.webmanifest /sw.js; do
+          for asset in /js/seguranca.js /css/ds.css /assets/logo-wordmark-320.webp /fonts/archivo-latin-var.woff2 /manifest.webmanifest /sw.js; do
             curl -fsSI "http://127.0.0.1:8080$asset" > /tmp/churrasplan-headers.txt
             grep -qi '^Content-Security-Policy:' /tmp/churrasplan-headers.txt
             grep -qi '^X-Content-Type-Options: nosniff' /tmp/churrasplan-headers.txt

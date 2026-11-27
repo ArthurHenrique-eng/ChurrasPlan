@@ -1,3 +1,12 @@
+// Rótulos de exibição para valores internos da API (somente apresentação).
+const ROTULOS_PAPEL = { usuario: "Conta pessoal", parceiro: "Parceiro", admin: "Administrador" };
+const ROTULOS_STATUS_ASSINATURA = {
+    sem_assinatura: "sem assinatura", active: "ativa", trialing: "em período de teste",
+    past_due: "pagamento pendente", canceled: "cancelada", unpaid: "não paga",
+    incomplete: "incompleta", incomplete_expired: "expirada", paused: "pausada",
+};
+function rotuloExibicao(mapa, valor) { return mapa[valor] || String(valor || "").replace(/_/g, " "); }
+
 function fmtData(valor) { if (!valor) return "Sem data definida"; const d = new Date(valor); return Number.isNaN(d.getTime()) ? "Sem data definida" : d.toLocaleString("pt-BR", { dateStyle: "medium", timeStyle: "short" }); }
 
 function criarDialogExclusaoConta() {
@@ -7,7 +16,7 @@ function criarDialogExclusaoConta() {
     dialog.className = "danger-dialog";
     dialog.innerHTML = `<form method="dialog" class="price-dialog__box danger-dialog__box">
         <button value="cancel" class="dialog-close" aria-label="Fechar">×</button>
-        <span class="eyebrow"><span></span>EXCLUSÃO DEFINITIVA</span>
+        <span class="eyebrow"><span></span>Exclusão definitiva</span>
         <h2>Excluir sua conta?</h2>
         <p>Seus churrascos privados, sessões e dados pessoais vinculados à conta serão removidos. Esta ação não pode ser desfeita.</p>
         <label class="campo"><span>Confirme sua senha</span><input id="exclusao-senha" type="password" autocomplete="current-password" required minlength="8"></label>
@@ -74,7 +83,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const usuario = await ChurrasPlanAuth.usuarioAtual().catch(() => null);
     if (!usuario) { irPara(ChurrasPlanAuth.urlLogin("minha-conta.html" + location.search)); return; }
     document.getElementById("conta-saudacao").textContent = `Olá, ${usuario.nome.split(" ")[0]}.`;
-    document.getElementById("conta-perfil").innerHTML = `<strong>${escaparHTML(usuario.nome)}</strong><p class="texto-suave">${escaparHTML(usuario.email)}</p><div class="restriction-chips" style="margin-top:10px"><span>${escaparHTML(usuario.papel)}</span>${usuario.email_verificado_em ? '<span>e-mail verificado</span>' : '<span>verificação pendente</span>'}</div>`;
+    document.getElementById("conta-perfil").innerHTML = `<strong>${escaparHTML(usuario.nome)}</strong><p class="texto-suave">${escaparHTML(usuario.email)}</p><div class="restriction-chips"><span class="is-neutral">${escaparHTML(rotuloExibicao(ROTULOS_PAPEL, usuario.papel))}</span>${usuario.email_verificado_em ? '<span>E-mail verificado</span>' : '<span class="is-warn">Verificação pendente</span>'}</div>`;
 
     try {
         let assinatura = await ChurrasPlanAPI.minhaAssinatura();
@@ -105,11 +114,12 @@ document.addEventListener("DOMContentLoaded", async () => {
         const premiumAtivo = assinatura.beneficios_ativos === true;
         const status = assinatura.status || "sem_assinatura";
         document.getElementById("conta-plano").innerHTML =
-            `<strong>Plano pessoal: ${escaparHTML(premiumAtivo ? "Premium" : "Gratuito")}</strong>
+            `<span class="plan-card__label">Plano pessoal</span>
+            <strong class="plan-card__name">${escaparHTML(premiumAtivo ? "Premium" : "Gratuito")}</strong>
             <p>${premiumAtivo ? "Premium de teste ativo, confirmado pela Stripe." : "Você pode conhecer o Premium e os planos comerciais."}</p>
-            <small>Status: ${escaparHTML(status)} · Pagamentos reais desativados.</small>
-            <div style="margin-top:12px"><a class="botao botao--secundario" href="planos.html">Ver planos</a>
-            ${premiumAtivo ? '<button type="button" id="conta-portal-stripe" class="botao botao--secundario">Gerenciar assinatura</button>' : '<button type="button" id="conta-sincronizar-stripe" class="botao botao--secundario">Verificar pagamento de teste</button>'}</div>`;
+            <small>Status: ${escaparHTML(rotuloExibicao(ROTULOS_STATUS_ASSINATURA, status))}. Pagamentos reais desativados.</small>
+            <div class="plan-card__actions"><a class="btn btn--secondary btn--sm" href="planos.html">Ver planos</a>
+            ${premiumAtivo ? '<button type="button" id="conta-portal-stripe" class="btn btn--secondary btn--sm">Gerenciar assinatura</button>' : '<button type="button" id="conta-sincronizar-stripe" class="btn btn--secondary btn--sm">Verificar pagamento de teste</button>'}</div>`;
         const sincronizar = document.getElementById("conta-sincronizar-stripe");
         if (sincronizar) sincronizar.onclick = async () => {
             sincronizar.disabled = true;
@@ -143,7 +153,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             const custo = c.custo_total_estimado == null
                 ? "sem preços cadastrados"
                 : `${formatarMoeda(c.custo_total_estimado)}${c.estimativa_precos_completa ? "" : " (parcial)"}`;
-            return `<article class="history-card"><div><h3>${escaparHTML(c.nome || "Churrasco")}</h3><p>${fmtData(c.data_evento)} · ${c.total_pessoas} pessoa(s) · ${custo}</p></div><div class="history-actions"><button class="botao botao--secundario" type="button" data-open="${c.id}">Abrir</button><button class="botao botao--primario" type="button" data-repeat="${c.id}">Repetir</button></div></article>`;
+            return `<article class="history-card"><div><h3>${escaparHTML(c.nome || "Churrasco")}</h3><p>${fmtData(c.data_evento)} · ${c.total_pessoas} pessoa(s) · ${custo}</p></div><div class="history-actions"><button class="btn btn--secondary btn--sm" type="button" data-open="${c.id}">Abrir</button><button class="btn btn--secondary btn--sm" type="button" data-repeat="${c.id}">Repetir</button></div></article>`;
         }).join("") : `<div class="empty-state">Você ainda não tem churrascos salvos. Quando criar um planejamento logado, ele aparecerá aqui.</div>`;
         lista.querySelectorAll("[data-open]").forEach((b) => b.onclick = () => abrirHistorico(b.dataset.open).catch((e) => mostrarMensagem(document.getElementById("conta-mensagem"), e.message, "erro")));
         lista.querySelectorAll("[data-repeat]").forEach((b) => b.onclick = () => repetirHistorico(b.dataset.repeat, b));
