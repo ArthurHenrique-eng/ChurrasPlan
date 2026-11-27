@@ -1,59 +1,157 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Administração — ChurrasPlan</title>
-  <link rel="icon" href="favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="css/unified-core.css">
-  <link rel="stylesheet" href="css/integracao-v3.css">
-  <link rel="stylesheet" href="css/production-v63.css">
-  <meta name="theme-color" content="#6f7c59">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="mobile-web-app-capable" content="yes">
-  <link rel="manifest" href="manifest.webmanifest">
-  <link rel="apple-touch-icon" href="assets/pwa/icon-192.png">
-<link rel="stylesheet" href="css/saas.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#a62210">
 <meta name="robots" content="noindex,nofollow">
+<title>Administração — ChurrasPlan</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="assets/pwa/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="preload" href="fonts/archivo-latin-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="css/ds.css">
+<link rel="stylesheet" href="css/pages/workspace.css">
 </head>
-<body class="account-page admin-page">
-  <a class="skip-link" href="#main">Pular para o conteúdo</a>
-  <main id="main" class="account-shell">
-    <header class="simple-topbar"><a class="home-brand" href="index.html"><img class="home-logo-icon" src="assets/logo-icon.png" alt=""><img class="home-wordmark" src="assets/logo-wordmark.png" alt="ChurrasPlan"></a><a class="text-button" href="minha-conta.html">Minha conta</a></header>
-    <section class="account-hero"><div><span class="eyebrow"><span></span>ADMINISTRAÇÃO</span><h1>Operação do ChurrasPlan.</h1><a href="operacao.html">Abrir indicadores SaaS, leads e alertas</a><p>Usuários, parceiros, moderação e auditoria de ações privilegiadas.</p></div></section>
-    <div class="mensagem" id="admin-mensagem" hidden></div>
-    <section class="admin-metrics" id="admin-metrics"><div class="empty-state">Carregando indicadores...</div></section>
-    <section class="account-section admin-section">
-      <div class="admin-section-head"><div><h2>Usuários</h2><p>Gerencie acesso sem expor senhas ou sessões.</p></div><input id="admin-busca" type="search" placeholder="Buscar nome ou e-mail" autocomplete="off"></div>
-      <div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Usuário</th><th>Papel</th><th>Status</th><th>Cadastro</th><th>Ações</th></tr></thead><tbody id="admin-usuarios"></tbody></table></div>
-    </section>
-    <section class="account-section admin-section">
-      <div class="admin-section-head"><div><h2>Cadastrar estabelecimento</h2><p>Cadastros feitos por administrador já entram como verificados. O endereço pode preencher as coordenadas automaticamente.</p></div></div>
-      <form class="account-form" id="admin-form-estabelecimento">
-        <label class="full">Nome<input id="admin-est-nome" required maxlength="150"></label>
-        <label>Tipo<select id="admin-est-tipo"><option value="mercado">Mercado</option><option value="supermercado">Supermercado</option><option value="acougue">Açougue</option><option value="atacarejo">Atacarejo</option></select></label>
-        <label>Cidade<input id="admin-est-cidade" maxlength="100"></label>
-        <label>Estado<input id="admin-est-estado" maxlength="2" placeholder="MG"></label>
-        <label>CEP<input id="admin-est-cep" maxlength="12"></label>
-        <label class="full">Endereço<input id="admin-est-endereco" maxlength="255" placeholder="Rua, número e bairro"></label>
-        <button class="botao botao--secundario full" id="admin-est-localizar" type="button">Localizar endereço e preencher coordenadas</button>
-        <label>Latitude<input id="admin-est-lat" type="text" inputmode="decimal" autocomplete="off" placeholder="-19,959383"></label>
-        <label>Longitude<input id="admin-est-lng" type="text" inputmode="decimal" autocomplete="off" placeholder="-44,011870"></label>
-        <button class="botao botao--primario full" type="submit">Cadastrar e verificar estabelecimento</button>
-      </form>
-    </section>
-    <section class="account-section admin-section">
-      <div class="admin-section-head"><div><h2>Estabelecimentos</h2><p>Somente parceiros verificados entram nas recomendações públicas.</p></div><label class="legal-check"><input id="admin-somente-pendentes" type="checkbox"><span>Somente pendentes</span></label></div>
-      <div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Estabelecimento</th><th>Local</th><th>Verificado</th><th>Ativo</th><th>Ações</th></tr></thead><tbody id="admin-estabelecimentos"></tbody></table></div>
-    </section>
-    <section class="account-section admin-section" aria-labelledby="admin-campanhas-titulo">
-      <h2 id="admin-campanhas-titulo">Revisão de campanhas comerciais</h2>
-      <p class="texto-suave">Aprovação exige oferta válida e estabelecimento verificado. Nenhuma aprovação ativa cobrança ou gera receita.</p>
-      <div id="admin-campanhas-pendentes" class="basket-table" aria-live="polite"></div>
-    </section>
-    <section class="account-section admin-section"><h2>Auditoria recente</h2><div class="audit-list" id="admin-auditoria"></div></section>
-  </main>
-  <script src="js/config.js"></script><script src="js/api.js"></script><script src="js/telemetria.js"></script><script src="js/script.js"></script><script src="js/auth-ui.js"></script><script src="js/admin.js"></script><script src="js/admin-campanhas.js"></script><script src="js/pwa.js"></script>
+<body class="app-page workspace-page admin-page">
+<a class="skip-link" href="#main">Pular para o conteúdo</a>
+<header class="app-bar">
+  <div class="app-bar__inner">
+    <a class="brand-lockup" href="index.html" aria-label="ChurrasPlan, página inicial">
+      <img class="brand-lockup__icon" src="assets/logo-icon-96.webp" alt="" width="34" height="32">
+      <img class="brand-lockup__wordmark" src="assets/logo-wordmark-320.webp" alt="ChurrasPlan" width="118" height="18">
+    </a>
+    <nav class="app-nav" aria-label="Navegação da administração">
+      <a href="admin.html">Administração</a>
+      <a href="operacao.html">Operação</a>
+      <a href="parceiro.html">Painel do parceiro</a>
+      <a href="minha-conta.html">Minha conta</a>
+    </nav>
+    <div class="app-bar__end">
+      <span id="auth-nav-slot"></span>
+    </div>
+  </div>
+</header>
+
+<main id="main" class="app-main workspace admin-shell">
+  <header class="page-header">
+    <div>
+      <p class="page-kicker">Administração</p>
+      <h1>Operação do ChurrasPlan.</h1>
+      <p>Usuários, parceiros, moderação e auditoria de ações privilegiadas.</p>
+    </div>
+    <div class="page-header__actions">
+      <a class="btn btn--secondary" href="operacao.html">Abrir indicadores SaaS, leads e alertas</a>
+    </div>
+  </header>
+
+  <div class="mensagem" id="admin-mensagem" data-toast hidden></div>
+
+  <section class="admin-metrics" id="admin-metrics" aria-label="Indicadores da plataforma">
+    <span class="skeleton skeleton--block admin-metric-skeleton" aria-hidden="true"></span>
+    <span class="skeleton skeleton--block admin-metric-skeleton" aria-hidden="true"></span>
+    <span class="skeleton skeleton--block admin-metric-skeleton" aria-hidden="true"></span>
+    <span class="skeleton skeleton--block admin-metric-skeleton" aria-hidden="true"></span>
+    <span class="skeleton skeleton--block admin-metric-skeleton" aria-hidden="true"></span>
+    <span class="skeleton skeleton--block admin-metric-skeleton" aria-hidden="true"></span>
+    <p class="sr-only">Carregando indicadores...</p>
+  </section>
+
+  <div class="app-layout app-layout--with-index">
+    <nav class="section-index" data-section-index aria-label="Seções da administração">
+      <p class="section-index__title">Nesta página</p>
+      <a href="#admin-secao-usuarios">Usuários</a>
+      <a href="#admin-secao-novo-estabelecimento">Novo estabelecimento</a>
+      <a href="#admin-secao-estabelecimentos">Estabelecimentos</a>
+      <a href="#admin-secao-campanhas">Campanhas</a>
+      <a href="#admin-secao-auditoria">Auditoria</a>
+    </nav>
+
+    <div class="app-content">
+      <section class="account-section admin-section" id="admin-secao-usuarios" aria-labelledby="admin-usuarios-titulo">
+        <div class="admin-section-head">
+          <div>
+            <div class="cartao__titulo"><span class="section-icon" data-icon="users"></span><h2 id="admin-usuarios-titulo">Usuários</h2></div>
+            <p>Gerencie acesso sem expor senhas ou sessões.</p>
+          </div>
+          <input id="admin-busca" type="search" placeholder="Buscar nome ou e-mail" autocomplete="off" aria-label="Buscar usuários por nome ou e-mail">
+        </div>
+        <div class="admin-table-wrap" tabindex="0" role="region" aria-labelledby="admin-usuarios-titulo">
+          <table class="admin-table">
+            <thead><tr><th>Usuário</th><th>Papel</th><th>Status</th><th>Cadastro</th><th>Ações</th></tr></thead>
+            <tbody id="admin-usuarios"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="account-section admin-section" id="admin-secao-novo-estabelecimento" aria-labelledby="admin-novo-est-titulo">
+        <div class="admin-section-head">
+          <div>
+            <div class="cartao__titulo"><span class="section-icon" data-icon="store"></span><h2 id="admin-novo-est-titulo">Cadastrar estabelecimento</h2></div>
+            <p>Cadastros feitos por administrador já entram como verificados. O endereço pode preencher as coordenadas automaticamente.</p>
+          </div>
+        </div>
+        <form class="account-form" id="admin-form-estabelecimento">
+          <label class="full">Nome<input id="admin-est-nome" required maxlength="150"></label>
+          <label>Tipo<select id="admin-est-tipo"><option value="mercado">Mercado</option><option value="supermercado">Supermercado</option><option value="acougue">Açougue</option><option value="atacarejo">Atacarejo</option></select></label>
+          <label>Cidade<input id="admin-est-cidade" maxlength="100"></label>
+          <label>Estado<input id="admin-est-estado" maxlength="2" placeholder="MG"></label>
+          <label>CEP<input id="admin-est-cep" maxlength="12" inputmode="numeric"></label>
+          <label class="full">Endereço<input id="admin-est-endereco" maxlength="255" placeholder="Rua, número e bairro"></label>
+          <button class="botao botao--secundario full" id="admin-est-localizar" type="button">Localizar endereço e preencher coordenadas</button>
+          <label>Latitude<input id="admin-est-lat" type="text" inputmode="decimal" autocomplete="off" placeholder="-19,959383"></label>
+          <label>Longitude<input id="admin-est-lng" type="text" inputmode="decimal" autocomplete="off" placeholder="-44,011870"></label>
+          <button class="botao botao--primario full" type="submit">Cadastrar e verificar estabelecimento</button>
+        </form>
+      </section>
+
+      <section class="account-section admin-section" id="admin-secao-estabelecimentos" aria-labelledby="admin-est-titulo">
+        <div class="admin-section-head">
+          <div>
+            <div class="cartao__titulo"><span class="section-icon" data-icon="shield"></span><h2 id="admin-est-titulo">Estabelecimentos</h2></div>
+            <p>Somente parceiros verificados entram nas recomendações públicas.</p>
+          </div>
+          <label class="legal-check admin-filter"><input id="admin-somente-pendentes" type="checkbox"><span>Somente pendentes</span></label>
+        </div>
+        <div class="admin-table-wrap" tabindex="0" role="region" aria-labelledby="admin-est-titulo">
+          <table class="admin-table">
+            <thead><tr><th>Estabelecimento</th><th>Local</th><th>Verificado</th><th>Ativo</th><th>Ações</th></tr></thead>
+            <tbody id="admin-estabelecimentos"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="account-section admin-section" id="admin-secao-campanhas" aria-labelledby="admin-campanhas-titulo">
+        <div class="cartao__titulo"><span class="section-icon" data-icon="sparkles"></span><h2 id="admin-campanhas-titulo">Revisão de campanhas comerciais</h2></div>
+        <p class="texto-suave">Aprovação exige oferta válida e estabelecimento verificado. Nenhuma aprovação ativa cobrança ou gera receita.</p>
+        <div id="admin-campanhas-pendentes" class="basket-table" aria-live="polite"></div>
+      </section>
+
+      <section class="account-section admin-section" id="admin-secao-auditoria" aria-labelledby="admin-auditoria-titulo">
+        <div class="cartao__titulo"><span class="section-icon" data-icon="history"></span><h2 id="admin-auditoria-titulo">Auditoria recente</h2></div>
+        <div class="audit-list" id="admin-auditoria"></div>
+      </section>
+    </div>
+  </div>
+</main>
+
+<footer class="app-footer-mini">
+  <span>© 2026 ChurrasPlan</span>
+  <nav aria-label="Links legais"><a href="privacidade.html">Privacidade</a><a href="termos.html">Termos</a><a href="cookies.html">Cookies</a></nav>
+</footer>
+
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script src="js/telemetria.js"></script>
+<script src="js/script.js"></script>
+<script src="js/auth-ui.js"></script>
+<script src="js/icons.js"></script>
+<script src="js/admin.js"></script>
+<script src="js/admin-campanhas.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/pwa.js"></script>
 <script src="js/analytics.js"></script>
 </body>
 </html>

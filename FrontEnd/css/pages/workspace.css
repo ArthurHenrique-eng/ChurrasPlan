@@ -607,6 +607,31 @@
   font-stretch: var(--semi-narrow);
 }
 
+.admin-section-head .cartao__titulo {
+  margin-bottom: var(--s-2);
+}
+
+.admin-section-head .cartao__titulo h2 {
+  margin-bottom: 0;
+}
+
+.admin-filter {
+  align-items: center;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.admin-metric-skeleton {
+  height: 96px;
+  margin: 0;
+  border-radius: var(--r-md);
+}
+
 .admin-section-head p {
   max-width: 62ch;
   color: var(--text-2);
@@ -707,10 +732,52 @@
 
 #fundador-limitacoes ul {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
   gap: 4px var(--s-5);
   margin-top: var(--s-2);
   padding-left: 1.1em;
+}
+
+#fundador-limitacoes li strong {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+#fundador-limitacoes > p {
+  margin-top: var(--s-3);
+}
+
+/* Indicadores do fundador: 2 colunas no celular e 4 no desktop (7 cartões, o de
+   texto ocupa 2 vagas e fecha a grade) */
+#fundador-metricas {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (min-width: 760px) {
+  #fundador-metricas {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+#fundador-metricas article.is-text {
+  grid-column: span 2;
+}
+
+/* Valor em texto (ex.: "Receita real") não usa o número condensado gigante */
+#fundador-metricas article.is-text h3 {
+  font-size: var(--fs-18);
+  font-stretch: 87.5%;
+  line-height: 1.25;
+  overflow-wrap: normal;
+}
+
+.task-item > div {
+  flex: 1 1 14rem;
+  min-width: 0;
+}
+
+.task-item > div span {
+  color: var(--text-3);
 }
 
 #operacao-alertas {
@@ -752,10 +819,90 @@
   }
 }
 
+.pro-col {
+  display: grid;
+  gap: var(--s-5);
+  min-width: 0;
+}
+
 .form-note {
   margin-top: var(--s-4);
   color: var(--text-3);
   font-size: var(--fs-13);
+}
+
+.pro-list > .empty-state {
+  padding: var(--s-6) var(--s-5);
+  font-size: var(--fs-14);
+}
+
+/* Cliente: nome e contato à esquerda, ação à direita */
+.client-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-2) var(--s-4);
+}
+
+.client-item > div {
+  min-width: 0;
+}
+
+.client-item > p,
+.client-item > div > p {
+  overflow-wrap: anywhere;
+}
+
+.client-item > button {
+  margin-top: 0;
+}
+
+.workspace button[data-excluir-cliente] {
+  border-color: transparent;
+  background: transparent;
+  color: var(--perigo-600);
+  box-shadow: none;
+}
+
+.workspace button[data-excluir-cliente]:hover {
+  background: var(--perigo-50);
+}
+
+/* Proposta: título + status, números lado a lado, ações */
+.proposal-item__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-2) var(--s-3);
+}
+
+.proposal-figures {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
+  gap: var(--s-3);
+  margin: var(--s-3) 0 0;
+  padding: var(--s-3) 0;
+  border-top: 1px dashed var(--border-strong);
+  border-bottom: 1px dashed var(--border-strong);
+}
+
+.proposal-figures dt {
+  color: var(--text-3);
+  font-size: var(--fs-13);
+  font-weight: 600;
+}
+
+.proposal-figures dd {
+  margin: 2px 0 0;
+  color: var(--carvao-950);
+  font-size: var(--fs-20);
+  font-weight: 800;
+  font-stretch: 75%;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
 }
 
 /* 8. Avisos flutuantes (js/ui.js recolhe após alguns segundos) ============== */
@@ -864,6 +1011,19 @@ body [data-toast].is-dismissed {
   .workspace .saas-card form > button {
     width: 100%;
     min-width: 0;
+    padding-top: 10px;
+    padding-bottom: 10px;
+    white-space: normal;
+  }
+
+  /* Tabelas em cartões: conteúdo na 2ª coluna, selos e botões no tamanho natural */
+  .admin-table td {
+    justify-items: start;
+    row-gap: 2px;
+  }
+
+  .admin-table td > small {
+    grid-column: 2;
   }
 
   .audit-list article {

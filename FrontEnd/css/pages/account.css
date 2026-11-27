@@ -856,13 +856,6 @@
   background: var(--cinza-100);
 }
 
-/* No celular, "Novo churrasco" continua no menu da conta; o cabeçalho cabe em uma linha */
-@media (max-width: 520px) {
-  .account-page .app-bar__end > .btn {
-    display: none;
-  }
-}
-
 @media (max-width: 600px) {
   .history-card {
     flex-direction: column;

@@ -719,6 +719,14 @@ table,
 
 }
 
+/* No celular, o atalho "Novo churrasco" sai do cabeçalho para a marca e a conta
+   caberem em uma linha; criar planejamento continua em Minha conta e na home. */
+@media (max-width: 520px) {
+  .app-bar__end > .btn {
+    display: none;
+  }
+}
+
 @media (max-width: 600px) {
   .save-state {
     display: none;
@@ -771,8 +779,14 @@ table,
 
 .app-layout {
   display: grid;
+  /* minmax(0, 1fr): tabelas largas rolam dentro do cartão em vez de alargar a página */
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--s-8);
   align-items: start;
+}
+
+.app-content {
+  min-width: 0;
 }
 
 @media (min-width: 1080px) {
@@ -1135,6 +1149,7 @@ svg.icon {
 
 .btn--block {
   width: 100%;
+  white-space: normal;
 }
 
 .btn:disabled,
@@ -1674,6 +1689,11 @@ details[open]::details-content {
 .badge--off {
   background: var(--cinza-100);
   color: var(--text-3);
+}
+
+.status-pill.is-danger {
+  background: var(--perigo-50);
+  color: var(--perigo-700);
 }
 
 .paid-tag,
