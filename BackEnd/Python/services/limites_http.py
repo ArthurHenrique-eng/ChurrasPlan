@@ -1,10 +1,11 @@
-"""Limite por IP e classe de operação, compartilhado entre processos MySQL."""
+"""Limite por IP e classe de operação, compartilhado entre processos pelo banco."""
 import time
 from collections import OrderedDict
 from threading import Lock
 from fastapi import Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from sqlalchemy.dialects.mysql import insert as mysql_insert
+from sqlalchemy.dialects.postgresql import insert as postgresql_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from config import settings
 from database.connection import get_db
@@ -44,7 +45,8 @@ def limitar_http(request: Request, db: Session = Depends(get_db)) -> None:
         stmt = mysql_insert(ContadorRequisicao).values(**valores)
         stmt = stmt.on_duplicate_key_update(quantidade=ContadorRequisicao.quantidade + 1)
     else:
-        stmt = sqlite_insert(ContadorRequisicao).values(**valores)
+        insert = postgresql_insert if db.bind.dialect.name == "postgresql" else sqlite_insert
+        stmt = insert(ContadorRequisicao).values(**valores)
         stmt = stmt.on_conflict_do_update(index_elements=["chave", "janela"], set_={"quantidade": ContadorRequisicao.quantidade + 1})
     db.execute(stmt)
     total = db.query(ContadorRequisicao.quantidade).filter_by(chave=chave, janela=janela).scalar()

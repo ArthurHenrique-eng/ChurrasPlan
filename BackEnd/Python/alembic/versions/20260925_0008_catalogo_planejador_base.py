@@ -146,7 +146,7 @@ def upgrade() -> None:
                         :categoria_id, NULL, 'generico', :slug, :nome,
                         :unidade_consumo, :unidade_venda, :venda_fracionada,
                         :incremento_venda, :quantidade_embalagem,
-                        :unidade_embalagem, 1
+                        :unidade_embalagem, TRUE
                     )
                     """
                 ),
@@ -167,7 +167,7 @@ def upgrade() -> None:
                         incremento_venda = :incremento_venda,
                         quantidade_embalagem = :quantidade_embalagem,
                         unidade_embalagem = :unidade_embalagem,
-                        ativo = 1
+                        ativo = TRUE
                     WHERE id = :id
                     """
                 ),

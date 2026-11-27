@@ -15,12 +15,32 @@ except ImportError:
     pass
 
 
+# Bancos suportados em produção, com o driver Python correspondente.
+DRIVERS_PRODUCAO = ("postgresql+psycopg://", "mysql+pymysql://")
+
+
+def normalizar_database_url(url: str) -> str:
+    """Aponta URLs PostgreSQL sem driver para o psycopg 3.
+
+    Provedores como Neon e Render entregam ``postgresql://...`` ou
+    ``postgres://...``. Sem o sufixo, o SQLAlchemy tentaria o psycopg2, que não
+    é dependência do projeto. Demais URLs (MySQL, SQLite) seguem inalteradas.
+    """
+    url = url.strip()
+    for prefixo in ("postgres://", "postgresql://"):
+        if url.startswith(prefixo):
+            return "postgresql+psycopg://" + url[len(prefixo):]
+    return url
+
+
 class Settings:
     APP_NAME: str = "ChurrasPlan API"
     APP_ENV: str = os.getenv("APP_ENV", "development")
+    # Usado só quando DATABASE_URL não está definida: "postgresql" ou "mysql".
+    DB_DRIVER: str = os.getenv("DB_DRIVER", "postgresql").strip().lower()
     DB_HOST: str = os.getenv("DB_HOST", "127.0.0.1")
-    DB_PORT: str = os.getenv("DB_PORT", "3306")
-    DB_USER: str = os.getenv("DB_USER", "root")
+    DB_PORT: str = os.getenv("DB_PORT", "3306" if DB_DRIVER == "mysql" else "5432")
+    DB_USER: str = os.getenv("DB_USER", "root" if DB_DRIVER == "mysql" else "postgres")
     DB_PASSWORD: str = os.getenv("DB_PASSWORD", "")
     DB_NAME: str = os.getenv("DB_NAME", "churrasplan")
     DATABASE_URL_OVERRIDE: str | None = os.getenv("DATABASE_URL")
@@ -32,13 +52,17 @@ class Settings:
     @property
     def DATABASE_URL(self) -> str:
         if self.DATABASE_URL_OVERRIDE:
-            return self.DATABASE_URL_OVERRIDE
+            return normalizar_database_url(self.DATABASE_URL_OVERRIDE)
         usuario = quote_plus(self.DB_USER)
         senha = quote_plus(self.DB_PASSWORD)
-        return (
-            f"mysql+pymysql://{usuario}:{senha}"
-            f"@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}?charset=utf8mb4"
-        )
+        if self.DB_DRIVER == "postgresql":
+            return f"postgresql+psycopg://{usuario}:{senha}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
+        if self.DB_DRIVER == "mysql":
+            return (
+                f"mysql+pymysql://{usuario}:{senha}"
+                f"@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}?charset=utf8mb4"
+            )
+        raise ValueError("DB_DRIVER deve ser 'postgresql' ou 'mysql'")
 
     CORS_ORIGINS: list[str] = [
         origem.strip() for origem in os.getenv(
@@ -106,7 +130,7 @@ class Settings:
     MAX_REQUEST_BODY_BYTES: int = int(os.getenv("MAX_REQUEST_BODY_BYTES", str(2 * 1024 * 1024)))
     TRUST_PROXY_HEADERS: bool = os.getenv("TRUST_PROXY_HEADERS", "false").lower() in {"1", "true", "yes"}
 
-    # Rate limiting persistido em MySQL. A chave é sempre um HMAC, nunca o IP puro.
+    # Rate limiting persistido no banco. A chave é sempre um HMAC, nunca o IP puro.
     SECURITY_PEPPER: str = os.getenv("SECURITY_PEPPER", "dev-only-change-me")
     RATE_LIMIT_ENABLED: bool = os.getenv("RATE_LIMIT_ENABLED", "true").lower() in {"1", "true", "yes"}
     RATE_LIMIT_LOGIN_ATTEMPTS: int = int(os.getenv("RATE_LIMIT_LOGIN_ATTEMPTS", "10"))
@@ -325,8 +349,8 @@ def validar_configuracao_producao(configuracao: Settings = settings) -> None:
         erros.append("DATA_ENCRYPTION_KEY deve ser uma chave Fernet válida em produção")
     if not getattr(configuracao, "RATE_LIMIT_ENABLED", False):
         erros.append("RATE_LIMIT_ENABLED deve ser true em produção")
-    if not configuracao.DATABASE_URL.lower().startswith("mysql+pymysql://"):
-        erros.append("DATABASE_URL deve apontar para MySQL via PyMySQL em produção")
+    if not configuracao.DATABASE_URL.lower().startswith(DRIVERS_PRODUCAO):
+        erros.append("DATABASE_URL deve apontar para PostgreSQL (psycopg) ou MySQL (PyMySQL) em produção")
     if not configuracao.DATABASE_URL_OVERRIDE and not configuracao.DB_PASSWORD:
         erros.append("DB_PASSWORD não pode ser vazio em produção")
     if erros:

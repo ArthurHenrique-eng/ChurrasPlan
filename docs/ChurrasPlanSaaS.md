@@ -33,7 +33,7 @@ Princípio central: o backend é a fonte de verdade de cálculos, persistência,
 |---|---|
 | Frontend | HTML/CSS/JavaScript modular e PWA em `FrontEnd/`; design system Brasa (`css/ds.css` + `css/pages/`, seção 20), SW v7.0.0 e MapLibre GL |
 | API | FastAPI, API v6.10.0, Pydantic, SQLAlchemy; `BackEnd/Python/main.py`, `routers/`, `schemas/`, `services/` |
-| Persistência | MySQL 8.4 em Docker/CI, SQLite para unidade; Alembic até `20261012_0024` |
+| Persistência | PostgreSQL (Neon 18 em produção, PostgreSQL 18 em Docker/CI) via psycopg 3; MySQL 8.4 mantido como compatibilidade; SQLite para unidade; Alembic até `20261012_0024` (seção 10.1) |
 | Tenant B2B | `models/organizacao.py`, `routers/parceiros.py`, `equipe.py`, `operacao_b2b.py`, `comercial_b2b.py` |
 | Direitos | `services/entitlements.py` (B2B) e `entitlements_usuario.py` (B2C) |
 | Stripe TEST | `routers/billing.py`, `billing_usuario.py`, `services/billing.py`, `billing_usuario.py` |
@@ -203,11 +203,11 @@ Preço vem do Stripe Test e é validado no servidor: modo teste, moeda BRL, Pric
 | `20261012_0023` | GTIN validado e EAN único por organização |
 | `20261012_0024` | contexto pseudônimo e índice para funis agregados |
 
-**Migração/rollback:** preservar FKs e dados legados, não atribuir a uma organização SKUs de dono incerto; ensaiar `upgrade head`, `alembic check`, downgrade/upgrade, MySQL real e dados de cópia em staging. Downgrade das migrações SaaS pode apagar grants, convites, auditorias, campanhas, lotes idempotentes, modelos e registros locais de Billing, **mas não cancela assinatura remota no Stripe**. Realizar backup, avaliação de impacto e conciliação externa antes de reverter. Testes SQLite não substituem FK, charset, InnoDB e concorrência MySQL.
+**Migração/rollback:** preservar FKs e dados legados, não atribuir a uma organização SKUs de dono incerto; ensaiar `upgrade head`, `alembic check`, downgrade/upgrade, banco real (PostgreSQL e MySQL) e dados de cópia em staging. Downgrade das migrações SaaS pode apagar grants, convites, auditorias, campanhas, lotes idempotentes, modelos e registros locais de Billing, **mas não cancela assinatura remota no Stripe**. Realizar backup, avaliação de impacto e conciliação externa antes de reverter. Testes SQLite não substituem FK, charset, locks e concorrência de um banco real.
 
 ## 10. Desenvolvimento, comandos e ambientes
 
-**Pré-requisitos típicos:** Python 3.11+ (CI usa 3.12), MySQL 8+, Node para checagem JS, Docker/Compose para stack completa e Playwright Chromium para E2E.
+**Pré-requisitos típicos:** Python 3.11+ (CI usa 3.12), PostgreSQL 16+ (ou MySQL 8+ por compatibilidade), Node para checagem JS, Docker/Compose para stack completa e Playwright Chromium para E2E.
 
 **Docker local (arquivo que realmente existe na main):**
 ~~~bash
@@ -217,7 +217,7 @@ docker compose -f docker-compose.dev.yml up --build
 # Swagger proxied: http://localhost:8080/docs
 ~~~
 
-A composição de desenvolvimento cria MySQL 8.4, aguarda readiness, aplica alembic upgrade head, carrega seed demo por padrão (LOAD_DEMO_DATA=false para desabilitar), inicia FastAPI e depois Nginx. Nunca usar senhas/defaults de desenvolvimento na produção.
+A composição de desenvolvimento cria PostgreSQL 18, aguarda readiness, aplica alembic upgrade head, carrega seed demo por padrão (LOAD_DEMO_DATA=false para desabilitar), inicia FastAPI e depois Nginx. Nunca usar senhas/defaults de desenvolvimento na produção.
 
 **Execução separada sem Docker:**
 ~~~bash
@@ -225,7 +225,7 @@ cd BackEnd/Python
 python -m venv .venv
 # ativar o ambiente virtual conforme SO
 pip install -r requirements-dev.txt
-# configurar .env e um banco MySQL local
+# configurar .env e um banco PostgreSQL local (DATABASE_URL, seção 10.1)
 alembic upgrade head
 python scripts/seed_demo.py       # opcional, apenas desenvolvimento
 uvicorn main:app --reload --port 8000
@@ -236,15 +236,41 @@ python -m http.server 5500
 
 Frontend local: http://127.0.0.1:5500; API local: http://127.0.0.1:8000. A API no frontend usa /api no mesmo domínio em produção por padrão, com configuração explícita para hosts diferentes. PUBLIC_APP_URL precisa refletir a URL acessada pelo cliente, principalmente para retorno de e-mail/pagamento.
 
-**Variáveis críticas:** APP_ENV, DATABASE_URL ou DB_HOST/DB_PORT/DB_USER/DB_PASSWORD/DB_NAME, AUTO_CREATE_SCHEMA=false, PUBLIC_APP_URL, CORS_ORIGINS, COOKIE_SECURE, REQUIRE_EMAIL_VERIFICATION, SECURITY_PEPPER, TRUSTED_HOSTS, SMTP_*, GEOAPIFY_ENABLED, GEOAPIFY_SERVER_API_KEY, LOAD_DEMO_DATA. Nunca commit de .env/credenciais.
+**Variáveis críticas:** APP_ENV, DATABASE_URL ou DB_DRIVER/DB_HOST/DB_PORT/DB_USER/DB_PASSWORD/DB_NAME, AUTO_CREATE_SCHEMA=false, PUBLIC_APP_URL, CORS_ORIGINS, COOKIE_SECURE, REQUIRE_EMAIL_VERIFICATION, SECURITY_PEPPER, TRUSTED_HOSTS, SMTP_*, GEOAPIFY_ENABLED, GEOAPIFY_SERVER_API_KEY, LOAD_DEMO_DATA. Nunca commit de .env/credenciais.
 
-**Produção Docker:** usar **docker-compose.production.yml**, .env.production.example como modelo, domínio DNS A/AAAA, portas 80/443 e Caddy emitindo TLS; frontend Nginx e API/MySQL na rede interna. Verificar compatibilidade das variáveis no compose/config antes de executar. Configuração insegura deve interromper a inicialização da API. Fazer backup, ensaio em staging, migrations e smoke test /api/health/ready. Criar primeiro admin com helper seguro e manter segredo fora do Git.
+**Produção Docker:** usar **docker-compose.production.yml**, .env.production.example como modelo, domínio DNS A/AAAA, portas 80/443 e Caddy emitindo TLS; frontend Nginx e API/PostgreSQL na rede interna. Verificar compatibilidade das variáveis no compose/config antes de executar. Configuração insegura deve interromper a inicialização da API. Fazer backup, ensaio em staging, migrations e smoke test /api/health/ready. Criar primeiro admin com helper seguro e manter segredo fora do Git.
+
+### 10.1 Banco de dados: PostgreSQL (Neon) desde 27/11/2026
+
+**Motivo:** o MySQL gratuito do Aiven foi encerrado (host deixou de resolver em 26–27/11/2026) e a API no Render parou de subir, porque `alembic upgrade head` roda antes do uvicorn. O Render não oferece MySQL gerenciado; o PostgreSQL gratuito do Neon é permanente e tem região AWS us-east-1, próxima do Render (Virgínia). Decisão do proprietário em 27/11/2026.
+
+**Estado:** IMPLEMENTADO na branch `claude/project-thread-8zeflo` (PR para `main`); TESTADO em PostgreSQL 16 local e no CI (PostgreSQL 18, a mesma versão do Neon: 18.7, região aws-us-east-1, fuso padrão GMT). NÃO está em produção até o merge e a troca de `DATABASE_URL` no Render.
+
+**Conexão:**
+- `DATABASE_URL` aceita a URL do provedor como vem (`postgresql://` ou `postgres://`); `config.normalizar_database_url` troca o prefixo para `postgresql+psycopg://` (psycopg 3, `psycopg[binary]`). Parâmetros como `sslmode=require` seguem para o libpq.
+- No Neon, usar a URL **direta** (sem `-pooler` no host): a API já mantém pool próprio (SQLAlchemy) e as migrations precisam de sessão estável.
+- Sem `DATABASE_URL`, `DB_DRIVER` (padrão `postgresql`; `mysql` para instalações antigas) monta a URL a partir de `DB_HOST/DB_PORT/DB_USER/DB_PASSWORD/DB_NAME`.
+- Produção aceita apenas `postgresql+psycopg://` ou `mysql+pymysql://`.
+- Cada conexão PostgreSQL executa `SET TIME ZONE 'UTC'` (`database.connection.configurar_sessao_postgresql`, também no Alembic): colunas `DateTime` sem fuso recebem `now()` do banco e são comparadas com `services.auth.agora()` em UTC. O teste `test_timestamps_do_banco_em_utc` falha com 3 h de diferença se isso regredir.
+- `connect_timeout` de 10 s e `pool_pre_ping`: o Neon gratuito suspende o compute após 5 min sem uso e acorda na próxima conexão.
+
+**Diferenças de dialeto tratadas no código:**
+- Upserts: `insert` do dialeto `postgresql` com `on_conflict_do_update/do_nothing` em `services/limites_http.py`, `services/analytics.py` e `routers/onde_comprar.py` (MySQL continua com `ON DUPLICATE KEY`).
+- Cotas: o PostgreSQL recusa `SELECT count(...) ... FOR UPDATE`. `database.connection.contagem_com_bloqueio` aplica o `FOR UPDATE` só no MySQL; nos dois bancos o lock da linha pai (organização ou usuário) serializa os escritores, e o READ COMMITTED do PostgreSQL faz cada contagem enxergar o que já foi confirmado. Usado em `services/entitlements.py`, `services/entitlements_usuario.py`, `services/equipe_organizacao.py` e `routers/profissional.py`. Atenção: `Query.with_for_update().count()` também gera `count(*) ... FOR UPDATE`; contagens com lock devem usar `select(func.count(...))` com esse helper.
+- Migrations 0002, 0008 e 0009 usam `TRUE` em vez de `1` para colunas booleanas, e 0009 usa `sa.true()` como default (o PostgreSQL recusa inteiro em coluna booleana). Bancos MySQL já migrados não são afetados; os defaults `"0"`/`"1"` em texto das demais migrations são aceitos pelos dois bancos.
+- Comparação de texto: o PostgreSQL diferencia maiúsculas; e-mails, códigos de filial/campanha e slugs já são normalizados antes de gravar e consultar.
+
+**Testes de banco real:** `BackEnd/Python/tests_banco_real/` (antigo `tests_mysql/`) roda contra a URL em `DB_TEST_URL` (`MYSQL_TEST_URL` continua aceito). O CI tem os jobs **PostgreSQL real + Alembic** (com fuso do servidor propositalmente fora de UTC), **MySQL 8 real + Alembic (compatibilidade)** e **E2E Chromium + PostgreSQL**.
+
+**Dados:** o banco novo nasce vazio. As migrations recriam tabelas e o catálogo genérico; contas, parceiros e ofertas do Aiven só voltam por cópia, e os dados dos serviços gratuitos do Aiven são apagados em 21/12/2026. A cópia usa `BackEnd/Python/scripts/copiar_mysql_para_postgres.py` (URLs em `ORIGEM_DATABASE_URL` e `DESTINO_DATABASE_URL`; sem `--executar` só confere revisões e conta linhas). O destino precisa estar no head e sem usuários; a cópia substitui o catálogo semeado pelas migrations, preserva os IDs, ajusta as sequências e roda numa única transação. Colunas que só existem na origem (como `usuarios.neon_auth_user_id`, da 0025 gravada por um preview) são ignoradas. TESTADO em MySQL 8.4 local com TLS → PostgreSQL 16: 349 linhas em 53 tabelas, comparação linha a linha sem diferença, login com a senha antiga e cadastros novos sem colisão de ID. `sql/schema.sql`, `sql/seed_data.sql` e `scripts/backup_mysql.py` continuam sendo referência/ferramenta MySQL; no PostgreSQL o Alembic é a fonte do schema e o backup deve usar `pg_dump` ou o restore do provedor (pendente).
+
+**Passos de operação (proprietário):** criar a URL de conexão direta no Neon, colocá-la em `DATABASE_URL` no painel do Render (segredo, nunca no Git nem em chat), fazer o merge da PR (dispara o deploy) e conferir `/api/health/ready`.
 
 ## 11. CI, testes e evidências
 
-A branch SaaS possui seis jobs GitHub Actions: **Backend unit/integration (SQLite)**, **MySQL 8 real + Alembic**, **Frontend static checks**, **Security audit**, **Docker configuration and images**, **E2E Chromium + MySQL**. CodeQL Python/JavaScript e Dependabot estão configurados. [CI do snapshot 208f349, 38004031754](https://github.com/ArthurHenrique-eng/ChurrasPlan/actions/runs/38004031754) e [CodeQL 38004031832](https://github.com/ArthurHenrique-eng/ChurrasPlan/actions/runs/38004031832): **success**. O registro da Fase 2 informa **167 testes SQLite e 12 testes MySQL** na trilha anterior; para precisão do head atual consultar logs específicos. Nenhum destes jobs certifica checkout externo real, deploy live ou backup produtivo.
+O CI possui sete jobs GitHub Actions: **Backend unit/integration (SQLite)**, **PostgreSQL real + Alembic**, **MySQL 8 real + Alembic (compatibilidade)**, **Frontend static checks**, **Security audit**, **Docker configuration and images**, **E2E Chromium + PostgreSQL** (até 27/11/2026 eram seis, com banco real e E2E só em MySQL). CodeQL Python/JavaScript e Dependabot estão configurados. [CI do snapshot 208f349, 38004031754](https://github.com/ArthurHenrique-eng/ChurrasPlan/actions/runs/38004031754) e [CodeQL 38004031832](https://github.com/ArthurHenrique-eng/ChurrasPlan/actions/runs/38004031832): **success**. O registro da Fase 2 informa **167 testes SQLite e 12 testes MySQL** na trilha anterior; para precisão do head atual consultar logs específicos. Nenhum destes jobs certifica checkout externo real, deploy live ou backup produtivo.
 
-**Comandos:** `cd BackEnd/Python && pytest -q tests`; configurar `MYSQL_TEST_URL` de banco descartável e executar `alembic upgrade head && alembic check && pytest -q tests_mysql`; na raiz `python scripts/validate_frontend.py`, `python scripts/validate_schema.py`, `./scripts/test_all.sh` (Windows: `.\scripts\test_all.ps1`), `pytest -q e2e` após instalar Playwright Chromium.
+**Comandos:** `cd BackEnd/Python && pytest -q tests`; configurar `DB_TEST_URL` (e `DATABASE_URL` igual) para um PostgreSQL ou MySQL descartável e executar `alembic upgrade head && alembic check && pytest -q tests_banco_real`; na raiz `python scripts/validate_frontend.py`, `python scripts/validate_schema.py`, `./scripts/test_all.sh` (Windows: `.\scripts\test_all.ps1`), `pytest -q e2e` após instalar Playwright Chromium.
 
 **Regressões SaaS:** `test_tenants_saas.py`, `test_entitlements_saas.py`, `test_equipe_organizacao_saas.py`, `test_operacao_b2b_saas.py`, `test_comercial_b2b_fase4a.py`, `test_billing_saas.py`, `test_billing_usuario_stripe.py`, `test_billing_fase2.py`, `test_entitlements_usuario_fase1.py`: isolamento, quotas/concorrência, webhooks, autenticação, CSRF, replay, assinatura, callbacks e compatibilidade. **Histórico, não resultado atual:** 67 testes v0.2, 83 v3, 90 v6.3, 92 v6.3.1, 96 v6.4.
 
@@ -304,7 +330,7 @@ A branch SaaS possui seis jobs GitHub Actions: **Backend unit/integration (SQLit
 | Pro | 20 | 1.000 | 20.000 | 15 |
 | Business | 200 | 10.000 | 100.000 | 100 |
 
-Cotas técnicas provisórias e não uma promessa de preço; contam inativos/histórico, bloqueiam criação mas não edição de registros antigos, com bloqueio MySQL `SELECT FOR UPDATE` contra corrida. Admin pode conceder `cortesia_admin` de Pro/Business por até 366 dias, auditada, com CSRF; expira para Free. `GET /api/parceiro/entitlements` devolve uso e limites; `PUT /api/admin/organizacoes/{id}/concessao` controla grants. Convites de equipe usam token aleatório com SHA-256 persistido, validade 7 dias, uso único, e-mail idêntico ao login, revogação e auditoria; `dev_token` só em dev/teste. Proprietário gerencia equipe sem remover a si, gestor só leitores/editores, editor pode gerir ofertas e leitor só consulta. Produção exige SMTP para convites; o painel escolhe tenant em `sessionStorage`.
+Cotas técnicas provisórias e não uma promessa de preço; contam inativos/histórico, bloqueiam criação mas não edição de registros antigos, com lock `SELECT FOR UPDATE` da organização contra corrida (contagem com `FOR UPDATE` só no MySQL, seção 10.1). Admin pode conceder `cortesia_admin` de Pro/Business por até 366 dias, auditada, com CSRF; expira para Free. `GET /api/parceiro/entitlements` devolve uso e limites; `PUT /api/admin/organizacoes/{id}/concessao` controla grants. Convites de equipe usam token aleatório com SHA-256 persistido, validade 7 dias, uso único, e-mail idêntico ao login, revogação e auditoria; `dev_token` só em dev/teste. Proprietário gerencia equipe sem remover a si, gestor só leitores/editores, editor pode gerir ofertas e leitor só consulta. Produção exige SMTP para convites; o painel escolhe tenant em `sessionStorage`.
 
 ### Filiais e importação de ofertas (2D, 0012)
 `estabelecimentos` são filiais com `codigo_filial` único por tenant, `unidade_matriz` transacional; só admin global aprova/valida estabelecimento. `POST /api/parceiro/importacoes/ofertas` aceita CSV de até **200 linhas/100 KB**, `estabelecimento_id,produto_id,preco` obrigatórios, status e original opcionais, vírgula/ponto decimal, validação por linha, chave idempotente por organização, hash/resumo persistido, não CSV completo. Chave repetida mesmo conteúdo reproduz retorno; conteúdo diferente gera 409. `GET /api/parceiro/filiais`, `PATCH /filiais/{id}`, `GET /onboarding`, `GET /relatorios/comercial` (até 365 dias) medem cadastro, aprovação, catálogo e interações; `vendas_confirmadas/receita_confirmada` nulos sem dados de transação.
@@ -483,7 +509,7 @@ Os resultados locais da revisão estão registrados na seção 19.5. Os resultad
 
 Cenários financeiros em `/api/admin/growth/cenarios` usam hipóteses fornecidas pelo administrador; custos ficam consultáveis por competência em `/custos`. A simulação não cria clientes, assinaturas ou receita. Leads fornecem ao administrador um link de descadastro para incluir em mensagens autorizadas; o descadastro não é revertido pelo reenvio anônimo do formulário. Alterar a preferência autenticada da conta também atualiza o lead do mesmo e-mail. Não reutilizar os números antigos ou um CI de outro commit como evidência de prontidão. O estado correto até esses gates é **pré-lançamento/piloto**, não produção comercial certificada.
 
-Datas de API sem offset em campos de timestamp conhecidos são UTC e normalizadas com `Z` no cliente. Offsets explícitos e campos textuais são preservados. Isso evita exibir eventos/expiração de assinatura três horas fora do horário no Brasil. MySQL dos ambientes Docker usa `+00:00`.
+Datas de API sem offset em campos de timestamp conhecidos são UTC e normalizadas com `Z` no cliente. Offsets explícitos e campos textuais são preservados. Isso evita exibir eventos/expiração de assinatura três horas fora do horário no Brasil. MySQL dos ambientes Docker usa `+00:00`; no PostgreSQL a API fixa `UTC` em cada conexão (seção 10.1).
 
 O proprietário pode encerrar uma organização gratuita com senha+confirmação; isso desativa lojas/ofertas e membros e permite excluir a conta. Organização com assinatura existente exige confirmação do término remoto. Logs de acesso Nginx/Uvicorn produtivos são desativados para não registrar query strings com tokens. Erros frontend usam catálogo técnico mínimo, sem mensagens, stack, URLs ou PII, separado de analytics.
 

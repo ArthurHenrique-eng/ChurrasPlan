@@ -1,22 +1,19 @@
 services:
   db:
-    image: mysql:8.4
+    image: postgres:18
     restart: unless-stopped
     environment:
-      MYSQL_DATABASE: ${MYSQL_DATABASE:-churrasplan}
-      MYSQL_USER: ${MYSQL_USER:-churrasplan}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?defina MYSQL_PASSWORD}
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?defina MYSQL_ROOT_PASSWORD}
-    command:
-    - --character-set-server=utf8mb4
-    - --collation-server=utf8mb4_unicode_ci
-    - --default-time-zone=+00:00
+      POSTGRES_DB: ${POSTGRES_DB:-churrasplan}
+      POSTGRES_USER: ${POSTGRES_USER:-churrasplan}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD}
+      TZ: UTC
+      PGTZ: UTC
     volumes:
-    - churrasplan_mysql_prod:/var/lib/mysql
+    - churrasplan_postgres_prod:/var/lib/postgresql
     healthcheck:
       test:
       - CMD-SHELL
-      - mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent
+      - pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB
       interval: 5s
       timeout: 5s
       retries: 30
@@ -31,11 +28,12 @@ services:
         condition: service_healthy
     environment:
       APP_ENV: production
+      DB_DRIVER: postgresql
       DB_HOST: db
-      DB_PORT: 3306
-      DB_USER: ${MYSQL_USER:-churrasplan}
-      DB_PASSWORD: ${MYSQL_PASSWORD:?defina MYSQL_PASSWORD}
-      DB_NAME: ${MYSQL_DATABASE:-churrasplan}
+      DB_PORT: 5432
+      DB_USER: ${POSTGRES_USER:-churrasplan}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD}
+      DB_NAME: ${POSTGRES_DB:-churrasplan}
       AUTO_CREATE_SCHEMA: 'false'
       COOKIE_SECURE: 'true'
       REQUIRE_EMAIL_VERIFICATION: 'true'
@@ -130,11 +128,12 @@ services:
         condition: service_healthy
     environment:
       APP_ENV: production
+      DB_DRIVER: postgresql
       DB_HOST: db
-      DB_PORT: 3306
-      DB_USER: ${MYSQL_USER:-churrasplan}
-      DB_PASSWORD: ${MYSQL_PASSWORD:?defina MYSQL_PASSWORD}
-      DB_NAME: ${MYSQL_DATABASE:-churrasplan}
+      DB_PORT: 5432
+      DB_USER: ${POSTGRES_USER:-churrasplan}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD}
+      DB_NAME: ${POSTGRES_DB:-churrasplan}
       AUTO_CREATE_SCHEMA: 'false'
       COOKIE_SECURE: 'true'
       REQUIRE_EMAIL_VERIFICATION: 'true'
@@ -184,6 +183,6 @@ networks:
   internal:
     driver: bridge
 volumes:
-  churrasplan_mysql_prod: null
+  churrasplan_postgres_prod: null
   caddy_data: null
   caddy_config: null

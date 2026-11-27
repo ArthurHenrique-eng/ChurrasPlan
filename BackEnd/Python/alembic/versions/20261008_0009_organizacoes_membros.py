@@ -22,7 +22,7 @@ def upgrade() -> None:
         sa.Column("id", sa.Integer(), primary_key=True),
         sa.Column("slug", sa.String(length=150), nullable=False),
         sa.Column("nome", sa.String(length=150), nullable=False),
-        sa.Column("ativo", sa.Boolean(), server_default=sa.text("1"), nullable=False),
+        sa.Column("ativo", sa.Boolean(), server_default=sa.true(), nullable=False),
         sa.Column("criado_em", sa.DateTime(), server_default=sa.func.now(), nullable=False),
     )
     op.create_index("ix_organizacoes_slug", "organizacoes", ["slug"], unique=True)
@@ -33,7 +33,7 @@ def upgrade() -> None:
         sa.Column("organizacao_id", sa.Integer(), sa.ForeignKey("organizacoes.id", ondelete="CASCADE"), nullable=False),
         sa.Column("usuario_id", sa.Integer(), sa.ForeignKey("usuarios.id", ondelete="CASCADE"), nullable=False),
         sa.Column("papel", sa.String(length=20), server_default="leitor", nullable=False),
-        sa.Column("ativo", sa.Boolean(), server_default=sa.text("1"), nullable=False),
+        sa.Column("ativo", sa.Boolean(), server_default=sa.true(), nullable=False),
         sa.Column("criado_em", sa.DateTime(), server_default=sa.func.now(), nullable=False),
         sa.UniqueConstraint("organizacao_id", "usuario_id", name="uq_organizacao_membro"),
     )
@@ -69,7 +69,7 @@ def upgrade() -> None:
         # Slug determinístico: migration reexecutada não cria organizações duplicadas.
         slug = f"legado-parceiro-{uid}"
         conn.execute(
-            sa.text("INSERT INTO organizacoes (slug, nome, ativo) VALUES (:slug, :nome, 1)"),
+            sa.text("INSERT INTO organizacoes (slug, nome, ativo) VALUES (:slug, :nome, TRUE)"),
             {"slug": slug, "nome": (str(usuario["nome"])[:125] + " - Parceiro")},
         )
         oid = conn.execute(
@@ -78,7 +78,7 @@ def upgrade() -> None:
         conn.execute(
             sa.text("""
                 INSERT INTO organizacao_membros (organizacao_id, usuario_id, papel, ativo)
-                VALUES (:oid, :uid, 'proprietario', 1)
+                VALUES (:oid, :uid, 'proprietario', TRUE)
             """), {"oid": oid, "uid": uid},
         )
         conn.execute(

@@ -10,6 +10,7 @@ from fastapi import HTTPException
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from database.connection import contagem_com_bloqueio
 from models import ConcessaoOrganizacao, AssinaturaOrganizacao, Estabelecimento, Organizacao, Preco, Produto, Usuario
 
 # Valores operacionais iniciais, NÃO preços nem ofertas comerciais.
@@ -54,8 +55,8 @@ def resolver_plano(db: Session, organizacao_id: int, *, bloqueio: bool = False) 
 
 def _contagem_atual(db: Session, org_id: int, recurso: str, *, bloqueio: bool = False) -> int:
     # Agregação no banco: nunca trafegar 100 mil IDs à aplicação.
-    # Após o lock da linha organizacoes, SELECT ... FOR UPDATE é leitura
-    # corrente no InnoDB, mesmo quando uma transação abriu snapshot RR antes.
+    # Após o lock da linha organizacoes, a contagem precisa ser leitura
+    # corrente; ver database.connection.contagem_com_bloqueio.
     if recurso == "estabelecimentos":
         stmt = select(func.count(Estabelecimento.id)).where(
             Estabelecimento.organizacao_id == org_id
@@ -78,13 +79,13 @@ def _contagem_atual(db: Session, org_id: int, recurso: str, *, bloqueio: bool = 
         for modelo in (ImportacaoOfertas, ImportacaoCatalogo):
             consulta = select(func.count(modelo.id)).where(modelo.organizacao_id == org_id, modelo.criado_em >= mes)
             if bloqueio:
-                consulta = consulta.with_for_update()
+                consulta = contagem_com_bloqueio(db, consulta)
             total += int(db.execute(consulta).scalar_one())
         return total
     else:
         raise ValueError("Recurso B2B desconhecido")
     if bloqueio:
-        stmt = stmt.with_for_update()
+        stmt = contagem_com_bloqueio(db, stmt)
     return int(db.execute(stmt).scalar_one())
 
 

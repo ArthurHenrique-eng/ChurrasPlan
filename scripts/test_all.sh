@@ -3,7 +3,8 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BACKEND="$ROOT/BackEnd/Python"
-RUN_MYSQL="${RUN_MYSQL:-0}"
+# RUN_DB=1 roda os testes de banco real (RUN_MYSQL=1 continua aceito).
+RUN_DB="${RUN_DB:-${RUN_MYSQL:-0}}"
 RUN_E2E="${RUN_E2E:-0}"
 
 printf '\n== ChurrasPlan: backend unit/integration ==\n'
@@ -18,14 +19,15 @@ python scripts/validate_frontend.py
 find FrontEnd/js -name '*.js' -print0 | xargs -0 -n1 node --check
 node --check FrontEnd/sw.js
 
-if [[ "$RUN_MYSQL" == "1" ]]; then
-  : "${MYSQL_TEST_URL:?Defina MYSQL_TEST_URL para RUN_MYSQL=1}"
-  printf '\n== ChurrasPlan: MySQL real + Alembic ==\n'
-  export DATABASE_URL="$MYSQL_TEST_URL"
+if [[ "$RUN_DB" == "1" ]]; then
+  DB_TEST_URL="${DB_TEST_URL:-${MYSQL_TEST_URL:-}}"
+  : "${DB_TEST_URL:?Defina DB_TEST_URL (PostgreSQL ou MySQL descartável) para RUN_DB=1}"
+  printf '\n== ChurrasPlan: banco real + Alembic ==\n'
+  export DB_TEST_URL DATABASE_URL="$DB_TEST_URL"
   cd "$BACKEND"
   alembic upgrade head
   alembic check
-  pytest -q tests_mysql
+  pytest -q tests_banco_real
 fi
 
 if [[ "$RUN_E2E" == "1" ]]; then

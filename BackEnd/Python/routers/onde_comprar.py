@@ -199,6 +199,7 @@ def registrar_interacoes(
             import hashlib, hmac
             from config import settings
             from sqlalchemy.dialects.mysql import insert as mysql_insert
+            from sqlalchemy.dialects.postgresql import insert as postgresql_insert
             from sqlalchemy.dialects.sqlite import insert as sqlite_insert
             chave = hmac.new(settings.SECURITY_PEPPER.encode(),
                 f"{usuario.id}:{datetime.now(UTC).date()}:{estabelecimento_id}:{tipo}".encode(), hashlib.sha256).hexdigest()
@@ -207,7 +208,8 @@ def registrar_interacoes(
                 stmt = mysql_insert(MetricaEstabelecimento).values(**campos)
                 stmt = stmt.on_duplicate_key_update(dedup_hash=stmt.inserted.dedup_hash)
             else:
-                stmt = sqlite_insert(MetricaEstabelecimento).values(**campos).on_conflict_do_nothing(index_elements=['dedup_hash'])
+                insert = postgresql_insert if db.bind.dialect.name == 'postgresql' else sqlite_insert
+                stmt = insert(MetricaEstabelecimento).values(**campos).on_conflict_do_nothing(index_elements=['dedup_hash'])
             db.execute(stmt)
             loja = existentes[estabelecimento_id]
             if loja.organizacao_id and loja.parceiro_verificado:
