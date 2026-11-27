@@ -125,6 +125,32 @@ describe("selarrt", () => {
     assert.equal((await handler().fetch(pedido(corpo))).status, 413);
   });
 
+  it("para de ler corpo sem Content-Length assim que passa do limite", async () => {
+    let pedacosLidos = 0;
+    let cancelado = false;
+    const corpoSemFim = new ReadableStream<Uint8Array>({
+      pull(controle) {
+        pedacosLidos += 1;
+        if (pedacosLidos > 1000) return controle.close();
+        controle.enqueue(new Uint8Array(1024).fill(97));
+      },
+      cancel() {
+        cancelado = true;
+      },
+    });
+    const requisicao = new Request("https://funcao.exemplo/selar", {
+      method: "POST",
+      body: corpoSemFim,
+      duplex: "half",
+      headers: { [CABECALHO_TIMESTAMP]: String(AGORA), [CABECALHO_ASSINATURA]: "0".repeat(64) },
+    } as RequestInit);
+    assert.equal(requisicao.headers.get("content-length"), null);
+
+    assert.equal((await handler().fetch(requisicao)).status, 413);
+    assert.ok(pedacosLidos <= 4, `leu ${pedacosLidos} pedaços de 1 KB`);
+    assert.ok(cancelado);
+  });
+
   it("responde 503 sem segredos ou com segredo do Realtime inválido", async () => {
     assert.equal((await handler({ seloSegredo: undefined }).fetch(pedido(corpoLista(1)))).status, 503);
     assert.equal((await handler({ realtimeSecret: undefined }).fetch(pedido(corpoLista(1)))).status, 503);

@@ -105,6 +105,28 @@ export function interpretarPedido(
   return { definicao, valores };
 }
 
+/**
+ * Lê o corpo parando assim que passa do limite, sem confiar no Content-Length
+ * (pedidos em chunks não o enviam). Devolve null se o corpo for grande demais.
+ */
+async function lerCorpoLimitado(request: Request, limite: number): Promise<string | null> {
+  if (!request.body) return "";
+  const leitor = request.body.getReader();
+  const pedacos: Uint8Array[] = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await leitor.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > limite) {
+      await leitor.cancel().catch(() => {});
+      return null;
+    }
+    pedacos.push(value);
+  }
+  return Buffer.concat(pedacos).toString("utf8");
+}
+
 export function criarHandlerSelarrt(opcoes: OpcoesSelarrt) {
   const agora = opcoes.agora ?? (() => Math.floor(Date.now() / 1000));
   let realtime: ReturnType<typeof createRealtime> | null = null;
@@ -128,10 +150,8 @@ export function criarHandlerSelarrt(opcoes: OpcoesSelarrt) {
 
       const declarado = Number(request.headers.get("content-length") ?? "0");
       if (declarado > CORPO_MAXIMO_BYTES) return resposta(413, { erro: "corpo_grande_demais" });
-      const corpo = await request.text();
-      if (Buffer.byteLength(corpo) > CORPO_MAXIMO_BYTES) {
-        return resposta(413, { erro: "corpo_grande_demais" });
-      }
+      const corpo = await lerCorpoLimitado(request, CORPO_MAXIMO_BYTES);
+      if (corpo === null) return resposta(413, { erro: "corpo_grande_demais" });
 
       const timestamp = request.headers.get(CABECALHO_TIMESTAMP) ?? "";
       const assinatura = request.headers.get(CABECALHO_ASSINATURA) ?? "";
