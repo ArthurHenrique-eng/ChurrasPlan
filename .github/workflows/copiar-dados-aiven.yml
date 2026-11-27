@@ -1,4 +1,4 @@
-# TEMPORÁRIO: roda uma vez a cópia Aiven (MySQL) -> Neon (PostgreSQL) e é
+# TEMPORÁRIO (execução de 27/11/2026): roda uma vez a cópia Aiven (MySQL) -> Neon (PostgreSQL) e é
 # removido no commit seguinte, antes do merge da PR #51.
 name: Copiar dados Aiven para Neon (uso único)
 
