@@ -3,6 +3,7 @@
 > **Documento canônico:** `docs/ChurrasPlanSaaS.md`. **Branch:** `Saas-ChurrasPlan`, nunca confundir com `main`.
 > **Atualizado:** 12/10/2026 (UTC). **Base histórica auditada:** commit `208f34954033dc7bb280bdaa72194ba1e37d854c`. **Revisão de lançamento:** API v6.10.0, Alembic head `20261012_0024`; implementação/evidências/gates na seção 19.
 > **Revisão funcional comprovada:** commit `8b3112a48bd7d271a858a1925e59c982043d6434`, [CI 38195317834](https://github.com/ArthurHenrique-eng/ChurrasPlan/actions/runs/38195317834), [CodeQL 38195317935](https://github.com/ArthurHenrique-eng/ChurrasPlan/actions/runs/38195317935) e [Container security 38195317810](https://github.com/ArthurHenrique-eng/ChurrasPlan/actions/runs/38195317810), todos success em 12/10/2026. Atualizações documentais posteriores não substituem essa identificação exata.
+> **Revisão visual do frontend:** design system Brasa em todas as páginas, sem mudança de API, schema ou regras (seção 20, 27/11/2026).
 > **Objetivo:** consolidar as **35 notas Markdown** pré-existentes em `docs/` num único contexto de leitura. Os originais permanecem recuperáveis por links imutáveis no Git, listados na seção de histórico, sem manter arquivos obsoletos concorrentes. O README e imagens de `docs/assets/` são preservados.
 
 ## 0. Como uma IA deve usar e manter este documento
@@ -30,7 +31,7 @@ Princípio central: o backend é a fonte de verdade de cálculos, persistência,
 
 | Camada | Stack e responsabilidades atuais |
 |---|---|
-| Frontend | HTML/CSS/JavaScript modular e PWA em `FrontEnd/`, SW e MapLibre GL |
+| Frontend | HTML/CSS/JavaScript modular e PWA em `FrontEnd/`; design system Brasa (`css/ds.css` + `css/pages/`, seção 20), SW v7.0.0 e MapLibre GL |
 | API | FastAPI, API v6.10.0, Pydantic, SQLAlchemy; `BackEnd/Python/main.py`, `routers/`, `schemas/`, `services/` |
 | Persistência | MySQL 8.4 em Docker/CI, SQLite para unidade; Alembic até `20261012_0024` |
 | Tenant B2B | `models/organizacao.py`, `routers/parceiros.py`, `equipe.py`, `operacao_b2b.py`, `comercial_b2b.py` |
@@ -542,3 +543,71 @@ O primeiro scan encontrou correções Alpine disponíveis para libexpat, pcre2 e
 QA adicional do painel do fundador: quatro funis e retenção renderizados em 1440/390 px, sem erros de JavaScript ou overflow horizontal do documento; tabelas mantêm rolagem interna em telas estreitas. Base sintética isolada usada somente para QA, sem representar clientes reais. Backup/restore permanece comprovado no ambiente local isolado da seção 19.5.
 
 **Estado final:** código entregue e verificações técnicas aprovadas para homologação/piloto. Os requisitos P0 externos da seção 19.3 continuam obrigatórios antes de lançamento comercial; os runs acima não validam SMTP/TLS/backup remoto, faturamento Live, proteção aplicada de main, operação jurídica ou recrutamento de parceiros.
+
+## 20. Frontend: design system Brasa (27/11/2026)
+
+**Estado:** IMPLEMENTADO na branch `claude/project-thread-i1j8fc`, com PR para `main` aguardando revisão; VALIDADO localmente conforme 20.5. A revisão é visual: API, rotas, schema, cálculos, autorização, Stripe Test, Geoapify/MapLibre e telemetria continuam com os mesmos contratos.
+
+### 20.1 Direção visual
+
+- A linguagem vem do próprio churrasco: brasa e carvão, papel kraft de açougue e a comanda de balcão. Os tokens ficam em `css/ds.css`: `--brasa-*` (ação principal, `#a62210`), `--vinho-*`, `--kraft-*` (superfícies quentes), `--carvao-*` (texto e áreas escuras), `--fumaca-*` (texto secundário), `--aco-*` (informação), `--erva-*` (sucesso), `--brilho-*` (atenção) e `--perigo-*` (erro).
+- Uma família tipográfica: Archivo variável (`fonts/archivo-latin-var.woff2`, pesos 400–800, larguras 75–100%, SIL OFL 1.1 em `fonts/Archivo-LICENSE.txt`). Quantidades e preços em destaque usam `.tag-number` (largura 75%, peso 800, algarismos tabulares), como numa etiqueta de balança. Rótulos em caixa de frase, sem caixa alta.
+- Elemento de assinatura: a comanda (`.ticket`, borda serrilhada por máscara; a sombra fica no invólucro `.ticket-shadow`) com listras de grelha (`--grill`). Aparece no resultado, na lista de compras, no convite, nos exemplos dos guias e na página de parceiros; o restante da interface fica sóbrio.
+- Movimento só responde a ações (menu, valor que muda, aviso, impressão da comanda). `@media (prefers-reduced-motion: reduce)` em `ds.css` neutraliza animações e transições.
+
+### 20.2 Arquivos
+
+| Arquivo | Páginas ou papel |
+|---|---|
+| `css/ds.css` | tokens, base, tipografia, botões, campos, comanda, cabeçalhos, rodapés, mensagens e utilitários; carregado por todas as páginas |
+| `css/pages/home.css` | `index.html` |
+| `css/pages/planner.css` | `planejamento`, `carnes`, `bebidas`, `extras`, `resultado` |
+| `css/pages/account.css` | `login`, `cadastro`, `recuperar-senha`, `redefinir-senha`, `verificar-email`, `minha-conta`, `seguranca`, `preferencias` |
+| `css/pages/workspace.css` | `parceiro`, `profissional`, `admin`, `operacao`, `onde-comprar` |
+| `css/pages/commercial.css` | `planos`, `parceiros` |
+| `css/pages/content.css` | `convite`, `privacidade`, `termos`, `cookies`, `offline`, `guias/*` |
+| `js/ui.js` | melhoria progressiva: menu móvel (`[data-nav-toggle]`), `aria-current` no link da página, cabeçalho ao rolar, índice de seções (`[data-section-index]`), destaque de valores que mudam, preenchimento de sliders e avisos flutuantes (`[data-toast]`) |
+| `assets/logo-*.webp` | ícone (96/192 px) e marca (320/480 px) em WebP; os PNG mestres continuam em `assets/` |
+
+`scripts/build_seo.py` gera `guias/*.html` com o mesmo cabeçalho e rodapé. O `--base-url` padrão vem de `PUBLIC_APP_URL`; para regenerar sem alterar canônicos, passe `--base-url` explicitamente (o repositório usa `http://localhost:8080`).
+
+### 20.3 Contratos preservados e mudanças
+
+**Preservado:** ids, `name`, atributos `data-*`, textos usados pelos E2E, rotas, ordem dos scripts, chamadas de API, CSP sem script inline (`script-src 'self' https://cdn.jsdelivr.net`), MapLibre 5.24.0 pelo jsDelivr e o fluxo de checkout Stripe Test.
+
+**JavaScript (apresentação e correções):**
+- Templates passam a usar as classes do design system. Códigos internos ganham rótulos de exibição (plano, status de assinatura e fatura, papel, status de proposta e tarefa); os valores enviados à API não mudaram.
+- `api.js`: `mensagemErroApi` transforma `detail` estruturado (lista de validação, `mensagem`, `LIMITE_MEMBROS_ATINGIDO`, `RECURSO_PLANO_NECESSARIO`) em texto legível; `erro.body` continua com o corpo completo.
+- `auth-pages.js`: link de redefinição ou verificação incompleto (HTTP 422) mostra uma instrução em vez de JSON.
+- Correções: `event.currentTarget` guardado antes do primeiro `await` em `admin.js`, `preferencias.js` e `conta-retencao.js` (virava `null` e quebrava o reset do formulário ou a reativação do botão); o índice de seções de `ui.js` só regrava atributos que mudaram (evita laço infinito do `MutationObserver`); `seguranca.js` confirma a ativação do MFA com mensagem; `operacao.js` esconde o painel e mostra aviso a quem não é administrador (a API continua negando o acesso).
+- `offline.html`: "Tentar novamente" usa `data-recarregar`, tratado em `pwa.js`, porque o `onclick` inline era bloqueado pela CSP.
+- `carnes.js`, `bebidas.js`, `extras.js`: cada item é um `<label>` clicável por inteiro; o percentual de carne ganha `aria-label`. `onde-comprar.js`: cores dos marcadores seguem os tokens e os botões de ordenação expõem `aria-pressed`.
+
+**Removido:** os 13 CSS anteriores (`style`, `index`, `planejamento`, `carnes`, `bebidas`, `extras`, `resultado`, `planos`, `saas`, `integracao-v3`, `production-v63`, `unified-core`, `unified-home`) e as fontes DM Sans, Lora e Manrope. Nenhum arquivo do repositório as referencia.
+
+**Service worker `churrasplan-v7.0.0`:** pré-carrega `ds.css`, os CSS das páginas seguras (home, planner, content), a fonte Archivo, os logos WebP e `ui.js`; a ativação apaga os caches `churrasplan-*` anteriores. `scripts/validate_frontend.py` falha quando um caminho de `STATIC_ASSETS` ou `SAFE_PAGES` não existe (um único ausente impede a instalação) e quando um link `pagina.html#ancora` aponta para id inexistente. No CI, a checagem de cabeçalhos do Nginx usa `ds.css`, o logo WebP e a fonte.
+
+### 20.4 Regras para novas telas
+
+1. Carregar `css/ds.css` e um único arquivo de `css/pages/`, reaproveitando o grupo mais próximo antes de criar outro.
+2. Usar tokens (`var(--…)`) em vez de cores soltas; texto secundário em `--fumaca-500` ou mais escuro, para manter contraste AA.
+3. Botões com `.btn` mais `--primary`, `--secondary` ou `--ghost`; um botão primário por área.
+4. Nenhum `<script>` inline nem atributo `on*=`: a CSP bloqueia. Comportamento novo vai em arquivo JS, ligado por `data-*`.
+5. `ds.css` aplica `li + li { margin-top: .25em }`; listas em grid devem zerar essa margem.
+6. Página nova em `SAFE_PAGES` precisa ter seu CSS em `STATIC_ASSETS`; o validador confere se os arquivos existem.
+7. Conferir 320, 390 e 1440 px sem rolagem horizontal, foco visível por teclado e `prefers-reduced-motion`.
+
+### 20.5 Evidências (27/11/2026, ambiente local)
+
+- Checks do job Frontend static checks (`node --check`, datas, origem da API, `validate_frontend.py`, coordenadas, parceiro, CSP): todos aprovados.
+- Páginas redesenhadas conferidas no Chromium em 1440 e 390 px, sem rolagem horizontal até 320 px. Fluxos manuais incluídos: planos com aviso de checkout cancelado; convite com RSVP "talvez", restauração após recarregar e estado sem código; onde comprar sem mapa; páginas legais com menu móvel e preferências de cookies; "Tentar novamente" da página offline.
+- Service worker: instala com 19 entradas; com a rede desligada, `privacidade.html` abre do cache já estilizada e `/guias/index.html` e `/admin.html` caem em `offline.html` estilizada.
+- Limite: o CDN do MapLibre é bloqueado neste ambiente, então mapa, tiles e popups reais não foram verificados; só o estado sem mapa.
+
+### 20.6 Pendências
+
+- Revisão visual humana no PR e no preview da Vercel antes do merge.
+- A Política de Privacidade ainda cita Google Maps/Places, mas o backend usa somente Geoapify e o mapa é MapLibre; revisar o texto jurídico.
+- `planos.js` mostra nomes de variáveis `STRIPE_PRICE_*` quando um preço não está configurado; convém escondê-los em produção.
+- `FrontEnd/Dockerfile`: `RUN apk upgrade --no-cache` numa camada cacheável pode reaproveitar pacotes antigos em builds com cache.
+- O E2E do parceiro falha localmente na categoria "Limpeza", ausente no banco local; o mesmo ocorre na `main`.
