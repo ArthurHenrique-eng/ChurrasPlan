@@ -1,29 +1,79 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Cookies — ChurrasPlan</title>
-  <link rel="icon" href="favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="css/unified-core.css"><link rel="stylesheet" href="css/integracao-v3.css"><link rel="stylesheet" href="css/production-v63.css">
-  <meta name="theme-color" content="#6f7c59">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <link rel="manifest" href="manifest.webmanifest">
-  <link rel="apple-touch-icon" href="assets/pwa/icon-192.png">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#a62210">
+<title>Cookies — ChurrasPlan</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="assets/pwa/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="preload" href="fonts/archivo-latin-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="css/ds.css">
+<link rel="stylesheet" href="css/pages/content.css">
 </head>
-<body class="account-page legal-page">
-  <a class="skip-link" href="#main">Pular para o conteúdo</a>
-  <main id="main" class="account-shell legal-shell">
-    <header class="simple-topbar"><a class="home-brand" href="index.html"><img class="home-logo-icon" src="assets/logo-icon.png" alt=""><img class="home-wordmark" src="assets/logo-wordmark.png" alt="ChurrasPlan"></a><a class="text-button" href="index.html">Voltar ao site</a></header>
-    <article class="legal-document">
-      <span class="eyebrow"><span></span>COOKIES E ARMAZENAMENTO</span><h1>Política de Cookies</h1>
-      <p class="legal-lead">O ChurrasPlan usa armazenamento essencial e oferece métricas opcionais mediante escolha explícita.</p>
-      <h2>Cookies essenciais</h2><p><code>churrasplan_session</code> mantém a sessão autenticada e é HttpOnly. <code>churrasplan_csrf</code> permite a proteção contra falsificação de requisições e precisa ser lido pelo frontend para compor o cabeçalho CSRF.</p>
-      <h2>Armazenamento local</h2><p>O planejamento em andamento pode ser mantido no navegador para que o usuário continue depois. A PWA também mantém arquivos estáticos em cache para melhorar abertura e resiliência de navegação.</p>
-      <h2>O que não usamos por padrão</h2><p>Não instalamos cookies publicitários. As métricas opcionais contam etapas do produto e usam um identificador aleatório por aba somente após consentimento. Os eventos são deduplicados por dia e retidos por até 90 dias; não incluem nomes, e-mails, localização, texto livre ou dados do evento.</p>
-      <div class="legal-links"><a href="privacidade.html">Política de Privacidade</a><a href="termos.html">Termos de Uso</a></div>
-    </article>
-  <section class="saas-card"><h2>Métricas opcionais</h2><p>Visitas e etapas do planejamento são registradas somente se você permitir. Você pode mudar a escolha a qualquer momento.</p><button id="cookies-preferencias" type="button">Alterar preferências</button></section></main>
-  <script src="js/pwa.js"></script>
-<script src="js/config.js"></script><script src="js/analytics.js"></script></body>
+<body class="legal-page">
+<a class="skip-link" href="#main">Pular para o conteúdo</a>
+<header class="site-header">
+  <div class="site-header__inner">
+    <a class="brand-lockup" href="index.html" aria-label="ChurrasPlan, página inicial">
+      <img class="brand-lockup__icon" src="assets/logo-icon-96.webp" alt="" width="38" height="36">
+      <img class="brand-lockup__wordmark" src="assets/logo-wordmark-320.webp" alt="ChurrasPlan" width="132" height="20">
+    </a>
+    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav" data-nav-toggle><span class="nav-toggle__bars"></span><span class="sr-only">Abrir menu</span></button>
+    <nav class="site-nav" id="site-nav" aria-label="Navegação principal">
+      <a href="index.html#como-funciona">Como funciona</a>
+      <a href="planos.html">Planos</a>
+      <a href="onde-comprar.html">Onde comprar</a>
+      <a href="parceiros.html">Para negócios</a>
+      <a class="btn btn--primary site-nav__cta" href="planejamento.html">Planejar churrasco</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main" class="content-main">
+  <article class="prose-page legal-document">
+    <header>
+      <p class="eyebrow"><span></span>Cookies e armazenamento</p>
+      <h1>Política de Cookies</h1>
+      <p class="prose-lead">O ChurrasPlan usa armazenamento essencial e oferece métricas opcionais mediante escolha explícita.</p>
+    </header>
+    <div class="prose">
+      <h2>Cookies essenciais</h2>
+      <p><code>churrasplan_session</code> mantém a sessão autenticada e é HttpOnly. <code>churrasplan_csrf</code> permite a proteção contra falsificação de requisições e precisa ser lido pelo frontend para compor o cabeçalho CSRF.</p>
+      <h2>Armazenamento local</h2>
+      <p>O planejamento em andamento pode ser mantido no navegador para que o usuário continue depois. A PWA também mantém arquivos estáticos em cache para melhorar abertura e resiliência de navegação.</p>
+      <h2>O que não usamos por padrão</h2>
+      <p>Não instalamos cookies publicitários. As métricas opcionais contam etapas do produto e usam um identificador aleatório por aba somente após consentimento. Os eventos são deduplicados por dia e retidos por até 90 dias; não incluem nomes, e-mails, localização, texto livre ou dados do evento.</p>
+    </div>
+    <section class="prose-panel" aria-labelledby="cookies-metricas-titulo">
+      <h2 id="cookies-metricas-titulo">Métricas opcionais</h2>
+      <p>Visitas e etapas do planejamento são registradas somente se você permitir. Você pode mudar a escolha a qualquer momento.</p>
+      <button class="btn btn--secondary" id="cookies-preferencias" type="button">Alterar preferências</button>
+    </section>
+    <nav class="prose-related" aria-label="Outros documentos"><p>Outros documentos</p><a class="text-button" href="privacidade.html">Política de Privacidade</a><a class="text-button" href="termos.html">Termos de Uso</a></nav>
+  </article>
+</main>
+
+<footer class="site-footer">
+  <div class="site-footer__inner">
+    <div class="site-footer__brand">
+      <img src="assets/logo-wordmark-320.webp" alt="ChurrasPlan" width="150" height="23" loading="lazy">
+      <p>Planejamento de churrasco com quantidades, orçamento e lista de compras, conectado a mercados e açougues da sua região.</p>
+    </div>
+    <nav class="site-footer__nav" aria-label="Rodapé">
+      <div><p class="site-footer__title">Produto</p><a href="planejamento.html">Planejar churrasco</a><a href="planos.html">Planos e preços</a><a href="onde-comprar.html">Onde comprar</a><a href="guias/index.html">Guias de churrasco</a></div>
+      <div><p class="site-footer__title">Negócios</p><a href="parceiros.html">ChurrasPlan Parceiros</a><a href="parceiro.html">Área do parceiro</a><a href="profissional.html">Área profissional</a></div>
+      <div><p class="site-footer__title">Conta e privacidade</p><a href="minha-conta.html">Minha conta</a><a href="privacidade.html">Privacidade</a><a href="termos.html">Termos de uso</a><a href="cookies.html">Cookies</a></div>
+    </nav>
+  </div>
+  <div class="site-footer__legal"><span>© 2026 ChurrasPlan</span><span>Quantidades e preços exibidos são estimativas de planejamento.</span></div>
+</footer>
+
+<script src="js/ui.js"></script>
+<script src="js/pwa.js"></script>
+<script src="js/config.js"></script>
+<script src="js/analytics.js"></script>
+</body>
 </html>
